@@ -33,7 +33,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
 
         {/* Header */}
         <div style={{ marginBottom:40, display:'flex', alignItems:'flex-end',
@@ -50,7 +50,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
         </div>
 
         {/* Stats row */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>
+        <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>
           <Card>
             <CardHeader title="Serato Library" action={
               <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.green,
@@ -134,7 +134,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
         </div>
 
         {/* Bottom row */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <Card>
             <CardHeader title="Wishlist — Download Queue" action={
               <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:9, padding:'5px 12px' }}>

@@ -43,6 +43,15 @@ export function SetDropApp() {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: .5; transform: scale(1.3); }
         }
+        @media (max-width: 768px) {
+          .sd-decorative { display: none !important; }
+          .sd-grid-3 { grid-template-columns: 1fr !important; }
+          .sd-grid-2 { grid-template-columns: 1fr !important; }
+          .sd-nav-links { display: none !important; }
+          .sd-pad-x { padding-left: 20px !important; padding-right: 20px !important; }
+          .sd-hero-pad { padding: 100px 20px 60px !important; }
+          .sd-inner-pad { padding: 32px 20px !important; }
+        }
       `}</style>
       {showNav && <Nav page={page} setPage={navigate} />}
       {page === 'landing'   && <LandingPage setPage={navigate} />}

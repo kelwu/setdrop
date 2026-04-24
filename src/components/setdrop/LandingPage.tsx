@@ -29,7 +29,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
     <div style={{ background:SD.bg, minHeight:'100vh', color:SD.text }}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="sd-hero-pad" style={{
         minHeight:'100vh', display:'flex', flexDirection:'column',
         alignItems:'center', justifyContent:'center', position:'relative',
         overflow:'hidden', padding:'120px 40px 80px', textAlign:'center',
@@ -52,7 +52,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
         }}/>
 
         {/* Speaker — left */}
-        <svg style={{ position:'absolute', left:'-20px', top:'50%', transform:'translateY(-50%)',
+        <svg className="sd-decorative" style={{ position:'absolute', left:'-20px', top:'50%', transform:'translateY(-50%)',
           opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
           <circle cx="90" cy="70" r="28" fill="#0A0A0A" stroke="#F5A623" strokeWidth="3"/>
@@ -67,7 +67,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
         </svg>
 
         {/* Speaker — right */}
-        <svg style={{ position:'absolute', right:'-20px', top:'50%', transform:'translateY(-50%)',
+        <svg className="sd-decorative" style={{ position:'absolute', right:'-20px', top:'50%', transform:'translateY(-50%)',
           opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
           <circle cx="90" cy="70" r="28" fill="#0A0A0A" stroke="#F5A623" strokeWidth="3"/>
@@ -82,7 +82,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
         </svg>
 
         {/* DJ Controller */}
-        <svg style={{ position:'absolute', top:'50%', left:'50%',
+        <svg className="sd-decorative" style={{ position:'absolute', top:'50%', left:'50%',
           transform:'translate(-50%,-50%)', opacity:.04, zIndex:0, pointerEvents:'none' }}
           width="900" height="360" viewBox="0 0 900 360" fill="none">
           <rect x="20" y="60" width="860" height="240" rx="24" fill="#F5A623"/>
@@ -191,14 +191,14 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
+      <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:72 }}>
           <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>The Workflow</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(48px,6vw,80px)', letterSpacing:4,
             margin:0, color:SD.text }}>HOW IT WORKS</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
+        <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
           border:`1px solid ${SD.border}` }}>
           {HOW_IT_WORKS.map((s, i) => (
             <div key={i} style={{
@@ -219,7 +219,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* ── Demo Setlist ──────────────────────────────────────────────────── */}
-      <section id="demo" style={{
+      <section id="demo" className="sd-pad-x" style={{
         padding:'80px 40px 120px',
         background:SD.surface,
         borderTop:`1px solid ${SD.border}`,
@@ -253,14 +253,14 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* ── Features ──────────────────────────────────────────────────────── */}
-      <section style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
+      <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:72 }}>
           <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>Why SetDrop</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,72px)', letterSpacing:4,
             margin:0, color:SD.text }}>BUILT FOR REAL DJs</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
+        <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
           border:`1px solid ${SD.border}` }}>
           {FEATURES.map((f, i) => (
             <div key={i} style={{
@@ -279,7 +279,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* ── Platforms ─────────────────────────────────────────────────────── */}
-      <section style={{ padding:'60px 40px', borderTop:`1px solid ${SD.border}`,
+      <section className="sd-pad-x" style={{ padding:'60px 40px', borderTop:`1px solid ${SD.border}`,
         borderBottom:`1px solid ${SD.border}`, background:SD.surface }}>
         <div style={{ maxWidth:800, margin:'0 auto', textAlign:'center' }}>
           <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.textMuted,
@@ -294,7 +294,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section style={{ padding:'140px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
+      <section className="sd-pad-x" style={{ padding:'140px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
           width:600, height:300, borderRadius:'50%',
@@ -317,7 +317,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop:`1px solid ${SD.border}`, padding:'32px 40px',
+      <footer className="sd-pad-x" style={{ borderTop:`1px solid ${SD.border}`, padding:'32px 40px',
         display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
         <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:3, color:SD.textMuted }}>
           SET<span style={{ color:SD.accent }}>DROP</span>

@@ -103,7 +103,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div style={{ maxWidth:1100, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1100, margin:'0 auto', padding:'48px 40px' }}>
         <div style={{ marginBottom:36 }}>
           <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
             letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Music Library</div>

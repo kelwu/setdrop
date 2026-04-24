@@ -54,7 +54,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between',
@@ -106,7 +106,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
         )}
 
         {/* Two-column layout */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:16, alignItems:'start' }}>
+        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:16, alignItems:'start' }}>
 
           {/* Tracklist */}
           <div>

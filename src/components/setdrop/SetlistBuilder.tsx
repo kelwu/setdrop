@@ -218,7 +218,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
     return (
       <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56,
         display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ maxWidth:480, width:'100%', padding:'0 40px' }}>
+        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px' }}>
           <div style={{ textAlign:'center', marginBottom:56 }}>
             <div style={{ fontFamily:SD.display, fontSize:56, letterSpacing:4,
               color:SD.text, marginBottom:8 }}>BUILDING</div>
@@ -249,7 +249,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px' }}>
         <div style={{ marginBottom:32 }}>
           <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
             letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Setlist Builder</div>

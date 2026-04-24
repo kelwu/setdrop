@@ -12,7 +12,7 @@ export function Nav({ page, setPage }: NavProps) {
     { id:'library', label:'Library' },
   ];
   return (
-    <nav style={{
+    <nav className="sd-pad-x" style={{
       position:'fixed', top:0, left:0, right:0, zIndex:200,
       height:56, display:'flex', alignItems:'center', justifyContent:'space-between',
       padding:'0 40px',
@@ -24,7 +24,7 @@ export function Nav({ page, setPage }: NavProps) {
       }}>
         SET<span style={{ color:SD.accent }}>DROP</span>
       </span>
-      <div style={{ display:'flex', alignItems:'center', gap:36 }}>
+      <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
         {links.map(l => (
           <span key={l.id} onClick={() => setPage(l.id)} style={{
             fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
