@@ -78,6 +78,11 @@ export type Database = {
           traxsource_search_url: string | null
           status: 'wishlist' | 'downloaded' | 'in_library'
           added_at: string
+          enrichment_source: 'pending' | 'beatport' | 'serato' | 'manual' | 'lastfm' | 'spotify'
+          lastfm_tags: Json
+          beatport_bpm: number | null
+          beatport_key: string | null
+          beatport_url: string | null
         }
         Insert: Omit<Database['public']['Tables']['wishlist_tracks']['Row'], 'id' | 'added_at'> & { id?: string; added_at?: string }
         Update: Partial<Database['public']['Tables']['wishlist_tracks']['Insert']>

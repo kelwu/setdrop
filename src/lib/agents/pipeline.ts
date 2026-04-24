@@ -36,8 +36,8 @@ async function callAgent<T>(system: string, userMessage: string): Promise<T> {
 async function runAnalyst(tracks: LibraryTrack[]): Promise<LibraryProfile> {
   const trackData = tracks.map(t => ({
     artist: t.artist, title: t.title, bpm: t.bpm, key: t.key,
-    genre: t.genre, energy: t.energy, danceability: t.danceability,
-    valence: t.valence, isWishlist: t.isWishlist,
+    genre: t.genre, lastfmTags: t.lastfmTags ?? [],
+    seratoEnergy: t.seratoEnergy, isWishlist: t.isWishlist,
   }));
   return callAgent<LibraryProfile>(
     ANALYST_SYSTEM,

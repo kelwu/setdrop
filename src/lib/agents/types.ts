@@ -27,11 +27,15 @@ export interface LibraryTrack {
   title: string;
   bpm: number;
   key: string;
-  energy?: number;
   genre?: string;
-  danceability?: number;
-  valence?: number;
+  // Mood/energy signals from Last.fm tags (replaces Spotify audio features)
+  lastfmTags?: string[];       // e.g. ["afrobeats", "feel-good", "summer", "danceable"]
+  // Serato analysis data (available for tracks already in library)
+  seratoEnergy?: number;       // 0-10 scale from Serato's own analysis
+  // Source metadata
+  enrichmentSource?: 'beatport' | 'serato' | 'lastfm' | 'manual' | 'pending';
   isWishlist: boolean;
+  beatportUrl?: string;
   beatportSearchUrl?: string;
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
