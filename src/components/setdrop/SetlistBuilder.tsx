@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenrePillSelector, SDInput, AgentProgress } from './shared';
@@ -39,6 +39,17 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
   const [wordplay, setWordplay] = useState('');
   const [venueName, setVenueName] = useState('');
 
+  const [libraryCount, setLibraryCount] = useState<number | null>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sd_library');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setLibraryCount(Array.isArray(parsed) ? parsed.length : null);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const GEN_STEPS = [
     'Analyzing your library...',
     'Gathering gig intel...',
@@ -76,6 +87,14 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
 
     try {
       const durationMinutes = parseInt(duration) || 60;
+
+      // Use uploaded library if available, otherwise API falls back to demo tracks
+      let uploadedTracks: unknown[] | undefined;
+      try {
+        const raw = localStorage.getItem('sd_library');
+        if (raw) uploadedTracks = JSON.parse(raw);
+      } catch { /* ignore */ }
+
       const res = await fetch('/api/generate-setlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,6 +117,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
             wordplayTheme: wordplay || undefined,
             venueContext: venueName || undefined,
           },
+          tracks: uploadedTracks,
         }),
       });
 
@@ -255,6 +275,29 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
             letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Setlist Builder</div>
           <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
             margin:0, color:SD.text, lineHeight:1 }}>BUILD YOUR SET</h1>
+        </div>
+
+        {/* Library status banner */}
+        <div style={{ marginBottom:24, padding:'12px 16px', borderRadius:3,
+          background: libraryCount ? SD.greenDim : SD.surface,
+          border:`1px solid ${libraryCount ? `${SD.green}33` : SD.border}`,
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+              background: libraryCount ? SD.green : SD.textMuted, display:'inline-block',
+              boxShadow: libraryCount ? `0 0 6px ${SD.green}` : 'none' }}/>
+            <span style={{ fontFamily:SD.mono, fontSize:10, color: libraryCount ? SD.text : SD.textMuted }}>
+              {libraryCount
+                ? `Building from your library — ${libraryCount.toLocaleString()} tracks`
+                : 'No library uploaded — will use demo tracks'}
+            </span>
+          </div>
+          <span onClick={() => setPage('library')} style={{
+            fontFamily:SD.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase',
+            color:SD.accent, cursor:'pointer', textDecoration:'underline',
+          }}>
+            {libraryCount ? 'Manage Library' : 'Upload CSV →'}
+          </span>
         </div>
 
         <StepIndicator />

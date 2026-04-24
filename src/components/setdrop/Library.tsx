@@ -1,8 +1,103 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
+import { LibraryTrack } from '@/lib/agents/types';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot } from './shared';
+
+// ─── CSV Parser ─────────────────────────────────────────────────────────────
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseSeratoCSV(text: string): LibraryTrack[] {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV has no tracks');
+
+  const rawHeaders = parseCSVLine(lines[0]).map(h =>
+    h.toLowerCase().replace(/\s+/g, '_').replace(/^"|"$/g, '')
+  );
+
+  const idx = (keys: string[]) => {
+    for (const k of keys) {
+      const i = rawHeaders.indexOf(k);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const colName    = idx(['name', 'title', 'song', 'track_title', 'track']);
+  const colArtist  = idx(['artist', 'artist_name']);
+  const colBpm     = idx(['bpm', 'tempo']);
+  const colKey     = idx(['key', 'musical_key']);
+  const colGenre   = idx(['genre', 'style']);
+  const colPlays   = idx(['play_count', 'plays', 'playcount']);
+
+  if (colName < 0 && colArtist < 0) {
+    throw new Error('Could not find track name or artist columns. Is this a Serato CSV export?');
+  }
+
+  const tracks: LibraryTrack[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+    const get = (c: number) => c >= 0 ? (cols[c] ?? '').replace(/^"|"$/g, '').trim() : '';
+
+    const artist = get(colArtist);
+    const title  = get(colName);
+    if (!artist && !title) continue;
+
+    tracks.push({
+      id: `csv-${i}`,
+      artist,
+      title,
+      bpm:   parseFloat(get(colBpm))  || 0,
+      key:   get(colKey),
+      genre: get(colGenre) || undefined,
+      isWishlist: false,
+      lastfmTags: [],
+      seratoEnergy: undefined,
+      enrichmentSource: 'serato',
+    });
+  }
+
+  if (tracks.length === 0) throw new Error('No valid tracks found — check that the file is a Serato CSV export');
+  return tracks;
+}
+
+function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
+  return {
+    pos: idx + 1,
+    artist: t.artist,
+    title: t.title,
+    bpm: t.bpm,
+    key: t.key || '—',
+    energy: t.seratoEnergy ?? 5,
+    wishlist: t.isWishlist,
+    wordplay: null,
+    why: '',
+    transition: '',
+    stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', spotify: 'yellow' },
+  };
+}
+
+// ─── Library Row ─────────────────────────────────────────────────────────────
 
 function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx: number }) {
   const [hov, setHov] = useState(false);
@@ -31,7 +126,7 @@ function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx:
         <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{track.title}</div>
       </div>
-      <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.accent }}>{track.bpm}</span>
+      <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.accent }}>{track.bpm || '—'}</span>
       <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{track.key}</span>
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
         <EnergyDot energy={track.energy} size={7} />
@@ -64,13 +159,115 @@ function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx:
   );
 }
 
+// ─── Upload Zone ─────────────────────────────────────────────────────────────
+
+function UploadZone({
+  onFile, dragOver, setDragOver, parseError,
+}: {
+  onFile: (f: File) => void;
+  dragOver: boolean;
+  setDragOver: (v: boolean) => void;
+  parseError: string | null;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onFile(file);
+  };
+
+  return (
+    <div style={{ marginBottom:28 }}>
+      <div
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        style={{
+          border:`2px dashed ${dragOver ? SD.accent : SD.borderMid}`,
+          borderRadius:4, padding:'40px 32px', textAlign:'center', cursor:'pointer',
+          background: dragOver ? SD.accentDim : SD.surface,
+          transition:'all .15s',
+        }}>
+        <div style={{ fontFamily:SD.display, fontSize:32, letterSpacing:3,
+          color: dragOver ? SD.accent : SD.textMuted, marginBottom:12 }}>
+          DROP CSV HERE
+        </div>
+        <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:16, lineHeight:1.7 }}>
+          Export your library from Serato: <span style={{ color:SD.textSec }}>File → Export → Export Library</span><br/>
+          Then drag the .csv file here, or click to browse.
+        </div>
+        <SDButton ghost style={{ fontSize:10, padding:'8px 20px' }}>Choose File</SDButton>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display:'none' }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+        />
+      </div>
+      {parseError && (
+        <div style={{ marginTop:12, padding:'12px 16px', background:'rgba(220,50,50,0.08)',
+          border:'1px solid rgba(220,50,50,0.3)', borderRadius:3,
+          fontFamily:SD.mono, fontSize:11, color:'#E05555' }}>
+          {parseError}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Library Screen ───────────────────────────────────────────────────────────
+
 export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [tab, setTab] = useState('library');
   const [search, setSearch] = useState('');
   const [bpmMin, setBpmMin] = useState('');
   const [bpmMax, setBpmMax] = useState('');
+  const [uploadedTracks, setUploadedTracks] = useState<LibraryTrack[] | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
-  const filtered = LIBRARY_TRACKS.filter(t => {
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sd_library');
+      if (raw) setUploadedTracks(JSON.parse(raw));
+    } catch { /* ignore corrupted data */ }
+  }, []);
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const tracks = parseSeratoCSV(text);
+        localStorage.setItem('sd_library', JSON.stringify(tracks));
+        setUploadedTracks(tracks);
+        setParseError(null);
+        setShowUpload(false);
+      } catch (err) {
+        setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const clearLibrary = () => {
+    localStorage.removeItem('sd_library');
+    setUploadedTracks(null);
+    setShowUpload(false);
+  };
+
+  const allTracks: SampleTrack[] = uploadedTracks
+    ? uploadedTracks.map(toDisplayTrack)
+    : LIBRARY_TRACKS;
+
+  const wishlistTracks = allTracks.filter(t => t.wishlist);
+
+  const filtered = allTracks.filter(t => {
     const q = search.toLowerCase();
     const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
     const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
@@ -104,18 +301,56 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1100, margin:'0 auto', padding:'48px 40px' }}>
-        <div style={{ marginBottom:36 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-            letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Music Library</div>
-          <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
-            margin:0, color:SD.text, lineHeight:1 }}>YOUR LIBRARY</h1>
+
+        {/* Header */}
+        <div style={{ marginBottom:28, display:'flex', alignItems:'flex-end',
+          justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+          <div>
+            <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+              letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Music Library</div>
+            <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
+              margin:0, color:SD.text, lineHeight:1 }}>YOUR LIBRARY</h1>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            {uploadedTracks ? (
+              <>
+                <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.green,
+                  display:'flex', alignItems:'center', gap:6 }}>
+                  <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
+                    display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
+                  {uploadedTracks.length.toLocaleString()} tracks loaded
+                </span>
+                <SDButton ghost onClick={() => setShowUpload(!showUpload)}
+                  style={{ fontSize:10, padding:'7px 14px' }}>Replace CSV</SDButton>
+                <SDButton ghost danger onClick={clearLibrary}
+                  style={{ fontSize:10, padding:'7px 14px', color:SD.textMuted }}>Clear</SDButton>
+              </>
+            ) : (
+              <SDButton ghost onClick={() => setShowUpload(!showUpload)}
+                style={{ fontSize:10, padding:'9px 18px' }}>
+                + Upload Serato CSV
+              </SDButton>
+            )}
+          </div>
         </div>
 
+        {/* Upload zone — shown when toggled or when no library yet */}
+        {(showUpload || (!uploadedTracks && tab === 'library')) && (
+          <UploadZone
+            onFile={handleFile}
+            dragOver={dragOver}
+            setDragOver={setDragOver}
+            parseError={parseError}
+          />
+        )}
+
+        {/* Tabs */}
         <div style={{ borderBottom:`1px solid ${SD.border}`, marginBottom:28 }}>
-          <TabBtn id="library" label="In Serato Library" count={LIBRARY_TRACKS.length} />
-          <TabBtn id="wishlist" label="Wishlist" count={LIBRARY_TRACKS.filter(t => t.wishlist).length} />
+          <TabBtn id="library" label="In Serato Library" count={allTracks.length} />
+          <TabBtn id="wishlist" label="Wishlist" count={wishlistTracks.length} />
         </div>
 
+        {/* Filters */}
         <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap', alignItems:'flex-end' }}>
           <div style={{ flex:1, minWidth:240 }}>
             <SDInput value={search} onChange={setSearch}
@@ -134,8 +369,10 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
 
         <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:12 }}>
           {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
+          {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Serato Library</span>}
         </div>
 
+        {/* Table header */}
         <div style={{ display:'grid', gridTemplateColumns:cols, gap:12,
           padding:'8px 16px', borderBottom:`1px solid ${SD.border}` }}>
           {headers.map(h => (
@@ -144,6 +381,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           ))}
         </div>
 
+        {/* Rows */}
         {filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 40px' }}>
             <div style={{ fontFamily:SD.display, fontSize:48, letterSpacing:3,
@@ -151,13 +389,14 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
               {tab === 'wishlist'
                 ? 'Save tracks from Spotify to start building your wishlist.'
-                : 'Connect Serato to sync your library.'}
+                : 'Upload your Serato library CSV to see your tracks here.'}
             </div>
           </div>
         ) : (
           filtered.map((t, idx) => <LibraryRow key={t.pos} track={t} tab={tab} idx={idx} />)
         )}
 
+        {/* Wishlist actions */}
         {tab === 'wishlist' && filtered.length > 0 && (
           <div style={{ marginTop:24, padding:'20px 24px',
             background:SD.accentDim, border:`1px solid ${SD.accent}33`,
