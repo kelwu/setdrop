@@ -73,6 +73,22 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
   };
   const handleArcMouseUp = () => { dragging.current = null; };
 
+  const handleArcTouchStart = (i: number, e: React.TouchEvent) => {
+    e.preventDefault();
+    dragging.current = i;
+  };
+  const handleArcTouchMove = (e: React.TouchEvent) => {
+    if (dragging.current === null) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const touch = e.touches[0];
+    const rect = svg.getBoundingClientRect();
+    const raw = (touch.clientY - rect.top) / rect.height;
+    const energy = Math.max(0, Math.min(10, Math.round(10 - raw * 10)));
+    setArcPoints(prev => prev.map((p, i) => i === dragging.current ? energy : p));
+  };
+  const handleArcTouchEnd = () => { dragging.current = null; };
+
   const runGeneration = async () => {
     setGenerating(true);
     setGenStep(0);
@@ -191,11 +207,13 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
     }, '');
     const fill = d + ` L${pts[n-1][0]},${py+ch} L${px},${py+ch}Z`;
     return (
-      <svg ref={svgRef} width={W} height={H}
-        style={{ display:'block', cursor: dragging.current !== null ? 'ns-resize' : 'default', userSelect:'none' }}
+      <svg ref={svgRef} width="100%" viewBox={`0 0 ${W} ${H}`}
+        style={{ display:'block', cursor: dragging.current !== null ? 'ns-resize' : 'default', userSelect:'none', touchAction:'none' }}
         onMouseMove={handleArcMouseMove}
         onMouseUp={handleArcMouseUp}
-        onMouseLeave={handleArcMouseUp}>
+        onMouseLeave={handleArcMouseUp}
+        onTouchMove={handleArcTouchMove}
+        onTouchEnd={handleArcTouchEnd}>
         <defs>
           <linearGradient id="builderArcFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={SD.accent} stopOpacity="0.2"/>
@@ -215,7 +233,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
         <path d={fill} fill="url(#builderArcFill)"/>
         <path d={d} fill="none" stroke={SD.accent} strokeWidth={2}/>
         {pts.map((pt, i) => (
-          <g key={i} style={{ cursor:'ns-resize' }} onMouseDown={e => handleArcMouseDown(i, e)}>
+          <g key={i} style={{ cursor:'ns-resize' }} onMouseDown={e => handleArcMouseDown(i, e)} onTouchStart={e => handleArcTouchStart(i, e)}>
             <circle cx={pt[0]} cy={pt[1]} r={10} fill="transparent"/>
             <circle cx={pt[0]} cy={pt[1]} r={5} fill={SD.accent} stroke={SD.bg} strokeWidth={2}/>
             <text x={pt[0]} y={py+ch+16} textAnchor="middle"
@@ -305,7 +323,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
         {/* Step 1 */}
         {step === 1 && (
           <div style={{ display:'flex', flexDirection:'column', gap:32 }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
               <SDInput label="Mix Name" value={mixName} onChange={setMixName}
                 placeholder="e.g. Friday Night Affair" />
               <SDInput label="Venue Name (optional — Gig Intel)" value={venueName}
@@ -328,7 +346,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
               <GenrePillSelector selected={crowd}
                 onChange={g => setCrowd(g === crowd ? '' : g)} genres={CROWD_TYPES} />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
+            <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
               <div style={fieldStyle}>
                 <label style={labelStyle}>Set Duration <span style={{ color:SD.accent }}>*</span></label>
                 <div style={{ display:'flex', gap:0, borderRadius:3, overflow:'hidden',
@@ -378,7 +396,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
               borderRadius:4, padding:'24px 24px 16px', overflow:'hidden' }}>
               <ArcBuilder />
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12 }}>
+            <div className="sd-grid-5" style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:12 }}>
               {arcLabels.map((label, i) => (
                 <div key={label} style={{ background:SD.surface, border:`1px solid ${SD.border}`,
                   borderRadius:3, padding:'16px 12px', textAlign:'center' }}>
@@ -436,7 +454,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
               borderRadius:3, padding:'20px 24px' }}>
               <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent,
                 letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Set Summary</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 {([
                   ['Genre', `${primaryGenre}${secondaryGenre ? ` / ${secondaryGenre}` : ''}`],
                   ['Crowd', crowd],
