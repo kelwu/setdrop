@@ -164,13 +164,17 @@ function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx:
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
+type UploadMode = 'db' | 'csv';
+
 function UploadZone({
-  onFile, dragOver, setDragOver, parseError,
+  onFile, dragOver, setDragOver, parseError, uploadMode, setUploadMode,
 }: {
   onFile: (f: File) => void;
   dragOver: boolean;
   setDragOver: (v: boolean) => void;
   parseError: string | null;
+  uploadMode: UploadMode;
+  setUploadMode: (m: UploadMode) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -181,8 +185,26 @@ function UploadZone({
     if (file) onFile(file);
   };
 
+  const isDb = uploadMode === 'db';
+
   return (
     <div style={{ marginBottom:28 }}>
+      {/* Mode tabs */}
+      <div style={{ display:'flex', marginBottom:12, borderBottom:`1px solid ${SD.border}` }}>
+        {(['db', 'csv'] as UploadMode[]).map(m => (
+          <button key={m} onClick={() => setUploadMode(m)} style={{
+            fontFamily:SD.mono, fontSize:10, letterSpacing:1.5, textTransform:'uppercase',
+            padding:'8px 20px', border:'none', cursor:'pointer',
+            background: uploadMode === m ? SD.surface2 : 'transparent',
+            color: uploadMode === m ? SD.text : SD.textMuted,
+            borderBottom: uploadMode === m ? `2px solid ${SD.accent}` : '2px solid transparent',
+            transition:'all .15s',
+          }}>
+            {m === 'db' ? 'Database V2' : 'History CSV'}
+          </button>
+        ))}
+      </div>
+
       <div
         onClick={() => fileRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -196,17 +218,27 @@ function UploadZone({
         }}>
         <div style={{ fontFamily:SD.display, fontSize:32, letterSpacing:3,
           color: dragOver ? SD.accent : SD.textMuted, marginBottom:12 }}>
-          DROP CSV HERE
+          {isDb ? 'DROP DATABASE V2 HERE' : 'DROP CSV HERE'}
         </div>
-        <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:16, lineHeight:1.7 }}>
-          Export your library from Serato: <span style={{ color:SD.textSec }}>File → Export → Export Library</span><br/>
-          Then drag the .csv file here, or click to browse.
+        <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:16, lineHeight:1.9 }}>
+          {isDb ? (
+            <>
+              Find the <span style={{ color:SD.textSec }}>_Serato_</span> folder inside your Music directory<br/>
+              and drag the <span style={{ color:SD.accent }}>database V2</span> file here, or click to browse.
+            </>
+          ) : (
+            <>
+              In Serato, open the <span style={{ color:SD.textSec }}>History</span> panel,
+              right-click a session → <span style={{ color:SD.textSec }}>Export as .csv</span><br/>
+              Then drag the file here. Note: History only includes tracks you&apos;ve played.
+            </>
+          )}
         </div>
         <SDButton ghost style={{ fontSize:10, padding:'8px 20px' }}>Choose File</SDButton>
         <input
           ref={fileRef}
           type="file"
-          accept=".csv,text/csv"
+          accept={isDb ? '*' : '.csv,text/csv'}
           style={{ display:'none' }}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
         />
@@ -314,6 +346,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [parseError, setParseError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('db');
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -331,24 +364,47 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   }, []);
 
   const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string;
-        const tracks = parseSeratoCSV(text);
-        localStorage.setItem('sd_library', JSON.stringify(tracks));
-        setUploadedTracks(tracks);
-        setParseError(null);
-        setShowUpload(false);
-        setSaving(true);
-        await saveLibraryToSupabase(tracks);
-        setSaving(false);
-      } catch (err) {
-        setSaving(false);
-        setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
-      }
-    };
-    reader.readAsText(file);
+    if (uploadMode === 'db') {
+      setSaving(true);
+      setParseError(null);
+      const form = new FormData();
+      form.append('file', file);
+      fetch('/api/library/parse-db', { method: 'POST', body: form })
+        .then(res => res.json())
+        .then(async (data: { tracks?: LibraryTrack[]; error?: string }) => {
+          if (data.error) throw new Error(data.error);
+          const tracks = data.tracks!;
+          localStorage.setItem('sd_library', JSON.stringify(tracks));
+          setUploadedTracks(tracks);
+          setParseError(null);
+          setShowUpload(false);
+          await saveLibraryToSupabase(tracks);
+          setSaving(false);
+        })
+        .catch(err => {
+          setSaving(false);
+          setParseError(err instanceof Error ? err.message : 'Failed to parse database V2 file');
+        });
+    } else {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const text = e.target?.result as string;
+          const tracks = parseSeratoCSV(text);
+          localStorage.setItem('sd_library', JSON.stringify(tracks));
+          setUploadedTracks(tracks);
+          setParseError(null);
+          setShowUpload(false);
+          setSaving(true);
+          await saveLibraryToSupabase(tracks);
+          setSaving(false);
+        } catch (err) {
+          setSaving(false);
+          setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const clearLibrary = async () => {
@@ -430,14 +486,14 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                   {saving ? 'Saving to cloud...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
                 </span>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
-                  style={{ fontSize:10, padding:'7px 14px' }}>Replace CSV</SDButton>
+                  style={{ fontSize:10, padding:'7px 14px' }}>Replace Library</SDButton>
                 <SDButton ghost danger onClick={clearLibrary}
                   style={{ fontSize:10, padding:'7px 14px', color:SD.textMuted }}>Clear</SDButton>
               </>
             ) : (
               <SDButton ghost onClick={() => setShowUpload(!showUpload)}
                 style={{ fontSize:10, padding:'9px 18px' }}>
-                + Upload Serato CSV
+                + Upload Library
               </SDButton>
             )}
           </div>
@@ -450,6 +506,8 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
             dragOver={dragOver}
             setDragOver={setDragOver}
             parseError={parseError}
+            uploadMode={uploadMode}
+            setUploadMode={setUploadMode}
           />
         )}
 

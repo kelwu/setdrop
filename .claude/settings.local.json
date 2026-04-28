@@ -10,7 +10,8 @@
       "mcp__claude_ai_Supabase__get_project_url",
       "mcp__claude_ai_Supabase__get_publishable_keys",
       "WebFetch(domain:api.anthropic.com)",
-      "WebFetch(domain:developer.spotify.com)"
+      "WebFetch(domain:developer.spotify.com)",
+      "WebSearch"
     ]
   }
 }
