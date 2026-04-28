@@ -1,11 +1,36 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack } from '@/lib/setdrop/constants';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
-interface NavProps { page: string; setPage: (p: string) => void; }
-export function Nav({ page, setPage }: NavProps) {
+interface NavProps { page: string; setPage: (p: string) => void; user?: User | null; }
+export function Nav({ page, setPage, user }: NavProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const initials = user?.email ? user.email[0].toUpperCase() : 'DJ';
+
   const links = [
     { id:'dashboard', label:'Dashboard' },
     { id:'builder', label:'Build Set' },
@@ -35,12 +60,47 @@ export function Nav({ page, setPage }: NavProps) {
           }}>{l.label}</span>
         ))}
         <SDButton onClick={() => setPage('builder')} small>Build Set</SDButton>
-        <div style={{
-          width:30, height:30, borderRadius:'50%', cursor:'pointer',
-          background:`linear-gradient(135deg,#F5A623,#FF6B35)`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontFamily:SD.mono, fontSize:11, fontWeight:700, color:'#000',
-        }}>DJ</div>
+        <div ref={menuRef} style={{ position:'relative' }}>
+          <div
+            onClick={() => setMenuOpen(o => !o)}
+            style={{
+              width:30, height:30, borderRadius:'50%', cursor:'pointer',
+              background:`linear-gradient(135deg,#F5A623,#FF6B35)`,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontFamily:SD.mono, fontSize:11, fontWeight:700, color:'#000',
+            }}
+          >{initials}</div>
+          {menuOpen && (
+            <div style={{
+              position:'absolute', top:'calc(100% + 10px)', right:0,
+              background:SD.surface2, border:`1px solid ${SD.border}`,
+              borderRadius:3, minWidth:160, zIndex:300,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              {user && (
+                <div style={{
+                  padding:'10px 14px', borderBottom:`1px solid ${SD.border}`,
+                  fontSize:11, color:SD.textSec, fontFamily:SD.mono,
+                  letterSpacing:.3, wordBreak:'break-all',
+                }}>
+                  {user.email}
+                </div>
+              )}
+              <div
+                onClick={handleSignOut}
+                style={{
+                  padding:'10px 14px', fontSize:11, color:SD.red,
+                  fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
+                  cursor:'pointer', transition:'background .12s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = SD.redDim)}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                Sign Out
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );

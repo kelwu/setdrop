@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { SD, PageId } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { Nav } from './shared';
@@ -11,22 +14,71 @@ import { SetlistOutput } from './SetlistOutput';
 import { Library } from './Library';
 import { PublicShare } from './PublicShare';
 
+const PROTECTED_PAGES: PageId[] = ['dashboard', 'builder', 'output', 'library'];
+
 export function SetDropApp() {
   const [page, setPage] = useState<PageId>('landing');
   const [generatedSetlist, setGeneratedSetlist] = useState<GeneratedSetlist | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    const saved = localStorage.getItem('sd_page') as PageId | null;
-    if (saved) setPage(saved);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (authLoading) return;
+
+    // Handle post-login redirect
+    const params = new URLSearchParams(window.location.search);
+    const goto = params.get('goto') as PageId | null;
+    if (goto && user) {
+      navigate(goto);
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+
+    // Restore last page from storage if authenticated
+    const saved = localStorage.getItem('sd_page') as PageId | null;
+    if (saved) setPage(saved);
+  }, [authLoading, user]);
+
   const navigate = (p: string) => {
-    setPage(p as PageId);
+    const targetPage = p as PageId;
+    if (PROTECTED_PAGES.includes(targetPage) && !user) {
+      router.push('/login');
+      return;
+    }
+    setPage(targetPage);
     localStorage.setItem('sd_page', p);
     window.scrollTo({ top: 0 });
   };
 
   const showNav = page !== 'landing' && page !== 'share';
+
+  if (authLoading) {
+    return (
+      <div style={{
+        background: SD.bg, minHeight: '100vh',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, letterSpacing: 2 }}>
+          LOADING...
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh' }}>
@@ -55,7 +107,7 @@ export function SetDropApp() {
           .sd-arc-wrap { overflow-x: auto; }
         }
       `}</style>
-      {showNav && <Nav page={page} setPage={navigate} />}
+      {showNav && <Nav page={page} setPage={navigate} user={user} />}
       {page === 'landing'   && <LandingPage setPage={navigate} />}
       {page === 'dashboard' && <Dashboard setPage={navigate} />}
       {page === 'builder'   && (
