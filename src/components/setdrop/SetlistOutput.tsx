@@ -2,8 +2,24 @@
 
 import React, { useState } from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
-import { GeneratedSetlist, SetlistTrack } from '@/lib/agents/types';
+import { GeneratedSetlist, SetlistTrack, LibraryTrack } from '@/lib/agents/types';
+import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
+
+function normalize(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { paths: string[]; matched: number } {
+  const paths: string[] = [];
+  for (const t of tracks) {
+    const na = normalize(t.artist);
+    const nt = normalize(t.title);
+    const found = library.find(l => normalize(l.artist) === na && normalize(l.title) === nt);
+    if (found?.filePath) paths.push(found.filePath);
+  }
+  return { paths, matched: paths.length };
+}
 
 function toDisplayTrack(t: SetlistTrack, idx: number) {
   return {
@@ -30,6 +46,34 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
   const [copied, setCopied] = useState(false);
   const [showRegen, setShowRegen] = useState(false);
   const [regenNote, setRegenNote] = useState('');
+  const [crateStatus, setCrateStatus] = useState<string | null>(null);
+
+  const handleExportCrate = () => {
+    if (!setlist) return;
+
+    let library: LibraryTrack[] = [];
+    try {
+      const raw = localStorage.getItem('sd_library');
+      if (raw) library = JSON.parse(raw);
+    } catch { /* ignore */ }
+
+    if (!library.length) {
+      setCrateStatus('Upload your Serato library first so we can match file paths.');
+      return;
+    }
+
+    const { paths, matched } = matchFilePaths(setlist.tracks, library);
+
+    if (!paths.length) {
+      setCrateStatus('No tracks matched your library. Re-upload your Serato CSV to include file paths.');
+      return;
+    }
+
+    const data = buildCrate(paths);
+    downloadCrate(data, setlist.name);
+    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
+    setTimeout(() => setCrateStatus(null), 8000);
+  };
 
   const displayTracks = setlist
     ? setlist.tracks.map((t, i) => toDisplayTrack(t, i))
@@ -84,9 +128,23 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
             <SDButton ghost onClick={() => setPage('share')} style={{ fontSize:10, padding:'8px 16px' }}>
               Share ↗
             </SDButton>
-            <SDButton style={{ fontSize:11, padding:'10px 24px' }}>Export Serato Crate</SDButton>
+            <SDButton style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportCrate}>
+              Export Serato Crate
+            </SDButton>
           </div>
         </div>
+
+        {crateStatus && (
+          <div style={{
+            marginBottom: 20, padding: '12px 16px',
+            background: crateStatus.startsWith('Downloaded') ? SD.greenDim : SD.accentDim,
+            border: `1px solid ${crateStatus.startsWith('Downloaded') ? SD.green + '44' : SD.accent + '44'}`,
+            borderRadius: 3, fontFamily: SD.mono, fontSize: 11,
+            color: crateStatus.startsWith('Downloaded') ? SD.green : SD.accent,
+          }}>
+            {crateStatus}
+          </div>
+        )}
 
         {showRegen && (
           <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,

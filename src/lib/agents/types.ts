@@ -28,6 +28,7 @@ export interface LibraryTrack {
   bpm: number;
   key: string;
   genre?: string;
+  filePath?: string;           // Full path as exported by Serato (used for .crate export)
   // Mood/energy signals from Last.fm tags (replaces Spotify audio features)
   lastfmTags?: string[];       // e.g. ["afrobeats", "feel-good", "summer", "danceable"]
   // Serato analysis data (available for tracks already in library)

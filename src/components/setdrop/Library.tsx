@@ -43,12 +43,13 @@ function parseSeratoCSV(text: string): LibraryTrack[] {
     return -1;
   };
 
-  const colName    = idx(['name', 'title', 'song', 'track_title', 'track']);
-  const colArtist  = idx(['artist', 'artist_name']);
-  const colBpm     = idx(['bpm', 'tempo']);
-  const colKey     = idx(['key', 'musical_key']);
-  const colGenre   = idx(['genre', 'style']);
-  const colPlays   = idx(['play_count', 'plays', 'playcount']);
+  const colName     = idx(['name', 'title', 'song', 'track_title', 'track']);
+  const colArtist   = idx(['artist', 'artist_name']);
+  const colBpm      = idx(['bpm', 'tempo']);
+  const colKey      = idx(['key', 'musical_key']);
+  const colGenre    = idx(['genre', 'style']);
+  const colPlays    = idx(['play_count', 'plays', 'playcount']);
+  const colLocation = idx(['location', 'file', 'filepath', 'file_path', 'path']);
 
   if (colName < 0 && colArtist < 0) {
     throw new Error('Could not find track name or artist columns. Is this a Serato CSV export?');
@@ -68,9 +69,10 @@ function parseSeratoCSV(text: string): LibraryTrack[] {
       id: `csv-${i}`,
       artist,
       title,
-      bpm:   parseFloat(get(colBpm))  || 0,
-      key:   get(colKey),
-      genre: get(colGenre) || undefined,
+      bpm:      parseFloat(get(colBpm)) || 0,
+      key:      get(colKey),
+      genre:    get(colGenre) || undefined,
+      filePath: get(colLocation) || undefined,
       isWishlist: false,
       lastfmTags: [],
       seratoEnergy: undefined,
@@ -261,6 +263,7 @@ async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
       bpm: t.bpm || null,
       key: t.key || null,
       genre: t.genre || null,
+      file_path: t.filePath || null,
       play_count: 0,
       in_library: true,
     }));
@@ -282,18 +285,19 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
 
   const { data: tracks } = await supabase
     .from('serato_tracks')
-    .select('id, artist, title, bpm, key, genre, play_count')
+    .select('id, artist, title, bpm, key, genre, file_path')
     .eq('library_id', library.id)
     .order('artist');
   if (!tracks?.length) return null;
 
-  return tracks.map((t, i) => ({
+  return tracks.map((t) => ({
     id: t.id,
     artist: t.artist ?? '',
     title: t.title ?? '',
     bpm: t.bpm ?? 0,
     key: t.key ?? '',
     genre: t.genre ?? undefined,
+    filePath: t.file_path ?? undefined,
     isWishlist: false,
     lastfmTags: [],
     enrichmentSource: 'serato' as const,
