@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenrePillSelector, SDInput, AgentProgress } from './shared';
@@ -145,6 +146,30 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
       }
 
       const setlist = await res.json() as GeneratedSetlist;
+
+      // Persist to Supabase if authenticated
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const crowdVal = crowd.toLowerCase().replace(' ', '-') as
+            'club' | 'lounge' | 'wedding' | 'festival' | 'house-party' | 'radio' | 'corporate';
+          const slotVal = slot.toLowerCase() as 'opener' | 'middle' | 'headliner' | 'closing';
+          await supabase.from('setlists').insert({
+            user_id: user.id,
+            name: setlist.name,
+            primary_genre: primaryGenre || null,
+            secondary_genre: secondaryGenre || null,
+            crowd_context: crowdVal,
+            duration_minutes: durationMinutes as 30 | 60 | 90 | 120,
+            lineup_slot: slotVal,
+            energy_arc: { intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2], sustain: arcPoints[3], cooldown: arcPoints[4] },
+            is_public: false,
+            tracks_json: setlist.tracks,
+          });
+        }
+      } catch { /* non-fatal — setlist still works in memory */ }
+
       setGenStep(GEN_STEPS.length);
       setTimeout(() => onSetlistGenerated(setlist), 400);
     } catch (err) {

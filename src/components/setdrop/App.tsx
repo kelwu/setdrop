@@ -28,6 +28,9 @@ export function SetDropApp() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setAuthLoading(false);
+      if (user) {
+        supabase.from('users').upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

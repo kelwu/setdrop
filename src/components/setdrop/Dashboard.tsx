@@ -1,16 +1,77 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { SDButton, ConfidenceBadge } from './shared';
 
-export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
-  const recentSets = [
-    { name:'Friday Night Affair', genre:'Afrobeats / House', date:'Apr 18 2026', duration:'90 min', tracks:18, slug:'friday-night-affair' },
-    { name:'Sunday Sessions Vol.3', genre:'R&B / Hip Hop', date:'Apr 12 2026', duration:'60 min', tracks:14, slug:'sunday-sessions-3' },
-    { name:'Rooftop Summer Mix', genre:'Afrobeats / Dancehall', date:'Apr 5 2026', duration:'120 min', tracks:22, slug:'rooftop-summer' },
-  ];
+interface LibraryStats {
+  totalTracks: number;
+  lastSynced: string | null;
+}
 
+interface RecentSet {
+  id: string;
+  name: string;
+  genre: string;
+  date: string;
+  duration: string;
+  trackCount: number;
+}
+
+export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
+  const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
+  const [recentSets, setRecentSets] = useState<RecentSet[] | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      setUserEmail(user.email ?? null);
+
+      const [libraryRes, setsRes] = await Promise.all([
+        supabase
+          .from('serato_libraries')
+          .select('total_tracks, last_synced')
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('setlists')
+          .select('id, name, primary_genre, secondary_genre, crowd_context, duration_minutes, created_at, tracks_json')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ]);
+
+      if (libraryRes.data) {
+        setLibraryStats({
+          totalTracks: libraryRes.data.total_tracks,
+          lastSynced: libraryRes.data.last_synced,
+        });
+      }
+
+      if (setsRes.data) {
+        setRecentSets(setsRes.data.map(s => {
+          const trackCount = Array.isArray(s.tracks_json) ? (s.tracks_json as unknown[]).length : 0;
+          const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || '—';
+          const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const duration = s.duration_minutes ? `${s.duration_minutes} min` : '—';
+          return { id: s.id, name: s.name, genre, date, duration, trackCount };
+        }));
+      }
+    });
+  }, []);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'GOOD MORNING';
+    if (h < 18) return 'GOOD AFTERNOON';
+    return 'GOOD EVENING';
+  };
+
+  const djName = userEmail ? userEmail.split('@')[0].toUpperCase() : 'DJ';
   const wishlistTracks = LIBRARY_TRACKS.filter(t => t.wishlist);
 
   function Card({ children, style: extra = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -42,7 +103,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Dashboard</div>
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
-              margin:0, color:SD.text, lineHeight:1 }}>GOOD EVENING, DJ</h1>
+              margin:0, color:SD.text, lineHeight:1 }}>{greeting()}, {djName}</h1>
           </div>
           <SDButton onClick={() => setPage('builder')} style={{ fontSize:13, padding:'13px 32px' }}>
             + Build New Set
@@ -53,29 +114,34 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
         <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>
           <Card>
             <CardHeader title="Serato Library" action={
-              <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.green,
-                display:'flex', alignItems:'center', gap:5 }}>
-                <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
-                  display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
-                Synced
-              </span>
+              libraryStats ? (
+                <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.green,
+                  display:'flex', alignItems:'center', gap:5 }}>
+                  <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
+                    display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
+                  Synced
+                </span>
+              ) : null
             }/>
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.text, lineHeight:1 }}>2,418</div>
+                color:SD.text, lineHeight:1 }}>
+                {libraryStats ? libraryStats.totalTracks.toLocaleString() : '—'}
+              </div>
               <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks in library</div>
-              <div style={{ marginTop:20, display:'flex', gap:24 }}>
-                {([['847','Crates'],['12','Genres'],['4h ago','Last sync']] as [string,string][]).map(([v, l]) => (
-                  <div key={l}>
-                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>{v}</div>
-                    <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-                      letterSpacing:1, textTransform:'uppercase', marginTop:2 }}>{l}</div>
+              {libraryStats?.lastSynced && (
+                <div style={{ marginTop:20 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                    letterSpacing:1, textTransform:'uppercase' }}>
+                    Last sync: {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost style={{ fontSize:10, padding:'7px 16px' }}>Sync Now</SDButton>
+                <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10, padding:'7px 16px' }}>
+                  {libraryStats ? 'Manage Library' : 'Upload Library'}
+                </SDButton>
               </div>
             </div>
           </Card>
@@ -112,18 +178,26 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             <CardHeader title="This Month"/>
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.text, lineHeight:1 }}>3</div>
+                color:SD.text, lineHeight:1 }}>
+                {recentSets === null ? '—' : recentSets.filter(s => {
+                  const d = new Date(s.date);
+                  const now = new Date();
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length}
+              </div>
               <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Sets built</div>
-              <div style={{ marginTop:20, display:'flex', gap:24 }}>
-                {([['64','Avg tracks/set'],['94 min','Avg duration']] as [string,string][]).map(([v, l]) => (
-                  <div key={l}>
-                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>{v}</div>
+              {recentSets && recentSets.length > 0 && (
+                <div style={{ marginTop:20, display:'flex', gap:24 }}>
+                  <div>
+                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>
+                      {Math.round(recentSets.reduce((a, s) => a + s.trackCount, 0) / recentSets.length)}
+                    </div>
                     <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-                      letterSpacing:1, textTransform:'uppercase', marginTop:2, lineHeight:1.4 }}>{l}</div>
+                      letterSpacing:1, textTransform:'uppercase', marginTop:2, lineHeight:1.4 }}>Avg tracks/set</div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
               <div style={{ marginTop:24 }}>
                 <SDButton ghost onClick={() => setPage('output')} style={{ fontSize:10, padding:'7px 16px' }}>
                   View History
@@ -178,8 +252,18 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
               </SDButton>
             }/>
             <div style={{ padding:'16px' }}>
-              {recentSets.map((s, i) => (
-                <div key={i} onClick={() => setPage('output')}
+              {recentSets === null ? (
+                <div style={{ padding:'32px 16px', textAlign:'center',
+                  fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Loading...</div>
+              ) : recentSets.length === 0 ? (
+                <div style={{ padding:'32px 16px', textAlign:'center' }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
+                    No sets yet
+                  </div>
+                  <SDButton onClick={() => setPage('builder')} style={{ fontSize:10 }}>Build Your First Set</SDButton>
+                </div>
+              ) : recentSets.map((s) => (
+                <div key={s.id} onClick={() => setPage('output')}
                   style={{ padding:'18px 16px', marginBottom:8,
                     background:SD.bg, border:`1px solid ${SD.border}`,
                     borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}
@@ -194,16 +278,11 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                     </div>
                     <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
                   </div>
-                  <div style={{ display:'flex', gap:16, marginTop:14,
-                    alignItems:'center', justifyContent:'space-between' }}>
-                    <div style={{ display:'flex', gap:16 }}>
-                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.tracks} tracks</span>
-                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.duration}</span>
-                    </div>
-                    <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-                      cursor:'pointer', textDecoration:'underline' }}>
-                      setdrop.app/set/{s.slug}
-                    </span>
+                  <div style={{ display:'flex', gap:16, marginTop:14 }}>
+                    {s.trackCount > 0 && (
+                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.trackCount} tracks</span>
+                    )}
+                    <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.duration}</span>
                   </div>
                 </div>
               ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot } from './shared';
@@ -221,6 +222,84 @@ function UploadZone({
 
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
+async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Find or create the library row
+  const { data: existing } = await supabase
+    .from('serato_libraries')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  let libraryId: string;
+  const now = new Date().toISOString();
+
+  if (existing) {
+    await supabase.from('serato_libraries')
+      .update({ total_tracks: tracks.length, last_synced: now })
+      .eq('id', existing.id);
+    await supabase.from('serato_tracks').delete().eq('library_id', existing.id);
+    libraryId = existing.id;
+  } else {
+    const { data } = await supabase.from('serato_libraries')
+      .insert({ user_id: user.id, total_tracks: tracks.length, last_synced: now, is_public: false })
+      .select('id').single();
+    if (!data) return;
+    libraryId = data.id;
+  }
+
+  // Batch insert tracks (500 at a time)
+  const BATCH = 500;
+  for (let i = 0; i < tracks.length; i += BATCH) {
+    const rows = tracks.slice(i, i + BATCH).map(t => ({
+      library_id: libraryId,
+      artist: t.artist || null,
+      title: t.title || null,
+      bpm: t.bpm || null,
+      key: t.key || null,
+      genre: t.genre || null,
+      play_count: 0,
+      in_library: true,
+    }));
+    await supabase.from('serato_tracks').insert(rows);
+  }
+}
+
+async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: library } = await supabase
+    .from('serato_libraries')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+  if (!library) return null;
+
+  const { data: tracks } = await supabase
+    .from('serato_tracks')
+    .select('id, artist, title, bpm, key, genre, play_count')
+    .eq('library_id', library.id)
+    .order('artist');
+  if (!tracks?.length) return null;
+
+  return tracks.map((t, i) => ({
+    id: t.id,
+    artist: t.artist ?? '',
+    title: t.title ?? '',
+    bpm: t.bpm ?? 0,
+    key: t.key ?? '',
+    genre: t.genre ?? undefined,
+    isWishlist: false,
+    lastfmTags: [],
+    enrichmentSource: 'serato' as const,
+  }));
+}
+
 export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [tab, setTab] = useState('library');
   const [search, setSearch] = useState('');
@@ -230,17 +309,26 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [dragOver, setDragOver] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('sd_library');
-      if (raw) setUploadedTracks(JSON.parse(raw));
-    } catch { /* ignore corrupted data */ }
+    // Try Supabase first, fall back to localStorage
+    loadLibraryFromSupabase().then(tracks => {
+      if (tracks) {
+        setUploadedTracks(tracks);
+        localStorage.setItem('sd_library', JSON.stringify(tracks));
+      } else {
+        try {
+          const raw = localStorage.getItem('sd_library');
+          if (raw) setUploadedTracks(JSON.parse(raw));
+        } catch { /* ignore corrupted data */ }
+      }
+    });
   }, []);
 
   const handleFile = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
         const tracks = parseSeratoCSV(text);
@@ -248,17 +336,34 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
         setUploadedTracks(tracks);
         setParseError(null);
         setShowUpload(false);
+        setSaving(true);
+        await saveLibraryToSupabase(tracks);
+        setSaving(false);
       } catch (err) {
+        setSaving(false);
         setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
       }
     };
     reader.readAsText(file);
   };
 
-  const clearLibrary = () => {
+  const clearLibrary = async () => {
     localStorage.removeItem('sd_library');
     setUploadedTracks(null);
     setShowUpload(false);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: library } = await supabase
+        .from('serato_libraries')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (library) {
+        await supabase.from('serato_tracks').delete().eq('library_id', library.id);
+        await supabase.from('serato_libraries').delete().eq('id', library.id);
+      }
+    }
   };
 
   const allTracks: SampleTrack[] = uploadedTracks
@@ -314,11 +419,11 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             {uploadedTracks ? (
               <>
-                <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.green,
+                <span style={{ fontFamily:SD.mono, fontSize:10, color: saving ? SD.accent : SD.green,
                   display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
-                    display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
-                  {uploadedTracks.length.toLocaleString()} tracks loaded
+                  <span style={{ width:6, height:6, borderRadius:'50%', background: saving ? SD.accent : SD.green,
+                    display:'inline-block', boxShadow:`0 0 6px ${saving ? SD.accent : SD.green}` }}/>
+                  {saving ? 'Saving to cloud...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
                 </span>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
                   style={{ fontSize:10, padding:'7px 14px' }}>Replace CSV</SDButton>
