@@ -28,6 +28,40 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', color:SD.text }}>
 
+      {/* ── Nav ──────────────────────────────────────────────────────────── */}
+      <nav className="sd-landing-nav" style={{
+        position:'fixed', top:0, left:0, right:0, zIndex:50,
+        padding:'0 40px', height:56,
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        background:'rgba(10,10,10,0.85)', backdropFilter:'blur(12px)',
+        borderBottom:`1px solid ${SD.border}`,
+      }}>
+        <span style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, cursor:'pointer' }}
+          onClick={() => setPage('landing')}>
+          SET<span style={{ color:SD.accent }}>DROP</span>
+        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <a href="/login" className="sd-landing-login" style={{
+            fontFamily:SD.mono, fontSize:11, letterSpacing:1, color:SD.textSec,
+            textDecoration:'none', padding:'7px 16px',
+            border:`1px solid transparent`, borderRadius:3, transition:'color .15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
+          onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+            Log In
+          </a>
+          <a href="/login" style={{
+            fontFamily:SD.mono, fontSize:11, letterSpacing:1, fontWeight:600,
+            color:'#000', background:SD.accent, textDecoration:'none',
+            padding:'8px 18px', borderRadius:3, transition:'background .15s', whiteSpace:'nowrap',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = SD.accentHover)}
+          onMouseLeave={e => (e.currentTarget.style.background = SD.accent)}>
+            Sign Up Free
+          </a>
+        </div>
+      </nav>
+
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="sd-hero-pad" style={{
         minHeight:'100vh', display:'flex', flexDirection:'column',
