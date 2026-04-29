@@ -100,9 +100,22 @@ function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
   };
 }
 
+// ─── Store URL Builder ───────────────────────────────────────────────────────
+
+function buildStoreUrls(artist: string, title: string) {
+  const q = encodeURIComponent(`${artist} ${title}`);
+  return {
+    beatport_search_url: `https://www.beatport.com/search/tracks?q=${q}`,
+    bpm_supreme_search_url: `https://www.bpmsupreme.com/search?q=${q}`,
+    traxsource_search_url: `https://www.traxsource.com/search?term=${q}`,
+  };
+}
+
 // ─── Library Row ─────────────────────────────────────────────────────────────
 
-function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx: number }) {
+function LibraryRow({ track, tab, idx, onDelete }: {
+  track: SampleTrack; tab: string; idx: number; onDelete?: () => void;
+}) {
   const [hov, setHov] = useState(false);
   const statusColor = track.wishlist
     ? { bg:SD.accentDim, border:`${SD.accent}44`, text:SD.accent, label:'Wishlist' }
@@ -114,6 +127,7 @@ function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx:
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
+        position:'relative',
         display:'grid', gridTemplateColumns:cols,
         gap:12, padding:'13px 16px',
         background: hov ? SD.surface : 'transparent',
@@ -157,6 +171,18 @@ function LibraryRow({ track, tab, idx }: { track: SampleTrack; tab: string; idx:
         <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
           {(idx * 7 + 3) % 40}
         </span>
+      )}
+      {onDelete && hov && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          style={{
+            position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+            background:'transparent', border:'none', cursor:'pointer',
+            fontFamily:SD.mono, fontSize:14, color:SD.textMuted, lineHeight:1,
+            padding:'4px 6px', borderRadius:2,
+          }}
+          title="Remove from wishlist"
+        >✕</button>
       )}
     </div>
   );
@@ -308,32 +334,60 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const seratoTracks: LibraryTrack[] = [];
+
   const { data: library } = await supabase
     .from('serato_libraries')
     .select('id')
     .eq('user_id', user.id)
     .single();
-  if (!library) return null;
 
-  const { data: tracks } = await supabase
-    .from('serato_tracks')
-    .select('id, artist, title, bpm, key, genre, file_path')
-    .eq('library_id', library.id)
-    .order('artist');
-  if (!tracks?.length) return null;
+  if (library) {
+    const { data: tracks } = await supabase
+      .from('serato_tracks')
+      .select('id, artist, title, bpm, key, genre, file_path')
+      .eq('library_id', library.id)
+      .order('artist');
+    if (tracks?.length) {
+      seratoTracks.push(...tracks.map(t => ({
+        id: t.id,
+        artist: t.artist ?? '',
+        title: t.title ?? '',
+        bpm: t.bpm ?? 0,
+        key: t.key ?? '',
+        genre: t.genre ?? undefined,
+        filePath: t.file_path ?? undefined,
+        isWishlist: false,
+        lastfmTags: [],
+        enrichmentSource: 'serato' as const,
+      })));
+    }
+  }
 
-  return tracks.map((t) => ({
-    id: t.id,
-    artist: t.artist ?? '',
-    title: t.title ?? '',
-    bpm: t.bpm ?? 0,
-    key: t.key ?? '',
-    genre: t.genre ?? undefined,
-    filePath: t.file_path ?? undefined,
-    isWishlist: false,
+  const { data: wishlistRows } = await supabase
+    .from('wishlist_tracks')
+    .select('id, artist, title, bpm, key, genre, beatport_search_url, bpm_supreme_search_url, traxsource_search_url')
+    .eq('user_id', user.id)
+    .eq('status', 'wishlist')
+    .order('added_at', { ascending: false });
+
+  const wishlistTracks: LibraryTrack[] = (wishlistRows ?? []).map(w => ({
+    id: w.id,
+    artist: w.artist ?? '',
+    title: w.title ?? '',
+    bpm: w.bpm ?? 0,
+    key: w.key ?? '',
+    genre: w.genre ?? undefined,
+    isWishlist: true,
     lastfmTags: [],
-    enrichmentSource: 'serato' as const,
+    enrichmentSource: 'manual' as const,
+    beatportSearchUrl: w.beatport_search_url ?? undefined,
+    bpmSupremeSearchUrl: w.bpm_supreme_search_url ?? undefined,
+    traxsourceSearchUrl: w.traxsource_search_url ?? undefined,
   }));
+
+  if (!seratoTracks.length && !wishlistTracks.length) return null;
+  return [...seratoTracks, ...wishlistTracks];
 }
 
 export function Library({ setPage }: { setPage: (p: string) => void }) {
@@ -347,6 +401,14 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [showUpload, setShowUpload] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadMode, setUploadMode] = useState<UploadMode>('db');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addArtist, setAddArtist] = useState('');
+  const [addTitle, setAddTitle] = useState('');
+  const [addBpm, setAddBpm] = useState('');
+  const [addKey, setAddKey] = useState('');
+  const [addGenre, setAddGenre] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -426,19 +488,78 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
     }
   };
 
+  const handleAddWishlist = async () => {
+    if (!addArtist.trim() || !addTitle.trim()) {
+      setAddError('Artist and title are required.');
+      return;
+    }
+    setAdding(true);
+    setAddError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
+      const urls = buildStoreUrls(addArtist.trim(), addTitle.trim());
+      const { error } = await supabase.from('wishlist_tracks').insert({
+        user_id: user.id,
+        artist: addArtist.trim(),
+        title: addTitle.trim(),
+        bpm: addBpm ? parseFloat(addBpm) : null,
+        key: addKey.trim() || null,
+        genre: addGenre.trim() || null,
+        status: 'wishlist',
+        enrichment_source: 'manual',
+        ...urls,
+      });
+      if (error) throw error;
+      setAddArtist(''); setAddTitle(''); setAddBpm(''); setAddKey(''); setAddGenre('');
+      setShowAddForm(false);
+      const tracks = await loadLibraryFromSupabase();
+      if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add track');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDeleteWishlist = async (id: string) => {
+    const supabase = createClient();
+    await supabase.from('wishlist_tracks').delete().eq('id', id);
+    const tracks = await loadLibraryFromSupabase();
+    if (tracks) {
+      setUploadedTracks(tracks);
+      localStorage.setItem('sd_library', JSON.stringify(tracks));
+    } else {
+      const remaining = (uploadedTracks ?? []).filter(t => t.id !== id);
+      setUploadedTracks(remaining.length ? remaining : null);
+      localStorage.setItem('sd_library', JSON.stringify(remaining));
+    }
+  };
+
   const allTracks: SampleTrack[] = uploadedTracks
     ? uploadedTracks.map(toDisplayTrack)
     : LIBRARY_TRACKS;
 
   const wishlistTracks = allTracks.filter(t => t.wishlist);
 
-  const filtered = allTracks.filter(t => {
+  const matchFn = (t: SampleTrack) => {
     const q = search.toLowerCase();
     const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
     const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
     if (tab === 'wishlist') return t.wishlist && matchSearch && matchBpm;
     return matchSearch && matchBpm;
+  };
+
+  const filteredRaw: LibraryTrack[] = (uploadedTracks ?? []).filter(t => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
+    const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
+    if (tab === 'wishlist') return t.isWishlist && matchSearch && matchBpm;
+    return matchSearch && matchBpm;
   });
+
+  const filtered = uploadedTracks ? filteredRaw.map(toDisplayTrack) : allTracks.filter(matchFn);
 
   function TabBtn({ id, label, count }: { id: string; label: string; count: number }) {
     return (
@@ -548,6 +669,45 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           ))}
         </div>
 
+        {/* Add to wishlist form */}
+        {tab === 'wishlist' && (
+          <div style={{ marginBottom:16 }}>
+            {!showAddForm ? (
+              <SDButton ghost onClick={() => setShowAddForm(true)}
+                style={{ fontSize:10, padding:'8px 16px' }}>+ Add Track to Wishlist</SDButton>
+            ) : (
+              <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
+                borderRadius:4, padding:'20px 24px' }}>
+                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                  color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>
+                  Add Track to Wishlist
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                  <SDInput value={addArtist} onChange={setAddArtist} placeholder="Artist *" />
+                  <SDInput value={addTitle} onChange={setAddTitle} placeholder="Title *" />
+                  <SDInput value={addBpm} onChange={setAddBpm} placeholder="BPM" />
+                  <SDInput value={addKey} onChange={setAddKey} placeholder="Key (e.g. 4A)" />
+                </div>
+                <div style={{ marginBottom:12 }}>
+                  <SDInput value={addGenre} onChange={setAddGenre} placeholder="Genre (optional)" />
+                </div>
+                {addError && (
+                  <div style={{ fontFamily:SD.mono, fontSize:11, color:'#E05555', marginBottom:10 }}>
+                    {addError}
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:10 }}>
+                  <SDButton onClick={handleAddWishlist} style={{ fontSize:11 }}>
+                    {adding ? 'Adding...' : 'Add Track'}
+                  </SDButton>
+                  <SDButton ghost onClick={() => { setShowAddForm(false); setAddError(null); }}
+                    style={{ fontSize:11 }}>Cancel</SDButton>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Rows */}
         {filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 40px' }}>
@@ -555,31 +715,49 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
               color:SD.textMuted, marginBottom:12 }}>NOTHING HERE</div>
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
               {tab === 'wishlist'
-                ? 'Save tracks from Spotify to start building your wishlist.'
-                : 'Upload your Serato library CSV to see your tracks here.'}
+                ? 'Add tracks you want to buy — they\'ll be included when generating your next set.'
+                : 'Upload your Serato library to see your tracks here.'}
             </div>
           </div>
         ) : (
-          filtered.map((t, idx) => <LibraryRow key={t.pos} track={t} tab={tab} idx={idx} />)
+          filtered.map((t, idx) => (
+            <LibraryRow
+              key={`${t.pos}-${idx}`}
+              track={t}
+              tab={tab}
+              idx={idx}
+              onDelete={tab === 'wishlist' && uploadedTracks ? () => handleDeleteWishlist(filteredRaw[idx].id) : undefined}
+            />
+          ))
         )}
 
         {/* Wishlist actions */}
-        {tab === 'wishlist' && filtered.length > 0 && (
-          <div style={{ marginTop:24, padding:'20px 24px',
-            background:SD.accentDim, border:`1px solid ${SD.accent}33`,
-            borderRadius:4, display:'flex', alignItems:'center',
-            justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
-            <div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:4 }}>
-                {filtered.filter(t => t.wishlist).length} tracks ready to download
+        {tab === 'wishlist' && filtered.length > 0 && (() => {
+          const withLinks = (uploadedTracks ?? []).filter(t => t.isWishlist && t.beatportSearchUrl);
+          const openCount = Math.min(withLinks.length, 5);
+          return (
+            <div style={{ marginTop:24, padding:'20px 24px',
+              background:SD.accentDim, border:`1px solid ${SD.accent}33`,
+              borderRadius:4, display:'flex', alignItems:'center',
+              justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:4 }}>
+                  {filtered.filter(t => t.wishlist).length} tracks ready to download
+                </div>
+                <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>
+                  Check store confidence before purchasing.
+                </div>
               </div>
-              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>
-                Check store confidence before purchasing.
-              </div>
+              {openCount > 0 && (
+                <SDButton style={{ fontSize:11 }} onClick={() => {
+                  withLinks.slice(0, 5).forEach(t => window.open(t.beatportSearchUrl, '_blank'));
+                }}>
+                  Open {openCount} Beatport Link{openCount !== 1 ? 's' : ''}
+                </SDButton>
+              )}
             </div>
-            <SDButton style={{ fontSize:11 }}>Open All Store Links</SDButton>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

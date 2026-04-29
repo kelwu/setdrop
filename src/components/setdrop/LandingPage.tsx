@@ -323,7 +323,8 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
         <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
-          © 2026 SetDrop · setdrop.app
+          © 2026 SetDrop · setdrop.app ·{' '}
+          <a href="/privacy" style={{ color:SD.textMuted, textDecoration:'none' }}>Privacy Policy</a>
         </span>
       </footer>
     </div>

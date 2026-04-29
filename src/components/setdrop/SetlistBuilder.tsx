@@ -41,12 +41,18 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
   const [venueName, setVenueName] = useState('');
 
   const [libraryCount, setLibraryCount] = useState<number | null>(null);
+  const [libraryTracks, setLibraryTracks] = useState<{ artist: string; title: string; bpm: number; key: string }[]>([]);
   useEffect(() => {
     try {
       const raw = localStorage.getItem('sd_library');
       if (raw) {
         const parsed = JSON.parse(raw);
-        setLibraryCount(Array.isArray(parsed) ? parsed.length : null);
+        if (Array.isArray(parsed)) {
+          setLibraryCount(parsed.length);
+          setLibraryTracks(parsed.map((t: { artist: string; title: string; bpm: number; key: string }) => ({
+            artist: t.artist, title: t.title, bpm: t.bpm, key: t.key,
+          })));
+        }
       }
     } catch { /* ignore */ }
   }, []);
@@ -131,6 +137,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
               cooldown: arcPoints[4],
             },
             lineupSlot: slot,
+            seedTracks: seedSearch ? [seedSearch] : undefined,
             wordplayTheme: wordplay || undefined,
             venueContext: venueName || undefined,
           },
@@ -148,6 +155,8 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
       const setlist = await res.json() as GeneratedSetlist;
 
       // Persist to Supabase if authenticated
+      let savedId: string | undefined;
+      let savedSlug: string | undefined;
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -155,7 +164,10 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
           const crowdVal = crowd.toLowerCase().replace(' ', '-') as
             'club' | 'lounge' | 'wedding' | 'festival' | 'house-party' | 'radio' | 'corporate';
           const slotVal = slot.toLowerCase() as 'opener' | 'middle' | 'headliner' | 'closing';
-          await supabase.from('setlists').insert({
+          const base = (setlist.shareSlug || setlist.name)
+            .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          savedSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+          const { data: saved } = await supabase.from('setlists').insert({
             user_id: user.id,
             name: setlist.name,
             primary_genre: primaryGenre || null,
@@ -165,13 +177,16 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
             lineup_slot: slotVal,
             energy_arc: { intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2], sustain: arcPoints[3], cooldown: arcPoints[4] },
             is_public: false,
+            share_url: savedSlug,
             tracks_json: setlist.tracks,
-          });
+          }).select('id').single();
+          savedId = saved?.id;
         }
       } catch { /* non-fatal — setlist still works in memory */ }
 
       setGenStep(GEN_STEPS.length);
-      setTimeout(() => onSetlistGenerated(setlist), 400);
+      const withMeta = { ...setlist, dbId: savedId, dbSlug: savedSlug };
+      setTimeout(() => onSetlistGenerated(withMeta), 400);
     } catch (err) {
       clearInterval(iv);
       setGenerating(false);
@@ -450,11 +465,11 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
                   <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:10,
                     background:SD.surface2, border:`1px solid ${SD.border}`,
                     borderTop:'none', borderRadius:'0 0 3px 3px', overflow:'hidden' }}>
-                    {LIBRARY_TRACKS
+                    {(libraryTracks.length ? libraryTracks : LIBRARY_TRACKS)
                       .filter(t => `${t.artist} ${t.title}`.toLowerCase().includes(seedSearch.toLowerCase()))
-                      .slice(0, 4)
-                      .map(t => (
-                        <div key={t.pos} onClick={() => setSeedSearch(`${t.artist} — ${t.title}`)}
+                      .slice(0, 6)
+                      .map((t, i) => (
+                        <div key={i} onClick={() => setSeedSearch(`${t.artist} — ${t.title}`)}
                           style={{ padding:'12px 16px', cursor:'pointer',
                             borderBottom:`1px solid ${SD.border}`, transition:'background .1s' }}
                           onMouseEnter={e => (e.currentTarget.style.background = SD.surface3)}
@@ -463,7 +478,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
                             {t.artist} — {t.title}
                           </div>
                           <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent, marginTop:2 }}>
-                            {t.bpm} BPM · {t.key}
+                            {t.bpm ? `${t.bpm} BPM` : ''}{t.key ? ` · ${t.key}` : ''}
                           </div>
                         </div>
                       ))}
@@ -501,9 +516,17 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
           </div>
         )}
 
+        {genError && (
+          <div style={{ marginTop:24, background:SD.redDim, border:`1px solid ${SD.red}44`,
+            borderRadius:3, padding:'14px 20px', fontFamily:SD.mono, fontSize:12, color:SD.red,
+            lineHeight:1.6 }}>
+            ⚠ {genError}
+          </div>
+        )}
+
         {/* Navigation */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-          marginTop:48, paddingTop:32, borderTop:`1px solid ${SD.border}` }}>
+          marginTop:24, paddingTop:32, borderTop:`1px solid ${SD.border}` }}>
           {step > 1
             ? <SDButton ghost onClick={() => setStep(s => s-1)}>← Back</SDButton>
             : <span/>

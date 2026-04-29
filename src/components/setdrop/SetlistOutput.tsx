@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack, LibraryTrack } from '@/lib/agents/types';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
+import { createClient } from '@/lib/supabase/client';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
 function normalize(s: string) {
@@ -47,6 +48,27 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
   const [showRegen, setShowRegen] = useState(false);
   const [regenNote, setRegenNote] = useState('');
   const [crateStatus, setCrateStatus] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
+  const [making, setMaking] = useState(false);
+
+  const shareUrl = setlist?.dbSlug && typeof window !== 'undefined'
+    ? `${window.location.origin}/set/${setlist.dbSlug}`
+    : null;
+
+  const handleMakePublic = async () => {
+    if (!setlist?.dbId || !shareUrl) return;
+    setMaking(true);
+    try {
+      const supabase = createClient();
+      await supabase.from('setlists').update({ is_public: true }).eq('id', setlist.dbId);
+      setIsPublic(true);
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } finally {
+      setMaking(false);
+    }
+  };
 
   const handleExportCrate = () => {
     if (!setlist) return;
@@ -234,16 +256,36 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
               borderRadius:4, padding:'18px 20px' }}>
               <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:12 }}>Share</div>
-              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent,
-                background:SD.accentDim, border:`1px solid ${SD.accent}33`,
-                borderRadius:3, padding:'10px 12px', wordBreak:'break-all', cursor:'pointer' }}>
-                setdrop.app/set/friday-night-affair
-              </div>
-              <div style={{ marginTop:12 }}>
-                <SDButton ghost full onClick={() => setPage('share')} style={{ fontSize:10 }}>
-                  View Public Page ↗
-                </SDButton>
-              </div>
+              {shareUrl ? (
+                <>
+                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent,
+                    background:SD.accentDim, border:`1px solid ${SD.accent}33`,
+                    borderRadius:3, padding:'10px 12px', wordBreak:'break-all' }}>
+                    {shareUrl.replace(/^https?:\/\//, '')}
+                  </div>
+                  <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:8 }}>
+                    {isPublic ? (
+                      <SDButton ghost full
+                        onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                        style={{ fontSize:10 }}>
+                        {copied ? '✓ Link Copied' : 'Copy Link'}
+                      </SDButton>
+                    ) : (
+                      <SDButton ghost full onClick={handleMakePublic}
+                        style={{ fontSize:10, opacity: making ? 0.6 : 1 }}>
+                        {making ? 'Publishing...' : 'Make Public + Copy Link'}
+                      </SDButton>
+                    )}
+                    <SDButton ghost full onClick={() => setPage('share')} style={{ fontSize:10 }}>
+                      Preview ↗
+                    </SDButton>
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
+                  Generate a setlist to get a share link
+                </div>
+              )}
             </div>
           </div>
         </div>

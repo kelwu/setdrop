@@ -116,4 +116,6 @@ export interface GeneratedSetlist {
   tracks: SetlistTrack[];
   reviewNotes: string;
   shareSlug: string;
+  dbId?: string;      // set after Supabase save
+  dbSlug?: string;    // sanitized slug actually saved to share_url column
 }
