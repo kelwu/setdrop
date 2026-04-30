@@ -87,7 +87,8 @@ async function runSelector(
   input: SetlistInput,
   tracks: LibraryTrack[],
   blueprint: SetBlueprint,
-  intel: GigIntelReport
+  intel: GigIntelReport,
+  recentlyPlayed: string[]
 ): Promise<SelectedTrack[]> {
   return callAgent<SelectedTrack[]>(
     SELECTOR_SYSTEM,
@@ -100,6 +101,9 @@ ${JSON.stringify(intel, null, 2)}
 User preferences:
 - Wordplay theme: ${input.wordplayTheme || 'None'}
 - Seed tracks: ${input.seedTracks?.join(', ') || 'None'}
+
+Recently played tracks (DO NOT repeat these):
+${recentlyPlayed.length ? recentlyPlayed.map(t => `- ${t}`).join('\n') : 'None'}
 
 Available tracks (${tracks.length} total):
 ${JSON.stringify(tracks, null, 2)}`
@@ -129,12 +133,13 @@ function generateSlug(name: string): string {
 // Main pipeline
 export async function runSetlistPipeline(
   input: SetlistInput,
-  tracks: LibraryTrack[]
+  tracks: LibraryTrack[],
+  recentlyPlayed: string[] = []
 ): Promise<GeneratedSetlist> {
   const profile = await runAnalyst(tracks);
   const intel = await runGigIntel(input, profile);
   const blueprint = await runArchitect(input, profile, intel);
-  const selected = await runSelector(input, tracks, blueprint, intel);
+  const selected = await runSelector(input, tracks, blueprint, intel, recentlyPlayed);
   const reviewed = await runReviewer(input, selected);
 
   return {

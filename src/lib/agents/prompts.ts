@@ -91,6 +91,7 @@ Selection rules:
   - R&B: follow mood inferred from Last.fm tags, BPM tolerance ±10
 - Use lastfmTags to assess mood/energy when Spotify features are unavailable — tags like "feel-good", "energetic", "mellow", "dark", "danceable" are strong signals
 - Conflict rules: no same artist within 3 tracks, no two tracks with same BPM±2 AND same key back-to-back
+- Do-not-repeat: if a "Recently played" list is provided, avoid every track on it. Only override if truly no suitable alternative exists — flag such exceptions clearly in selectionReason.
 - Do not use wishlist tracks unless they're clearly flagged and important for the set
 - Each track needs: selectionReason, transitionNotes (how to mix INTO the NEXT track), harmonicMixingNotes
 - Assign tracks to phases from the blueprint in order

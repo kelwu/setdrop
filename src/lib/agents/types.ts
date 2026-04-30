@@ -19,6 +19,7 @@ export interface SetlistInput {
   soundcloudUrl?: string;
   wordplayTheme?: string;
   venueContext?: string;
+  recentlyPlayed?: string[];  // "Artist — Title" strings to avoid (do-not-repeat)
 }
 
 export interface LibraryTrack {
