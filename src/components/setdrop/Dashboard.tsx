@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { SD, LIBRARY_TRACKS, ConfidenceStatus } from '@/lib/setdrop/constants';
-import { SDButton, ConfidenceBadge } from './shared';
+import { SD } from '@/lib/setdrop/constants';
+import { SDButton } from './shared';
 
 interface LibraryStats {
   totalTracks: number;
@@ -15,8 +15,18 @@ interface RecentSet {
   name: string;
   genre: string;
   date: string;
+  createdAtRaw: string;
   duration: string;
   trackCount: number;
+}
+
+interface WishlistItem {
+  id: string;
+  artist: string;
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  beatportSearchUrl: string | null;
 }
 
 interface GigEntry {
@@ -31,7 +41,10 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
   const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
   const [recentSets, setRecentSets] = useState<RecentSet[] | null>(null);
   const [gigHistory, setGigHistory] = useState<GigEntry[] | null>(null);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[] | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -40,7 +53,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
       if (!user) return;
       setUserEmail(user.email ?? null);
 
-      const [libraryRes, setsRes, gigsRes] = await Promise.all([
+      const [libraryRes, setsRes, gigsRes, wishlistRes] = await Promise.all([
         supabase
           .from('serato_libraries')
           .select('total_tracks, last_synced')
@@ -58,6 +71,13 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
           .eq('user_id', user.id)
           .order('gig_date', { ascending: false })
           .limit(10),
+        supabase
+          .from('wishlist_tracks')
+          .select('id, artist, title, bpm, key, beatport_search_url')
+          .eq('user_id', user.id)
+          .eq('status', 'wishlist')
+          .order('added_at', { ascending: false })
+          .limit(5),
       ]);
 
       if (libraryRes.data) {
@@ -73,9 +93,18 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
           const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || '—';
           const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const duration = s.duration_minutes ? `${s.duration_minutes} min` : '—';
-          return { id: s.id, name: s.name, genre, date, duration, trackCount };
+          return { id: s.id, name: s.name, genre, date, createdAtRaw: s.created_at, duration, trackCount };
         }));
       }
+
+      setWishlistItems((wishlistRes.data ?? []).map(w => ({
+        id: w.id,
+        artist: w.artist ?? '',
+        title: w.title ?? '',
+        bpm: w.bpm ?? null,
+        key: w.key ?? null,
+        beatportSearchUrl: w.beatport_search_url ?? null,
+      })));
 
       if (gigsRes.data) {
         setGigHistory(gigsRes.data.map(g => ({
@@ -99,7 +128,18 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
   };
 
   const djName = userEmail ? userEmail.split('@')[0].toUpperCase() : 'DJ';
-  const wishlistTracks = LIBRARY_TRACKS.filter(t => t.wishlist);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await fetch('/api/account/delete', { method: 'POST' });
+      localStorage.clear();
+      window.location.href = '/';
+    } catch {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   function Card({ children, style: extra = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
@@ -176,26 +216,17 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
           <Card>
             <CardHeader title="Wishlist" action={
               <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent }}>
-                {wishlistTracks.length} tracks
+                {wishlistItems !== null ? `${wishlistItems.length} tracks` : ''}
               </span>
             }/>
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.accent, lineHeight:1 }}>{wishlistTracks.length}</div>
+                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? '—'}</div>
               <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks to download</div>
-              <div style={{ marginTop:20, display:'flex', gap:24 }}>
-                {([['3','Ready on Beatport'],['2','Check manually']] as [string,string][]).map(([v, l]) => (
-                  <div key={l}>
-                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>{v}</div>
-                    <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-                      letterSpacing:1, textTransform:'uppercase', marginTop:2, maxWidth:72, lineHeight:1.4 }}>{l}</div>
-                  </div>
-                ))}
-              </div>
               <div style={{ marginTop:24 }}>
                 <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10, padding:'7px 16px' }}>
-                  View Wishlist
+                  {wishlistItems?.length ? 'View Wishlist' : 'Add to Wishlist'}
                 </SDButton>
               </div>
             </div>
@@ -207,7 +238,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
                 color:SD.text, lineHeight:1 }}>
                 {recentSets === null ? '—' : recentSets.filter(s => {
-                  const d = new Date(s.date);
+                  const d = new Date(s.createdAtRaw);
                   const now = new Date();
                   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 }).length}
@@ -274,32 +305,40 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
               </SDButton>
             }/>
             <div style={{ padding:'16px' }}>
-              {wishlistTracks.map(t => (
-                <div key={t.pos} style={{ display:'flex', alignItems:'center', gap:14,
-                  padding:'12px 8px', borderBottom:`1px solid ${SD.border}` }}>
+              {wishlistItems === null ? (
+                <div style={{ padding:'32px 16px', textAlign:'center',
+                  fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Loading...</div>
+              ) : wishlistItems.length === 0 ? (
+                <div style={{ padding:'32px 16px', textAlign:'center' }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
+                    No wishlist tracks yet
+                  </div>
+                  <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10 }}>Add Tracks</SDButton>
+                </div>
+              ) : wishlistItems.map((t, i) => (
+                <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
+                  padding:'12px 8px', borderBottom: i < wishlistItems.length - 1 ? `1px solid ${SD.border}` : 'none' }}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
                       color:SD.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                       {t.artist} — {t.title}
                     </div>
                     <div style={{ display:'flex', gap:10, marginTop:3 }}>
-                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent }}>{t.bpm} BPM</span>
-                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{t.key}</span>
+                      {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent }}>{t.bpm} BPM</span>}
+                      {t.key && <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{t.key}</span>}
                     </div>
                   </div>
-                  <div style={{ display:'flex', gap:8, flexShrink:0, flexWrap:'wrap', justifyContent:'flex-end' }}>
-                    {(Object.entries(t.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
-                      <ConfidenceBadge key={s} status={v}
-                        label={s==='bpmSupreme'?'BPM':s[0].toUpperCase()+s.slice(1)} />
-                    ))}
-                  </div>
+                  {t.beatportSearchUrl && (
+                    <a href={t.beatportSearchUrl} target="_blank" rel="noreferrer"
+                      style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent,
+                        background:SD.accentDim, border:`1px solid ${SD.accent}33`,
+                        borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap',
+                        textDecoration:'none', flexShrink:0 }}>
+                      Beatport ↗
+                    </a>
+                  )}
                 </div>
               ))}
-              <div style={{ padding:'16px 8px 0' }}>
-                <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
-                  + {Math.max(0, wishlistTracks.length - 2)} more tracks in wishlist
-                </span>
-              </div>
             </div>
           </Card>
 
@@ -346,6 +385,39 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
               ))}
             </div>
           </Card>
+        </div>
+
+        {/* Account */}
+        <div style={{ marginTop:32, borderTop:`1px solid ${SD.border}`, paddingTop:32 }}>
+          <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+            color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>Account</div>
+          {!showDeleteConfirm ? (
+            <SDButton ghost onClick={() => setShowDeleteConfirm(true)}
+              style={{ fontSize:10, padding:'7px 16px', color:'#E05555', borderColor:'rgba(220,50,50,0.3)' }}>
+              Delete Account
+            </SDButton>
+          ) : (
+            <div style={{ background:'rgba(220,50,50,0.06)', border:'1px solid rgba(220,50,50,0.25)',
+              borderRadius:4, padding:'20px 24px', maxWidth:480 }}>
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:8 }}>
+                Delete your account?
+              </div>
+              <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec, marginBottom:20, lineHeight:1.7 }}>
+                This permanently deletes your library, setlists, wishlist, and gig history. This cannot be undone.
+              </div>
+              <div style={{ display:'flex', gap:10 }}>
+                <SDButton onClick={handleDeleteAccount}
+                  style={{ fontSize:11, background:'rgba(220,50,50,0.15)',
+                    borderColor:'rgba(220,50,50,0.4)', color:'#E05555',
+                    opacity: deleting ? 0.6 : 1 }}>
+                  {deleting ? 'Deleting...' : 'Yes, delete everything'}
+                </SDButton>
+                <SDButton ghost onClick={() => setShowDeleteConfirm(false)} style={{ fontSize:11 }}>
+                  Cancel
+                </SDButton>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
