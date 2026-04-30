@@ -45,6 +45,10 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('sd_onboarding_done') === '1';
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -176,6 +180,57 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             + Build New Set
           </SDButton>
         </div>
+
+        {/* Onboarding — shown until library uploaded + first set built */}
+        {!onboardingDismissed && (libraryStats === null || (recentSets !== null && recentSets.length === 0)) && (
+          <div style={{ background:SD.surface, border:`1px solid ${SD.borderMid}`,
+            borderRadius:4, padding:'24px 28px', marginBottom:24 }}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:20 }}>
+              <div>
+                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                  color:SD.accent, textTransform:'uppercase', marginBottom:6 }}>Get Started</div>
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.text }}>
+                  Two steps to your first AI-generated set
+                </div>
+              </div>
+              <button onClick={() => { setOnboardingDismissed(true); localStorage.setItem('sd_onboarding_done','1'); }}
+                style={{ background:'none', border:'none', cursor:'pointer',
+                  fontFamily:SD.mono, fontSize:12, color:SD.textMuted, padding:'2px 6px' }}>✕</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              {[
+                { n:1, done: libraryStats !== null, label:'Upload your Serato library', sub:'Drag in your database V2 file or a history CSV export', page:'library', cta:'Upload Library' },
+                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd — it handles the rest', page:'builder', cta:'Build Set' },
+              ].map(step => (
+                <div key={step.n} style={{ display:'flex', alignItems:'center', gap:16,
+                  padding:'14px 18px', background:SD.bg,
+                  border:`1px solid ${step.done ? SD.green+'44' : SD.border}`,
+                  borderRadius:3 }}>
+                  <div style={{ width:28, height:28, borderRadius:'50%', flexShrink:0,
+                    background: step.done ? SD.greenDim : SD.surface2,
+                    border:`1px solid ${step.done ? SD.green+'66' : SD.border}`,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontFamily:SD.mono, fontSize:11,
+                    color: step.done ? SD.green : SD.textMuted }}>
+                    {step.done ? '✓' : step.n}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
+                      color: step.done ? SD.textSec : SD.text, marginBottom:2,
+                      textDecoration: step.done ? 'line-through' : 'none' }}>{step.label}</div>
+                    <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>{step.sub}</div>
+                  </div>
+                  {!step.done && (
+                    <SDButton ghost onClick={() => setPage(step.page)}
+                      style={{ fontSize:10, padding:'6px 14px', flexShrink:0 }}>
+                      {step.cta}
+                    </SDButton>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats row */}
         <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>

@@ -113,8 +113,8 @@ function buildStoreUrls(artist: string, title: string) {
 
 // ─── Library Row ─────────────────────────────────────────────────────────────
 
-function LibraryRow({ track, tab, idx, onDelete }: {
-  track: SampleTrack; tab: string; idx: number; onDelete?: () => void;
+function LibraryRow({ track, tab, idx, onDelete, tags }: {
+  track: SampleTrack; tab: string; idx: number; onDelete?: () => void; tags?: string[];
 }) {
   const [hov, setHov] = useState(false);
   const statusColor = track.wishlist
@@ -142,6 +142,16 @@ function LibraryRow({ track, tab, idx, onDelete }: {
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{track.artist}</div>
         <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{track.title}</div>
+        {hov && tags && tags.length > 0 && (
+          <div style={{ display:'flex', gap:4, marginTop:4, flexWrap:'wrap' }}>
+            {tags.slice(0, 5).map(tag => (
+              <span key={tag} style={{ fontFamily:SD.mono, fontSize:8, letterSpacing:.5,
+                color:SD.textMuted, background:SD.surface2,
+                border:`1px solid ${SD.border}`, borderRadius:2,
+                padding:'1px 5px', textTransform:'lowercase' }}>{tag}</span>
+            ))}
+          </div>
+        )}
       </div>
       <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.accent }}>{track.bpm || '—'}</span>
       <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{track.key}</span>
@@ -741,6 +751,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                   track={t}
                   tab={tab}
                   idx={idx}
+                  tags={filteredRaw[idx]?.lastfmTags}
                   onDelete={tab === 'wishlist' && uploadedTracks ? () => handleDeleteWishlist(filteredRaw[idx].id) : undefined}
                 />
               ))}
