@@ -257,7 +257,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                 </div>
               )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => setPage('output')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => setPage('history')} style={{ fontSize:10, padding:'7px 16px' }}>
                   View History
                 </SDButton>
               </div>
@@ -344,7 +344,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
 
           <Card>
             <CardHeader title="Recent Setlists" action={
-              <SDButton ghost onClick={() => setPage('output')} style={{ fontSize:9, padding:'5px 12px' }}>
+              <SDButton ghost onClick={() => setPage('history')} style={{ fontSize:9, padding:'5px 12px' }}>
                 View All
               </SDButton>
             }/>
@@ -360,7 +360,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                   <SDButton onClick={() => setPage('builder')} style={{ fontSize:10 }}>Build Your First Set</SDButton>
                 </div>
               ) : recentSets.map((s) => (
-                <div key={s.id} onClick={() => setPage('output')}
+                <div key={s.id} onClick={() => setPage('history')}
                   style={{ padding:'18px 16px', marginBottom:8,
                     background:SD.bg, border:`1px solid ${SD.border}`,
                     borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}

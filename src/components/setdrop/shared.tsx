@@ -34,6 +34,7 @@ export function Nav({ page, setPage, user }: NavProps) {
   const links = [
     { id:'dashboard', label:'Dashboard' },
     { id:'builder', label:'Build Set' },
+    { id:'history', label:'History' },
     { id:'library', label:'Library' },
   ];
   return (

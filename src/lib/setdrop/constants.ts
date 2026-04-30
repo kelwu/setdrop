@@ -103,4 +103,4 @@ export const LIBRARY_TRACKS: SampleTrack[] = [
   { pos:15, artist:'Asake', title:'Organise', bpm:133, key:'6B', energy:7, wishlist:false, wordplay:null, why:'', transition:'', stores:{beatport:'green',bpmSupreme:'green',traxsource:'yellow',spotify:'green'} },
 ];
 
-export type PageId = 'landing' | 'dashboard' | 'builder' | 'output' | 'library' | 'share';
+export type PageId = 'landing' | 'dashboard' | 'builder' | 'output' | 'library' | 'share' | 'history';

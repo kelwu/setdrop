@@ -13,8 +13,9 @@ import { SetlistBuilder } from './SetlistBuilder';
 import { SetlistOutput } from './SetlistOutput';
 import { Library } from './Library';
 import { PublicShare } from './PublicShare';
+import { SetlistHistory } from './SetlistHistory';
 
-const PROTECTED_PAGES: PageId[] = ['dashboard', 'builder', 'output', 'library'];
+const PROTECTED_PAGES: PageId[] = ['dashboard', 'builder', 'output', 'library', 'history'];
 
 export function SetDropApp() {
   const [page, setPage] = useState<PageId>('landing');
@@ -124,6 +125,12 @@ export function SetDropApp() {
       {page === 'output'    && <SetlistOutput setPage={navigate} setlist={generatedSetlist} />}
       {page === 'library'   && <Library setPage={navigate} />}
       {page === 'share'     && <PublicShare setPage={navigate} setlist={generatedSetlist} />}
+      {page === 'history'   && (
+        <SetlistHistory
+          setPage={navigate}
+          onLoad={(s) => { setGeneratedSetlist(s); navigate('output'); }}
+        />
+      )}
     </div>
   );
 }
