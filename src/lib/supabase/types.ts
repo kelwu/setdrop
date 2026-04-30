@@ -41,6 +41,7 @@ export type Database = {
           date_added: string | null
           play_count: number
           in_library: boolean
+          lastfm_tags: string[] | null
         }
         Insert: Omit<Database['public']['Tables']['serato_tracks']['Row'], 'id'> & { id?: string }
         Update: Partial<Database['public']['Tables']['serato_tracks']['Insert']>

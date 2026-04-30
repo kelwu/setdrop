@@ -345,7 +345,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
   if (library) {
     const { data: tracks } = await supabase
       .from('serato_tracks')
-      .select('id, artist, title, bpm, key, genre, file_path')
+      .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
       .eq('library_id', library.id)
       .order('artist');
     if (tracks?.length) {
@@ -358,7 +358,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
         genre: t.genre ?? undefined,
         filePath: t.file_path ?? undefined,
         isWishlist: false,
-        lastfmTags: [],
+        lastfmTags: t.lastfm_tags ?? [],
         enrichmentSource: 'serato' as const,
       })));
     }
@@ -366,7 +366,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
 
   const { data: wishlistRows } = await supabase
     .from('wishlist_tracks')
-    .select('id, artist, title, bpm, key, genre, beatport_search_url, bpm_supreme_search_url, traxsource_search_url')
+    .select('id, artist, title, bpm, key, genre, beatport_search_url, bpm_supreme_search_url, traxsource_search_url, lastfm_tags')
     .eq('user_id', user.id)
     .eq('status', 'wishlist')
     .order('added_at', { ascending: false });
@@ -379,7 +379,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
     key: w.key ?? '',
     genre: w.genre ?? undefined,
     isWishlist: true,
-    lastfmTags: [],
+    lastfmTags: Array.isArray(w.lastfm_tags) ? (w.lastfm_tags as string[]) : [],
     enrichmentSource: 'manual' as const,
     beatportSearchUrl: w.beatport_search_url ?? undefined,
     bpmSupremeSearchUrl: w.bpm_supreme_search_url ?? undefined,
@@ -409,6 +409,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [addGenre, setAddGenre] = useState('');
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -424,6 +425,13 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       }
     });
   }, []);
+
+  const triggerEnrichment = () => {
+    setEnriching(true);
+    fetch('/api/library/enrich-lastfm', { method: 'POST' })
+      .then(() => setEnriching(false))
+      .catch(() => setEnriching(false));
+  };
 
   const handleFile = (file: File) => {
     if (uploadMode === 'db') {
@@ -442,6 +450,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           setShowUpload(false);
           await saveLibraryToSupabase(tracks);
           setSaving(false);
+          triggerEnrichment();
         })
         .catch(err => {
           setSaving(false);
@@ -460,6 +469,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           setSaving(true);
           await saveLibraryToSupabase(tracks);
           setSaving(false);
+          triggerEnrichment();
         } catch (err) {
           setSaving(false);
           setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
@@ -600,11 +610,14 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             {uploadedTracks ? (
               <>
-                <span style={{ fontFamily:SD.mono, fontSize:10, color: saving ? SD.accent : SD.green,
+                <span style={{ fontFamily:SD.mono, fontSize:10,
+                  color: saving ? SD.accent : enriching ? SD.textSec : SD.green,
                   display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background: saving ? SD.accent : SD.green,
-                    display:'inline-block', boxShadow:`0 0 6px ${saving ? SD.accent : SD.green}` }}/>
-                  {saving ? 'Saving to cloud...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
+                  <span style={{ width:6, height:6, borderRadius:'50%',
+                    background: saving ? SD.accent : enriching ? SD.textSec : SD.green,
+                    display:'inline-block',
+                    boxShadow:`0 0 6px ${saving ? SD.accent : enriching ? SD.textSec : SD.green}` }}/>
+                  {saving ? 'Saving to cloud...' : enriching ? 'Fetching Last.fm tags...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
                 </span>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
                   style={{ fontSize:10, padding:'7px 14px' }}>Replace Library</SDButton>
