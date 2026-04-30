@@ -50,6 +50,32 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
   const [crateStatus, setCrateStatus] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
   const [making, setMaking] = useState(false);
+  const [showGigForm, setShowGigForm] = useState(false);
+  const [gigVenue, setGigVenue] = useState('');
+  const [gigDate, setGigDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [loggingGig, setLoggingGig] = useState(false);
+  const [gigLogged, setGigLogged] = useState(false);
+
+  const handleLogGig = async () => {
+    if (!setlist?.dbId) return;
+    setLoggingGig(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not logged in');
+      await supabase.from('gig_history').insert({
+        user_id: user.id,
+        setlist_id: setlist.dbId,
+        gig_name: setlist.name,
+        gig_date: gigDate,
+        venue: gigVenue.trim() || null,
+      });
+      setGigLogged(true);
+      setShowGigForm(false);
+    } finally {
+      setLoggingGig(false);
+    }
+  };
 
   const shareUrl = setlist?.dbSlug && typeof window !== 'undefined'
     ? `${window.location.origin}/set/${setlist.dbSlug}`
@@ -287,6 +313,50 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
                 </div>
               )}
             </div>
+
+            {setlist?.dbId && (
+              <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
+                borderRadius:4, padding:'18px 20px' }}>
+                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                  color:SD.textMuted, textTransform:'uppercase', marginBottom:12 }}>Gig Log</div>
+                {gigLogged ? (
+                  <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.green }}>✓ Gig logged</div>
+                ) : showGigForm ? (
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    <input
+                      type="date"
+                      value={gigDate}
+                      onChange={e => setGigDate(e.target.value)}
+                      style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3,
+                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:11,
+                        outline:'none', width:'100%', boxSizing:'border-box' }}
+                    />
+                    <input
+                      value={gigVenue}
+                      onChange={e => setGigVenue(e.target.value)}
+                      placeholder="Venue (optional)"
+                      style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3,
+                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:11,
+                        outline:'none', width:'100%', boxSizing:'border-box' }}
+                      onFocus={e => (e.target.style.borderColor = SD.accent)}
+                      onBlur={e => (e.target.style.borderColor = SD.border)}
+                    />
+                    <div style={{ display:'flex', gap:8 }}>
+                      <SDButton onClick={handleLogGig} style={{ flex:1, fontSize:10, opacity: loggingGig ? 0.6 : 1 }}>
+                        {loggingGig ? 'Logging...' : 'Log Gig'}
+                      </SDButton>
+                      <SDButton ghost onClick={() => setShowGigForm(false)} style={{ fontSize:10, padding:'8px 12px' }}>
+                        Cancel
+                      </SDButton>
+                    </div>
+                  </div>
+                ) : (
+                  <SDButton ghost full onClick={() => setShowGigForm(true)} style={{ fontSize:10 }}>
+                    Mark as Played
+                  </SDButton>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -19,9 +19,18 @@ interface RecentSet {
   trackCount: number;
 }
 
+interface GigEntry {
+  id: string;
+  gigName: string;
+  gigDate: string;
+  venue: string | null;
+  playedAt: string;
+}
+
 export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
   const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
   const [recentSets, setRecentSets] = useState<RecentSet[] | null>(null);
+  const [gigHistory, setGigHistory] = useState<GigEntry[] | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,7 +40,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
       if (!user) return;
       setUserEmail(user.email ?? null);
 
-      const [libraryRes, setsRes] = await Promise.all([
+      const [libraryRes, setsRes, gigsRes] = await Promise.all([
         supabase
           .from('serato_libraries')
           .select('total_tracks, last_synced')
@@ -43,6 +52,12 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5),
+        supabase
+          .from('gig_history')
+          .select('id, gig_name, gig_date, venue, played_at')
+          .eq('user_id', user.id)
+          .order('gig_date', { ascending: false })
+          .limit(10),
       ]);
 
       if (libraryRes.data) {
@@ -60,6 +75,18 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
           const duration = s.duration_minutes ? `${s.duration_minutes} min` : '—';
           return { id: s.id, name: s.name, genre, date, duration, trackCount };
         }));
+      }
+
+      if (gigsRes.data) {
+        setGigHistory(gigsRes.data.map(g => ({
+          id: g.id,
+          gigName: g.gig_name,
+          gigDate: g.gig_date,
+          venue: g.venue ?? null,
+          playedAt: g.played_at,
+        })));
+      } else {
+        setGigHistory([]);
       }
     });
   }, []);
@@ -206,6 +233,37 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             </div>
           </Card>
         </div>
+
+        {/* Gig History */}
+        {gigHistory !== null && gigHistory.length > 0 && (
+          <Card style={{ marginBottom:16 }}>
+            <CardHeader title="Gig History" />
+            <div style={{ padding:'16px' }}>
+              {gigHistory.map((g, i) => (
+                <div key={g.id} style={{
+                  display:'flex', alignItems:'center', justifyContent:'space-between',
+                  padding:'14px 8px',
+                  borderBottom: i < gigHistory.length - 1 ? `1px solid ${SD.border}` : 'none',
+                  gap:16,
+                }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
+                      color:SD.text, marginBottom:3,
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      {g.gigName}
+                    </div>
+                    {g.venue && (
+                      <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{g.venue}</div>
+                    )}
+                  </div>
+                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, flexShrink:0 }}>
+                    {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Bottom row */}
         <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
