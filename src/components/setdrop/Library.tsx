@@ -526,6 +526,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       setShowAddForm(false);
       const tracks = await loadLibraryFromSupabase();
       if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
+      fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Failed to add track');
     } finally {
@@ -673,15 +674,6 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Serato Library</span>}
         </div>
 
-        {/* Table header */}
-        <div style={{ display:'grid', gridTemplateColumns:cols, gap:12,
-          padding:'8px 16px', borderBottom:`1px solid ${SD.border}` }}>
-          {headers.map(h => (
-            <span key={h} style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-              letterSpacing:1.5, textTransform:'uppercase' }}>{h}</span>
-          ))}
-        </div>
-
         {/* Add to wishlist form */}
         {tab === 'wishlist' && (
           <div style={{ marginBottom:16 }}>
@@ -733,15 +725,27 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
             </div>
           </div>
         ) : (
-          filtered.map((t, idx) => (
-            <LibraryRow
-              key={`${t.pos}-${idx}`}
-              track={t}
-              tab={tab}
-              idx={idx}
-              onDelete={tab === 'wishlist' && uploadedTracks ? () => handleDeleteWishlist(filteredRaw[idx].id) : undefined}
-            />
-          ))
+          <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
+            <div style={{ minWidth:520 }}>
+              {/* Table header */}
+              <div style={{ display:'grid', gridTemplateColumns:cols, gap:12,
+                padding:'8px 16px', borderBottom:`1px solid ${SD.border}` }}>
+                {headers.map(h => (
+                  <span key={h} style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                    letterSpacing:1.5, textTransform:'uppercase' }}>{h}</span>
+                ))}
+              </div>
+              {filtered.map((t, idx) => (
+                <LibraryRow
+                  key={`${t.pos}-${idx}`}
+                  track={t}
+                  tab={tab}
+                  idx={idx}
+                  onDelete={tab === 'wishlist' && uploadedTracks ? () => handleDeleteWishlist(filteredRaw[idx].id) : undefined}
+                />
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Wishlist actions */}

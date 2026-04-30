@@ -109,8 +109,9 @@ export function SetDropApp() {
           .sd-pad-x { padding-left: 20px !important; padding-right: 20px !important; }
           .sd-landing-nav { padding-left: 20px !important; padding-right: 20px !important; }
           .sd-hero-pad { padding: 100px 20px 60px !important; }
-          .sd-inner-pad { padding: 32px 20px !important; }
+          .sd-inner-pad { padding: 32px 20px 80px !important; }
           .sd-arc-wrap { overflow-x: auto; }
+          .sd-bottom-nav { display: flex !important; }
         }
       `}</style>
       {showNav && <Nav page={page} setPage={navigate} user={user} />}

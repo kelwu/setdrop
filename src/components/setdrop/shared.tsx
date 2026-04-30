@@ -37,73 +37,105 @@ export function Nav({ page, setPage, user }: NavProps) {
     { id:'history', label:'History' },
     { id:'library', label:'Library' },
   ];
+  const mobileNavItems = [
+    { id:'dashboard', label:'Dash', icon:'⊞' },
+    { id:'builder',   label:'Build', icon:'+' },
+    { id:'history',   label:'History', icon:'↺' },
+    { id:'library',   label:'Library', icon:'♬' },
+  ];
+
   return (
-    <nav className="sd-pad-x" style={{
-      position:'fixed', top:0, left:0, right:0, zIndex:200,
-      height:56, display:'flex', alignItems:'center', justifyContent:'space-between',
-      padding:'0 40px',
-      background:'rgba(10,10,10,0.96)', backdropFilter:'blur(16px)',
-      borderBottom:`1px solid ${SD.border}`,
-    }}>
-      <span onClick={() => setPage('landing')} style={{
-        fontFamily:SD.display, fontSize:26, letterSpacing:4, cursor:'pointer', color:SD.text,
+    <>
+      <nav className="sd-pad-x" style={{
+        position:'fixed', top:0, left:0, right:0, zIndex:200,
+        height:56, display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'0 40px',
+        background:'rgba(10,10,10,0.96)', backdropFilter:'blur(16px)',
+        borderBottom:`1px solid ${SD.border}`,
       }}>
-        SET<span style={{ color:SD.accent }}>DROP</span>
-      </span>
-      <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
-        {links.map(l => (
-          <span key={l.id} onClick={() => setPage(l.id)} style={{
-            fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
-            textTransform:'uppercase', cursor:'pointer',
-            color: page === l.id ? SD.accent : SD.textSec,
-            borderBottom: page === l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
-            paddingBottom:2, transition:'color .15s',
-          }}>{l.label}</span>
-        ))}
-        <SDButton onClick={() => setPage('builder')} small>Build Set</SDButton>
-        <div ref={menuRef} style={{ position:'relative' }}>
-          <div
-            onClick={() => setMenuOpen(o => !o)}
-            style={{
-              width:30, height:30, borderRadius:'50%', cursor:'pointer',
-              background:`linear-gradient(135deg,#F5A623,#FF6B35)`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontFamily:SD.mono, fontSize:11, fontWeight:700, color:'#000',
-            }}
-          >{initials}</div>
-          {menuOpen && (
-            <div style={{
-              position:'absolute', top:'calc(100% + 10px)', right:0,
-              background:SD.surface2, border:`1px solid ${SD.border}`,
-              borderRadius:3, minWidth:160, zIndex:300,
-              boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
-            }}>
-              {user && (
-                <div style={{
-                  padding:'10px 14px', borderBottom:`1px solid ${SD.border}`,
-                  fontSize:11, color:SD.textSec, fontFamily:SD.mono,
-                  letterSpacing:.3, wordBreak:'break-all',
-                }}>
-                  {user.email}
+        <span onClick={() => setPage('landing')} style={{
+          fontFamily:SD.display, fontSize:26, letterSpacing:4, cursor:'pointer', color:SD.text,
+        }}>
+          SET<span style={{ color:SD.accent }}>DROP</span>
+        </span>
+        <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
+          {links.map(l => (
+            <span key={l.id} onClick={() => setPage(l.id)} style={{
+              fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
+              textTransform:'uppercase', cursor:'pointer',
+              color: page === l.id ? SD.accent : SD.textSec,
+              borderBottom: page === l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
+              paddingBottom:2, transition:'color .15s',
+            }}>{l.label}</span>
+          ))}
+          <SDButton onClick={() => setPage('builder')} small>Build Set</SDButton>
+          <div ref={menuRef} style={{ position:'relative' }}>
+            <div
+              onClick={() => setMenuOpen(o => !o)}
+              style={{
+                width:30, height:30, borderRadius:'50%', cursor:'pointer',
+                background:`linear-gradient(135deg,#F5A623,#FF6B35)`,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontFamily:SD.mono, fontSize:11, fontWeight:700, color:'#000',
+              }}
+            >{initials}</div>
+            {menuOpen && (
+              <div style={{
+                position:'absolute', top:'calc(100% + 10px)', right:0,
+                background:SD.surface2, border:`1px solid ${SD.border}`,
+                borderRadius:3, minWidth:160, zIndex:300,
+                boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
+              }}>
+                {user && (
+                  <div style={{
+                    padding:'10px 14px', borderBottom:`1px solid ${SD.border}`,
+                    fontSize:11, color:SD.textSec, fontFamily:SD.mono,
+                    letterSpacing:.3, wordBreak:'break-all',
+                  }}>
+                    {user.email}
+                  </div>
+                )}
+                <div
+                  onClick={handleSignOut}
+                  style={{
+                    padding:'10px 14px', fontSize:11, color:SD.red,
+                    fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
+                    cursor:'pointer', transition:'background .12s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = SD.redDim)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Sign Out
                 </div>
-              )}
-              <div
-                onClick={handleSignOut}
-                style={{
-                  padding:'10px 14px', fontSize:11, color:SD.red,
-                  fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
-                  cursor:'pointer', transition:'background .12s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = SD.redDim)}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                Sign Out
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+      </nav>
+
+      {/* Mobile bottom tab bar */}
+      <div className="sd-bottom-nav" style={{
+        display:'none',
+        position:'fixed', bottom:0, left:0, right:0, zIndex:200,
+        height:58, alignItems:'stretch',
+        background:'rgba(10,10,10,0.97)', backdropFilter:'blur(16px)',
+        borderTop:`1px solid ${SD.border}`,
+      }}>
+        {mobileNavItems.map(item => (
+          <div key={item.id} onClick={() => setPage(item.id)} style={{
+            flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+            justifyContent:'center', gap:3, cursor:'pointer',
+            color: page === item.id ? SD.accent : SD.textMuted,
+            borderTop: page === item.id ? `2px solid ${SD.accent}` : '2px solid transparent',
+            transition:'color .15s',
+          }}>
+            <span style={{ fontSize:15, lineHeight:1 }}>{item.icon}</span>
+            <span style={{ fontFamily:SD.mono, fontSize:8, letterSpacing:1,
+              textTransform:'uppercase' }}>{item.label}</span>
+          </div>
+        ))}
       </div>
-    </nav>
+    </>
   );
 }
 
