@@ -53,9 +53,9 @@ export function SetDropApp() {
       return;
     }
 
-    // Restore last page from storage only when authenticated
+    // Restore last page from storage only when authenticated, else go to dashboard
     const saved = localStorage.getItem('sd_page') as PageId | null;
-    if (saved && user) setPage(saved);
+    if (user) setPage(saved ?? 'dashboard');
   }, [authLoading, user]);
 
   const navigate = (p: string) => {
