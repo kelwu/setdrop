@@ -11,7 +11,8 @@
       "mcp__claude_ai_Supabase__get_publishable_keys",
       "WebFetch(domain:api.anthropic.com)",
       "WebFetch(domain:developer.spotify.com)",
-      "WebSearch"
+      "WebSearch",
+      "Skill(claude-api)"
     ]
   }
 }

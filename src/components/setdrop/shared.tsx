@@ -95,12 +95,24 @@ export function Nav({ page, setPage, user }: NavProps) {
                     {user.email}
                   </div>
                 )}
+                <a href="/invoice"
+                  style={{
+                    display:'block', padding:'10px 14px', fontSize:11, color:SD.textSec,
+                    fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
+                    cursor:'pointer', transition:'background .12s', textDecoration:'none',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = SD.surface)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Invoice Generator
+                </a>
                 <div
                   onClick={handleSignOut}
                   style={{
                     padding:'10px 14px', fontSize:11, color:SD.red,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
                     cursor:'pointer', transition:'background .12s',
+                    borderTop:`1px solid ${SD.border}`,
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = SD.redDim)}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

@@ -185,7 +185,19 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
       } catch { /* non-fatal — setlist still works in memory */ }
 
       setGenStep(GEN_STEPS.length);
-      const withMeta = { ...setlist, dbId: savedId, dbSlug: savedSlug };
+      const withMeta = {
+        ...setlist,
+        dbId: savedId,
+        dbSlug: savedSlug,
+        generatedAt: new Date().toISOString(),
+        input: {
+          primaryGenre,
+          secondaryGenre: secondaryGenre || undefined,
+          crowdContext: crowd,
+          durationMinutes,
+          lineupSlot: slot,
+        },
+      };
       setTimeout(() => onSetlistGenerated(withMeta), 400);
     } catch (err) {
       clearInterval(iv);

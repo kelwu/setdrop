@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
+import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot } from './shared';
 
 // ─── CSV Parser ─────────────────────────────────────────────────────────────
@@ -200,7 +201,13 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
-type UploadMode = 'db' | 'csv';
+type UploadMode = 'db' | 'csv' | 'rekordbox';
+
+const UPLOAD_MODES: { id: UploadMode; label: string }[] = [
+  { id: 'db',        label: 'Serato DB V2'   },
+  { id: 'csv',       label: 'Serato CSV'      },
+  { id: 'rekordbox', label: 'Rekordbox XML'   },
+];
 
 function UploadZone({
   onFile, dragOver, setDragOver, parseError, uploadMode, setUploadMode,
@@ -221,22 +228,44 @@ function UploadZone({
     if (file) onFile(file);
   };
 
-  const isDb = uploadMode === 'db';
+  const accept = uploadMode === 'db' ? '*' : uploadMode === 'rekordbox' ? '.xml,application/xml,text/xml' : '.csv,text/csv';
+
+  const dropLabel = uploadMode === 'db' ? 'DROP DATABASE V2 HERE'
+    : uploadMode === 'rekordbox' ? 'DROP REKORDBOX XML HERE'
+    : 'DROP CSV HERE';
+
+  const instructions = uploadMode === 'db' ? (
+    <>
+      Find the <span style={{ color:SD.textSec }}>_Serato_</span> folder inside your Music directory<br/>
+      and drag the <span style={{ color:SD.accent }}>database V2</span> file here, or click to browse.
+    </>
+  ) : uploadMode === 'rekordbox' ? (
+    <>
+      In Rekordbox, go to <span style={{ color:SD.textSec }}>File → Export Collection in xml format</span><br/>
+      then drag the <span style={{ color:SD.accent }}>rekordbox.xml</span> file here, or click to browse.
+    </>
+  ) : (
+    <>
+      In Serato, open the <span style={{ color:SD.textSec }}>History</span> panel,
+      right-click a session → <span style={{ color:SD.textSec }}>Export as .csv</span><br/>
+      Then drag the file here. Note: History only includes tracks you&apos;ve played.
+    </>
+  );
 
   return (
     <div style={{ marginBottom:28 }}>
       {/* Mode tabs */}
       <div style={{ display:'flex', marginBottom:12, borderBottom:`1px solid ${SD.border}` }}>
-        {(['db', 'csv'] as UploadMode[]).map(m => (
-          <button key={m} onClick={() => setUploadMode(m)} style={{
+        {UPLOAD_MODES.map(({ id, label }) => (
+          <button key={id} onClick={() => setUploadMode(id)} style={{
             fontFamily:SD.mono, fontSize:10, letterSpacing:1.5, textTransform:'uppercase',
             padding:'8px 20px', border:'none', cursor:'pointer',
-            background: uploadMode === m ? SD.surface2 : 'transparent',
-            color: uploadMode === m ? SD.text : SD.textMuted,
-            borderBottom: uploadMode === m ? `2px solid ${SD.accent}` : '2px solid transparent',
+            background: uploadMode === id ? SD.surface2 : 'transparent',
+            color: uploadMode === id ? SD.text : SD.textMuted,
+            borderBottom: uploadMode === id ? `2px solid ${SD.accent}` : '2px solid transparent',
             transition:'all .15s',
           }}>
-            {m === 'db' ? 'Database V2' : 'History CSV'}
+            {label}
           </button>
         ))}
       </div>
@@ -254,27 +283,16 @@ function UploadZone({
         }}>
         <div style={{ fontFamily:SD.display, fontSize:32, letterSpacing:3,
           color: dragOver ? SD.accent : SD.textMuted, marginBottom:12 }}>
-          {isDb ? 'DROP DATABASE V2 HERE' : 'DROP CSV HERE'}
+          {dropLabel}
         </div>
         <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:16, lineHeight:1.9 }}>
-          {isDb ? (
-            <>
-              Find the <span style={{ color:SD.textSec }}>_Serato_</span> folder inside your Music directory<br/>
-              and drag the <span style={{ color:SD.accent }}>database V2</span> file here, or click to browse.
-            </>
-          ) : (
-            <>
-              In Serato, open the <span style={{ color:SD.textSec }}>History</span> panel,
-              right-click a session → <span style={{ color:SD.textSec }}>Export as .csv</span><br/>
-              Then drag the file here. Note: History only includes tracks you&apos;ve played.
-            </>
-          )}
+          {instructions}
         </div>
         <SDButton ghost style={{ fontSize:10, padding:'8px 20px' }}>Choose File</SDButton>
         <input
           ref={fileRef}
           type="file"
-          accept={isDb ? '*' : '.csv,text/csv'}
+          accept={accept}
           style={{ display:'none' }}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
         />
@@ -420,6 +438,12 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [enriching, setEnriching] = useState(false);
+  const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<{ id: string; name: string; trackCount: number }[]>([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [showSpotifyPanel, setShowSpotifyPanel] = useState(false);
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -435,6 +459,56 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       }
     });
   }, []);
+
+  useEffect(() => {
+    fetch('/api/spotify/status')
+      .then(r => r.json())
+      .then((d: { connected: boolean }) => setSpotifyConnected(d.connected))
+      .catch(() => setSpotifyConnected(false));
+  }, []);
+
+  const loadSpotifyPlaylists = () => {
+    fetch('/api/spotify/playlists')
+      .then(r => r.json())
+      .then((d: { playlists?: { id: string; name: string; trackCount: number }[] }) => {
+        if (d.playlists) {
+          setSpotifyPlaylists(d.playlists);
+          if (d.playlists[0]) setSelectedPlaylist(d.playlists[0].id);
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleSpotifyImport = async () => {
+    if (!selectedPlaylist) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const res = await fetch('/api/spotify/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: selectedPlaylist }),
+      });
+      const data = await res.json() as { imported?: number; skipped?: number; error?: string };
+      if (data.error) throw new Error(data.error);
+      setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
+      const tracks = await loadLibraryFromSupabase();
+      if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
+      fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
+    } catch (err) {
+      setImportResult({ imported: -1, skipped: 0 });
+      console.error(err);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleSpotifyDisconnect = async () => {
+    await fetch('/api/spotify/disconnect', { method: 'POST' });
+    setSpotifyConnected(false);
+    setSpotifyPlaylists([]);
+    setShowSpotifyPanel(false);
+  };
 
   const triggerEnrichment = () => {
     setEnriching(true);
@@ -471,7 +545,9 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       reader.onload = async (e) => {
         try {
           const text = e.target?.result as string;
-          const tracks = parseSeratoCSV(text);
+          const tracks = uploadMode === 'rekordbox'
+            ? parseRekordboxXML(text)
+            : parseSeratoCSV(text);
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setParseError(null);
@@ -482,7 +558,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           triggerEnrichment();
         } catch (err) {
           setSaving(false);
-          setParseError(err instanceof Error ? err.message : 'Failed to parse CSV');
+          setParseError(err instanceof Error ? err.message : `Failed to parse ${uploadMode === 'rekordbox' ? 'Rekordbox XML' : 'CSV'}`);
         }
       };
       reader.readAsText(file);
@@ -658,7 +734,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
 
         {/* Tabs */}
         <div style={{ borderBottom:`1px solid ${SD.border}`, marginBottom:28 }}>
-          <TabBtn id="library" label="In Serato Library" count={allTracks.length} />
+          <TabBtn id="library" label="In Library" count={allTracks.length} />
           <TabBtn id="wishlist" label="Wishlist" count={wishlistTracks.length} />
         </div>
 
@@ -681,8 +757,81 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
 
         <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:12 }}>
           {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
-          {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Serato Library</span>}
+          {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Library</span>}
         </div>
+
+        {/* Spotify import panel */}
+        {tab === 'wishlist' && spotifyConnected !== null && (
+          <div style={{ marginBottom: 16 }}>
+            {!spotifyConnected ? (
+              <a href="/api/spotify/auth" style={{ textDecoration: 'none' }}>
+                <SDButton ghost style={{ fontSize: 10, padding: '8px 16px' }}>
+                  ♫ Connect Spotify
+                </SDButton>
+              </a>
+            ) : (
+              <div>
+                {!showSpotifyPanel ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <SDButton ghost onClick={() => { setShowSpotifyPanel(true); if (!spotifyPlaylists.length) loadSpotifyPlaylists(); }}
+                      style={{ fontSize: 10, padding: '8px 16px' }}>
+                      ♫ Import from Spotify
+                    </SDButton>
+                    <span style={{ fontFamily: SD.mono, fontSize: 9, color: SD.green }}>● Connected</span>
+                    <button onClick={handleSpotifyDisconnect}
+                      style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
+                    borderRadius: 4, padding: '20px 24px' }}>
+                    <div style={{ fontFamily: SD.mono, fontSize: 9, letterSpacing: 2,
+                      color: SD.textMuted, textTransform: 'uppercase', marginBottom: 16 }}>
+                      Import from Spotify
+                    </div>
+                    {spotifyPlaylists.length === 0 ? (
+                      <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+                        Loading playlists...
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <select
+                          value={selectedPlaylist}
+                          onChange={e => setSelectedPlaylist(e.target.value)}
+                          style={{
+                            fontFamily: SD.mono, fontSize: 11, color: SD.text,
+                            background: SD.surface2, border: `1px solid ${SD.border}`,
+                            borderRadius: 3, padding: '8px 12px', cursor: 'pointer', flex: 1, minWidth: 200,
+                          }}>
+                          {spotifyPlaylists.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.trackCount} tracks)
+                            </option>
+                          ))}
+                        </select>
+                        <SDButton onClick={handleSpotifyImport} style={{ fontSize: 11 }}>
+                          {importing ? 'Importing...' : 'Import'}
+                        </SDButton>
+                        <SDButton ghost onClick={() => { setShowSpotifyPanel(false); setImportResult(null); }}
+                          style={{ fontSize: 11 }}>Cancel</SDButton>
+                      </div>
+                    )}
+                    {importResult && (
+                      <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 11,
+                        color: importResult.imported < 0 ? '#E05555' : SD.green }}>
+                        {importResult.imported < 0
+                          ? 'Import failed — check console'
+                          : `✓ ${importResult.imported} tracks added${importResult.skipped ? `, ${importResult.skipped} already in wishlist` : ''}`}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Add to wishlist form */}
         {tab === 'wishlist' && (
@@ -731,7 +880,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
               {tab === 'wishlist'
                 ? 'Add tracks you want to buy — they\'ll be included when generating your next set.'
-                : 'Upload your Serato library to see your tracks here.'}
+                : 'Upload your Serato or Rekordbox library to see your tracks here.'}
             </div>
           </div>
         ) : (

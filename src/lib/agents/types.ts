@@ -117,6 +117,14 @@ export interface GeneratedSetlist {
   tracks: SetlistTrack[];
   reviewNotes: string;
   shareSlug: string;
-  dbId?: string;      // set after Supabase save
-  dbSlug?: string;    // sanitized slug actually saved to share_url column
+  dbId?: string;
+  dbSlug?: string;
+  generatedAt?: string;
+  input?: {
+    primaryGenre: string;
+    secondaryGenre?: string;
+    crowdContext: string;
+    durationMinutes: number;
+    lineupSlot: string;
+  };
 }

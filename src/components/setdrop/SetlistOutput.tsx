@@ -127,6 +127,16 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     ? setlist.tracks.map((t, i) => toDisplayTrack(t, i))
     : SAMPLE_TRACKS;
   const setlistName = setlist?.name ?? 'Friday Night Affair';
+  const inp = setlist?.input;
+  const genreLabel = inp
+    ? `${inp.primaryGenre}${inp.secondaryGenre ? ` / ${inp.secondaryGenre}` : ''}`
+    : 'Afrobeats / Hip Hop';
+  const crowdLabel = inp?.crowdContext ?? 'Club';
+  const durationLabel = inp ? `${inp.durationMinutes} min` : '90 min';
+  const slotLabel = inp?.lineupSlot ?? 'Headliner';
+  const dateLabel = setlist?.generatedAt
+    ? new Date(setlist.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const avgBpm = Math.round(displayTracks.reduce((a, t) => a + t.bpm, 0) / displayTracks.length);
   const keys = [...new Set(displayTracks.map(t => t.key))];
@@ -157,7 +167,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:'0 0 8px', color:SD.text, lineHeight:1 }}>{setlistName.toUpperCase()}</h1>
             <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-              {['Afrobeats / Hip Hop','Club','90 min','Headliner','Apr 22 2026'].map((v, i) => (
+              {[genreLabel, crowdLabel, durationLabel, slotLabel, dateLabel].map((v, i) => (
                 <span key={i} style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>
                   {i > 0 && <span style={{ color:SD.textMuted, marginRight:16 }}>·</span>}
                   {v}
@@ -245,7 +255,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
               <StatBox value={avgBpm} label="Avg BPM" />
               <StatBox value={displayTracks.length} label="Tracks" />
               <StatBox value={keys.length} label="Keys used" />
-              <StatBox value="90m" label="Duration" />
+              <StatBox value={durationLabel} label="Duration" />
             </div>
 
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
@@ -264,16 +274,17 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'18px 20px' }}>
               <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
-                color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Genre Mix</div>
-              {([['Afrobeats','45%'],['Hip Hop','30%'],['R&B','15%'],['Latin','10%']] as [string,string][]).map(([g, p]) => (
-                <div key={g} style={{ marginBottom:10 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                    <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{g}</span>
-                    <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent }}>{p}</span>
-                  </div>
-                  <div style={{ height:2, background:SD.surface3, borderRadius:1 }}>
-                    <div style={{ height:'100%', width:p, background:SD.accent, borderRadius:1 }}/>
-                  </div>
+                color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Set Info</div>
+              {[
+                ['Genre', genreLabel],
+                ['Crowd', crowdLabel],
+                ['Slot', slotLabel],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display:'flex', justifyContent:'space-between',
+                  marginBottom:10, alignItems:'baseline' }}>
+                  <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                    letterSpacing:1, textTransform:'uppercase' }}>{label}</span>
+                  <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{value}</span>
                 </div>
               ))}
             </div>

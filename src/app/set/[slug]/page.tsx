@@ -191,7 +191,7 @@ export default async function PublicSetPage({ params }: Props) {
               padding: '13px 36px', borderRadius: 3, textDecoration: 'none',
             }}>Try SetDrop Free</a>
             <div style={{ marginTop: 14, fontFamily: S.mono, fontSize: 10, color: S.textMuted }}>
-              setdrop-phi.vercel.app
+              {process.env.NEXT_PUBLIC_APP_URL ?? 'setdrop-phi.vercel.app'}
             </div>
           </div>
         </div>
