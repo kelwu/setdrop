@@ -26,11 +26,6 @@ export async function proxy(request: NextRequest) {
   // Refresh session — must be called before any auth checks
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redirect authenticated users away from login
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
   return supabaseResponse
 }
 
