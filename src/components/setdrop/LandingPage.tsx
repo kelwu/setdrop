@@ -41,24 +41,25 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <a href="/login" className="sd-landing-login" style={{
+          <button className="sd-landing-login" onClick={() => window.location.assign('/login')} style={{
             fontFamily:SD.mono, fontSize:11, letterSpacing:1, color:SD.textSec,
-            textDecoration:'none', padding:'7px 16px',
-            border:`1px solid transparent`, borderRadius:3, transition:'color .15s',
+            background:'none', padding:'7px 16px',
+            border:`1px solid transparent`, borderRadius:3, transition:'color .15s', cursor:'pointer',
           }}
           onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
           onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
             Log In
-          </a>
-          <a href="/login" style={{
+          </button>
+          <button onClick={() => window.location.assign('/login')} style={{
             fontFamily:SD.mono, fontSize:11, letterSpacing:1, fontWeight:600,
-            color:'#000', background:SD.accent, textDecoration:'none',
+            color:'#000', background:SD.accent,
             padding:'8px 18px', borderRadius:3, transition:'background .15s', whiteSpace:'nowrap',
+            border:'none', cursor:'pointer',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = SD.accentHover)}
           onMouseLeave={e => (e.currentTarget.style.background = SD.accent)}>
             Sign Up Free
-          </a>
+          </button>
         </div>
       </nav>
 
