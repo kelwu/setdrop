@@ -83,7 +83,7 @@ ${recentlyPlayed.length ? recentlyPlayed.map(t => `- ${t}`).join('\n') : 'None'}
 
 Available tracks (${tracks.length} total):
 ${JSON.stringify(tracks, null, 2)}`,
-    4096,
+    8192,
   );
 }
 
