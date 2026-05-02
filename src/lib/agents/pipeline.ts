@@ -3,10 +3,7 @@ import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, SelectedTrack, GeneratedSetlist,
 } from './types';
-import {
-  ANALYST_SYSTEM, GIG_INTEL_SYSTEM, ARCHITECT_SYSTEM,
-  SELECTOR_SYSTEM, REVIEWER_SYSTEM,
-} from './prompts';
+import { PLANNER_SYSTEM, SELECTOR_SYSTEM, REVIEWER_SYSTEM } from './prompts';
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -20,11 +17,11 @@ function parseJSON<T>(text: string): T {
   return JSON.parse(raw.trim()) as T;
 }
 
-async function callAgent<T>(system: string, userMessage: string): Promise<T> {
+async function callAgent<T>(system: string, userMessage: string, maxTokens = 4096): Promise<T> {
   const anthropic = client();
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: maxTokens,
     system,
     messages: [{ role: 'user', content: userMessage }],
   });
@@ -32,24 +29,22 @@ async function callAgent<T>(system: string, userMessage: string): Promise<T> {
   return parseJSON<T>(text);
 }
 
-// Agent 1: Analyst
-async function runAnalyst(tracks: LibraryTrack[]): Promise<LibraryProfile> {
+// Call 1: Profile library + assess gig + design blueprint in one pass
+async function runPlanner(
+  tracks: LibraryTrack[],
+  input: SetlistInput,
+): Promise<{ libraryProfile: LibraryProfile; gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
   const trackData = tracks.map(t => ({
     artist: t.artist, title: t.title, bpm: t.bpm, key: t.key,
     genre: t.genre, lastfmTags: t.lastfmTags ?? [],
     seratoEnergy: t.seratoEnergy, isWishlist: t.isWishlist,
   }));
-  return callAgent<LibraryProfile>(
-    ANALYST_SYSTEM,
-    `Analyze this library of ${tracks.length} tracks:\n\n${JSON.stringify(trackData, null, 2)}`
-  );
-}
+  return callAgent(
+    PLANNER_SYSTEM,
+    `Library (${tracks.length} tracks):
+${JSON.stringify(trackData, null, 2)}
 
-// Agent 2: Gig Intel
-async function runGigIntel(input: SetlistInput, profile: LibraryProfile): Promise<GigIntelReport> {
-  return callAgent<GigIntelReport>(
-    GIG_INTEL_SYSTEM,
-    `Gig context:
+Gig context:
 - Venue: ${input.venueContext || 'Not specified'}
 - Crowd: ${input.crowdContext}
 - Primary genre: ${input.primaryGenre}
@@ -57,38 +52,18 @@ async function runGigIntel(input: SetlistInput, profile: LibraryProfile): Promis
 - Lineup slot: ${input.lineupSlot}
 - Duration: ${input.durationMinutes} minutes
 - Vibe: ${input.vibe || 'Not specified'}
-
-Library profile:
-${JSON.stringify(profile, null, 2)}`
+- Energy arc: ${JSON.stringify(input.energyArc)}`,
+    2048,
   );
 }
 
-// Agent 3: Set Architect
-async function runArchitect(input: SetlistInput, profile: LibraryProfile, intel: GigIntelReport): Promise<SetBlueprint> {
-  return callAgent<SetBlueprint>(
-    ARCHITECT_SYSTEM,
-    `User inputs:
-- Duration: ${input.durationMinutes} minutes
-- Primary genre: ${input.primaryGenre}
-- Secondary genre: ${input.secondaryGenre || 'None'}
-- Lineup slot: ${input.lineupSlot}
-- Energy arc: ${JSON.stringify(input.energyArc)}
-
-Gig intel:
-${JSON.stringify(intel, null, 2)}
-
-Library profile:
-${JSON.stringify(profile, null, 2)}`
-  );
-}
-
-// Agent 4: Selector
+// Call 2: Select and sequence tracks
 async function runSelector(
   input: SetlistInput,
   tracks: LibraryTrack[],
   blueprint: SetBlueprint,
   intel: GigIntelReport,
-  recentlyPlayed: string[]
+  recentlyPlayed: string[],
 ): Promise<SelectedTrack[]> {
   return callAgent<SelectedTrack[]>(
     SELECTOR_SYSTEM,
@@ -106,14 +81,15 @@ Recently played tracks (DO NOT repeat these):
 ${recentlyPlayed.length ? recentlyPlayed.map(t => `- ${t}`).join('\n') : 'None'}
 
 Available tracks (${tracks.length} total):
-${JSON.stringify(tracks, null, 2)}`
+${JSON.stringify(tracks, null, 2)}`,
+    4096,
   );
 }
 
-// Agent 5: Reviewer
+// Call 3: Review and polish
 async function runReviewer(
   input: SetlistInput,
-  selected: SelectedTrack[]
+  selected: SelectedTrack[],
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
   return callAgent(
     REVIEWER_SYSTEM,
@@ -121,7 +97,8 @@ async function runReviewer(
 Wordplay theme: ${input.wordplayTheme || 'None'}
 
 Proposed setlist (${selected.length} tracks):
-${JSON.stringify(selected, null, 2)}`
+${JSON.stringify(selected, null, 2)}`,
+    4096,
   );
 }
 
@@ -130,15 +107,13 @@ function generateSlug(name: string): string {
     '-' + Math.random().toString(36).slice(2, 7);
 }
 
-// Main pipeline
+// Main pipeline — 3 LLM calls (was 5)
 export async function runSetlistPipeline(
   input: SetlistInput,
   tracks: LibraryTrack[],
   recentlyPlayed: string[] = []
 ): Promise<GeneratedSetlist> {
-  const profile = await runAnalyst(tracks);
-  const intel = await runGigIntel(input, profile);
-  const blueprint = await runArchitect(input, profile, intel);
+  const { gigIntel: intel, blueprint } = await runPlanner(tracks, input);
   const selected = await runSelector(input, tracks, blueprint, intel, recentlyPlayed);
   const reviewed = await runReviewer(input, selected);
 

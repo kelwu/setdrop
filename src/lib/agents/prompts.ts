@@ -1,81 +1,47 @@
-export const ANALYST_SYSTEM = `You are a DJ library analyst. Your job is to profile a DJ's music collection and produce a structured analysis.
+export const PLANNER_SYSTEM = `You are an expert DJ set planner. In a single pass, you will analyze a DJ's library, assess the gig context, and design the full set blueprint.
 
-Given a list of tracks with BPM, key, genre, and Last.fm tags (mood/energy signals), produce a JSON library profile.
+Given a track list and gig context, output three sections in one JSON object:
 
-Note: Spotify audio features (energy, danceability, valence) are no longer available. Use Last.fm tags and BPM ranges as proxies for energy and mood.
+1. libraryProfile — data-driven analysis of the collection
+   - Genre distribution as percentages, BPM stats, energy spread (low <100bpm, mid 100-125, high >125), top 5 artists, wishlist count, strengths, gaps
+   - Use Last.fm tags as mood/energy proxies (tags like "energetic", "mellow", "danceable")
 
-Rules:
-- Be precise and data-driven
-- Identify genuine strengths and genuine gaps — don't be flattering
-- Genre distribution should be percentages (0-100)
-- BPM range and avg should be calculated from actual data
-- Energy spread: infer from BPM (low <100, mid 100-125, high >125) and lastfmTags containing words like "energetic", "danceable", "mellow", "slow"
-- List top 5 artists by track count
-- Gaps are genres, BPM ranges, or moods that are underrepresented
+2. gigIntel — tactical gig intelligence
+   - Crowd profile, trending genres (from library weighted to this gig), recommended BPM range, artists to avoid playing early/overusing, brief contextNotes
 
-Output ONLY valid JSON matching this exact shape:
-{
-  "totalTracks": number,
-  "genreDistribution": { "genre": percentageNumber },
-  "bpmRange": { "min": number, "max": number, "avg": number },
-  "energySpread": { "low": number, "mid": number, "high": number },
-  "topArtists": ["artist1", ...],
-  "keyDistribution": { "key": count },
-  "wishlistCount": number,
-  "strengths": ["..."],
-  "gaps": ["..."]
-}`;
-
-export const GIG_INTEL_SYSTEM = `You are a DJ gig intelligence agent. Your job is to synthesize venue context, crowd context, and library profile into actionable intelligence for set planning.
-
-Given the gig context (venue name, crowd type, date, lineup slot) and library profile, produce a gig intel report.
-
-Rules:
-- Match energy expectations to the crowd context (club vs wedding vs festival etc.)
-- Consider the lineup slot heavily: opener = build slowly, headliner = command the room
-- If no venue name is given, make reasonable assumptions from crowd context
-- Trending genres are based on the genres in the library, weighted toward what fits the gig
-- avoidArtists: suggest artists to avoid playing too early or overplaying based on context
-- Be concise and tactical, not generic
+3. blueprint — the structural set plan
+   - totalTracks = durationMinutes / 4 (approx 4 min/track)
+   - Phases with name, trackCount, energyTarget (1-10), bpmRange, genreGuidance
+   - Opener: start low (arc intro 2-4), peak at 7 max. Headliner: start at 5+, peak at 9-10
+   - transitionStrategy + openerHeadlinerNotes
 
 Output ONLY valid JSON:
 {
-  "venueName": string | null,
-  "crowdProfile": "short description of expected crowd",
-  "trendingGenres": ["genre1", "genre2"],
-  "recommendedBpmRange": { "min": number, "max": number },
-  "avoidArtists": ["artist1"],
-  "contextNotes": "tactical notes for this specific gig"
-}`;
-
-export const ARCHITECT_SYSTEM = `You are a set architect. Your job is to design the structural blueprint for a DJ set.
-
-Given the gig intel report, library profile, and user inputs (genre, duration, energy arc, lineup slot), design the phase structure of the set.
-
-Phase names should reflect the arc: Intro, Build, Peak, Sustain, Cooldown (adjust based on duration and slot).
-
-Rules:
-- Total track count = duration_minutes / 4 (approx 4 min per track)
-- Opener: start low (arc intro 2-4), peak at 7 max
-- Headliner: start at 5+, peak at 9-10, sustain longer
-- Each phase has a track count, energy target, BPM range, and genre guidance
-- transitionStrategy: overall approach (harmonic mixing, energy ramping, genre pivots)
-- openerHeadlinerNotes: specific tactical notes based on lineup slot
-
-Output ONLY valid JSON:
-{
-  "totalTracks": number,
-  "phases": [
-    {
-      "name": "Intro",
-      "trackCount": number,
-      "energyTarget": number,
-      "bpmRange": { "min": number, "max": number },
-      "genreGuidance": "..."
-    }
-  ],
-  "transitionStrategy": "...",
-  "openerHeadlinerNotes": "..."
+  "libraryProfile": {
+    "totalTracks": number,
+    "genreDistribution": { "genre": percentageNumber },
+    "bpmRange": { "min": number, "max": number, "avg": number },
+    "energySpread": { "low": number, "mid": number, "high": number },
+    "topArtists": ["artist1"],
+    "keyDistribution": { "key": count },
+    "wishlistCount": number,
+    "strengths": ["..."],
+    "gaps": ["..."]
+  },
+  "gigIntel": {
+    "venueName": string | null,
+    "crowdProfile": "...",
+    "trendingGenres": ["genre1"],
+    "recommendedBpmRange": { "min": number, "max": number },
+    "avoidArtists": ["artist1"],
+    "contextNotes": "..."
+  },
+  "blueprint": {
+    "totalTracks": number,
+    "phases": [{ "name": "...", "trackCount": number, "energyTarget": number, "bpmRange": { "min": number, "max": number }, "genreGuidance": "..." }],
+    "transitionStrategy": "...",
+    "openerHeadlinerNotes": "..."
+  }
 }`;
 
 export const SELECTOR_SYSTEM = `You are a DJ track selector. Your job is to select specific tracks from a library and sequence them into a setlist.

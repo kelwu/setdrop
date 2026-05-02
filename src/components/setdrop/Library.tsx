@@ -7,83 +7,6 @@ import { LibraryTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot } from './shared';
 
-// ─── CSV Parser ─────────────────────────────────────────────────────────────
-
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function parseSeratoCSV(text: string): LibraryTrack[] {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) throw new Error('CSV has no tracks');
-
-  const rawHeaders = parseCSVLine(lines[0]).map(h =>
-    h.toLowerCase().replace(/\s+/g, '_').replace(/^"|"$/g, '')
-  );
-
-  const idx = (keys: string[]) => {
-    for (const k of keys) {
-      const i = rawHeaders.indexOf(k);
-      if (i >= 0) return i;
-    }
-    return -1;
-  };
-
-  const colName     = idx(['name', 'title', 'song', 'track_title', 'track']);
-  const colArtist   = idx(['artist', 'artist_name']);
-  const colBpm      = idx(['bpm', 'tempo']);
-  const colKey      = idx(['key', 'musical_key']);
-  const colGenre    = idx(['genre', 'style']);
-  const colPlays    = idx(['play_count', 'plays', 'playcount']);
-  const colLocation = idx(['location', 'file', 'filepath', 'file_path', 'path']);
-
-  if (colName < 0 && colArtist < 0) {
-    throw new Error('Could not find track name or artist columns. Is this a Serato CSV export?');
-  }
-
-  const tracks: LibraryTrack[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const cols = parseCSVLine(lines[i]);
-    const get = (c: number) => c >= 0 ? (cols[c] ?? '').replace(/^"|"$/g, '').trim() : '';
-
-    const artist = get(colArtist);
-    const title  = get(colName);
-    if (!artist && !title) continue;
-
-    tracks.push({
-      id: `csv-${i}`,
-      artist,
-      title,
-      bpm:      parseFloat(get(colBpm)) || 0,
-      key:      get(colKey),
-      genre:    get(colGenre) || undefined,
-      filePath: get(colLocation) || undefined,
-      isWishlist: false,
-      lastfmTags: [],
-      seratoEnergy: undefined,
-      enrichmentSource: 'serato',
-    });
-  }
-
-  if (tracks.length === 0) throw new Error('No valid tracks found — check that the file is a Serato CSV export');
-  return tracks;
-}
 
 function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
   return {
@@ -135,18 +58,18 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
         borderBottom:`1px solid ${SD.border}`,
         transition:'background .12s', alignItems:'center',
       }}>
-      <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
+      <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
         {String(track.pos).padStart(2,'0')}
       </span>
       <div style={{ minWidth:0 }}>
-        <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600, color:SD.text,
+        <div style={{ fontFamily:SD.mono, fontSize:14, fontWeight:600, color:SD.text,
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{track.artist}</div>
-        <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
+        <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec,
           whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{track.title}</div>
         {hov && tags && tags.length > 0 && (
           <div style={{ display:'flex', gap:4, marginTop:4, flexWrap:'wrap' }}>
             {tags.slice(0, 5).map(tag => (
-              <span key={tag} style={{ fontFamily:SD.mono, fontSize:8, letterSpacing:.5,
+              <span key={tag} style={{ fontFamily:SD.mono, fontSize:10, letterSpacing:.5,
                 color:SD.textMuted, background:SD.surface2,
                 border:`1px solid ${SD.border}`, borderRadius:2,
                 padding:'1px 5px', textTransform:'lowercase' }}>{tag}</span>
@@ -154,11 +77,11 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
           </div>
         )}
       </div>
-      <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.accent }}>{track.bpm || '—'}</span>
-      <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{track.key}</span>
+      <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.accent }}>{track.bpm || '—'}</span>
+      <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>{track.key}</span>
       <div style={{ display:'flex', alignItems:'center', gap:6 }}>
         <EnergyDot energy={track.energy} size={7} />
-        <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>{track.energy}</span>
+        <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{track.energy}</span>
       </div>
       {tab === 'wishlist' ? (
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
@@ -168,18 +91,18 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
           ))}
         </div>
       ) : (
-        <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
+        <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
           {`Mar ${(idx % 28) + 1} 2026`}
         </span>
       )}
       {tab === 'wishlist' ? (
-        <span style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:.5, textTransform:'uppercase',
+        <span style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:.5, textTransform:'uppercase',
           padding:'3px 8px', borderRadius:2, background:statusColor.bg,
           border:`1px solid ${statusColor.border}`, color:statusColor.text, whiteSpace:'nowrap' }}>
           {statusColor.label}
         </span>
       ) : (
-        <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
+        <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
           {(idx * 7 + 3) % 40}
         </span>
       )}
@@ -201,13 +124,11 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
-type UploadMode = 'db' | 'csv' | 'rekordbox';
+type UploadMode = 'db' | 'rekordbox';
 
-const UPLOAD_MODES: { id: UploadMode; label: string }[] = [
-  { id: 'db',        label: 'Serato DB V2'   },
-  { id: 'csv',       label: 'Serato CSV'      },
-  { id: 'rekordbox', label: 'Rekordbox XML'   },
-];
+const SERATO_BLUE = '#1F6BFF';
+const SERATO_BLUE_DIM = 'rgba(31,107,255,0.10)';
+const SERATO_BLUE_BORDER = 'rgba(31,107,255,0.35)';
 
 function UploadZone({
   onFile, dragOver, setDragOver, parseError, uploadMode, setUploadMode,
@@ -228,46 +149,65 @@ function UploadZone({
     if (file) onFile(file);
   };
 
-  const accept = uploadMode === 'db' ? '*' : uploadMode === 'rekordbox' ? '.xml,application/xml,text/xml' : '.csv,text/csv';
-
-  const dropLabel = uploadMode === 'db' ? 'DROP DATABASE V2 HERE'
-    : uploadMode === 'rekordbox' ? 'DROP REKORDBOX XML HERE'
-    : 'DROP CSV HERE';
-
+  const accept = uploadMode === 'db' ? '*' : '.xml,application/xml,text/xml';
+  const dropLabel = uploadMode === 'db' ? 'DROP DATABASE V2 HERE' : 'DROP REKORDBOX XML HERE';
   const instructions = uploadMode === 'db' ? (
     <>
       Find the <span style={{ color:SD.textSec }}>_Serato_</span> folder inside your Music directory<br/>
       and drag the <span style={{ color:SD.accent }}>database V2</span> file here, or click to browse.
     </>
-  ) : uploadMode === 'rekordbox' ? (
+  ) : (
     <>
       In Rekordbox, go to <span style={{ color:SD.textSec }}>File → Export Collection in xml format</span><br/>
       then drag the <span style={{ color:SD.accent }}>rekordbox.xml</span> file here, or click to browse.
-    </>
-  ) : (
-    <>
-      In Serato, open the <span style={{ color:SD.textSec }}>History</span> panel,
-      right-click a session → <span style={{ color:SD.textSec }}>Export as .csv</span><br/>
-      Then drag the file here. Note: History only includes tracks you&apos;ve played.
     </>
   );
 
   return (
     <div style={{ marginBottom:28 }}>
-      {/* Mode tabs */}
-      <div style={{ display:'flex', marginBottom:12, borderBottom:`1px solid ${SD.border}` }}>
-        {UPLOAD_MODES.map(({ id, label }) => (
-          <button key={id} onClick={() => setUploadMode(id)} style={{
-            fontFamily:SD.mono, fontSize:10, letterSpacing:1.5, textTransform:'uppercase',
-            padding:'8px 20px', border:'none', cursor:'pointer',
-            background: uploadMode === id ? SD.surface2 : 'transparent',
-            color: uploadMode === id ? SD.text : SD.textMuted,
-            borderBottom: uploadMode === id ? `2px solid ${SD.accent}` : '2px solid transparent',
-            transition:'all .15s',
-          }}>
-            {label}
-          </button>
-        ))}
+      {/* Brand selector cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+        {/* Serato card */}
+        <button
+          onClick={() => setUploadMode('db')}
+          style={{
+            background: uploadMode === 'db' ? SERATO_BLUE_DIM : SD.surface2,
+            border: uploadMode === 'db' ? `2px solid ${SERATO_BLUE}` : `2px solid ${SERATO_BLUE_BORDER}`,
+            borderRadius:4, padding:'20px 16px', cursor:'pointer',
+            textAlign:'center', transition:'all .15s',
+          }}
+          onMouseEnter={e => { if (uploadMode !== 'db') e.currentTarget.style.borderColor = SERATO_BLUE; }}
+          onMouseLeave={e => { if (uploadMode !== 'db') e.currentTarget.style.borderColor = SERATO_BLUE_BORDER; }}
+        >
+          <div style={{
+            fontFamily:SD.display, fontSize:22, letterSpacing:3,
+            color: SERATO_BLUE, marginBottom:6,
+          }}>SERATO</div>
+          <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color: uploadMode === 'db' ? SERATO_BLUE : SD.textMuted }}>
+            DB V2
+          </div>
+        </button>
+
+        {/* Rekordbox card */}
+        <button
+          onClick={() => setUploadMode('rekordbox')}
+          style={{
+            background: uploadMode === 'rekordbox' ? 'rgba(255,255,255,0.05)' : SD.surface2,
+            border: uploadMode === 'rekordbox' ? `2px solid ${SD.text}` : `2px solid ${SD.borderMid}`,
+            borderRadius:4, padding:'20px 16px', cursor:'pointer',
+            textAlign:'center', transition:'all .15s',
+          }}
+          onMouseEnter={e => { if (uploadMode !== 'rekordbox') e.currentTarget.style.borderColor = SD.textSec; }}
+          onMouseLeave={e => { if (uploadMode !== 'rekordbox') e.currentTarget.style.borderColor = SD.borderMid; }}
+        >
+          <div style={{
+            fontFamily:SD.display, fontSize:22, letterSpacing:3,
+            color: uploadMode === 'rekordbox' ? SD.text : SD.textSec, marginBottom:6,
+          }}>REKORDBOX</div>
+          <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color: uploadMode === 'rekordbox' ? SD.textSec : SD.textMuted }}>
+            XML
+          </div>
+        </button>
       </div>
 
       <div
@@ -285,10 +225,10 @@ function UploadZone({
           color: dragOver ? SD.accent : SD.textMuted, marginBottom:12 }}>
           {dropLabel}
         </div>
-        <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:16, lineHeight:1.9 }}>
+        <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, marginBottom:16, lineHeight:1.9 }}>
           {instructions}
         </div>
-        <SDButton ghost style={{ fontSize:10, padding:'8px 20px' }}>Choose File</SDButton>
+        <SDButton ghost style={{ fontSize:12, padding:'8px 20px' }}>Choose File</SDButton>
         <input
           ref={fileRef}
           type="file"
@@ -300,7 +240,7 @@ function UploadZone({
       {parseError && (
         <div style={{ marginTop:12, padding:'12px 16px', background:'rgba(220,50,50,0.08)',
           border:'1px solid rgba(220,50,50,0.3)', borderRadius:3,
-          fontFamily:SD.mono, fontSize:11, color:'#E05555' }}>
+          fontFamily:SD.mono, fontSize:13, color:'#E05555' }}>
           {parseError}
         </div>
       )}
@@ -545,9 +485,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       reader.onload = async (e) => {
         try {
           const text = e.target?.result as string;
-          const tracks = uploadMode === 'rekordbox'
-            ? parseRekordboxXML(text)
-            : parseSeratoCSV(text);
+          const tracks = parseRekordboxXML(text);
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setParseError(null);
@@ -558,7 +496,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           triggerEnrichment();
         } catch (err) {
           setSaving(false);
-          setParseError(err instanceof Error ? err.message : `Failed to parse ${uploadMode === 'rekordbox' ? 'Rekordbox XML' : 'CSV'}`);
+          setParseError(err instanceof Error ? err.message : 'Failed to parse Rekordbox XML');
         }
       };
       reader.readAsText(file);
@@ -661,7 +599,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   function TabBtn({ id, label, count }: { id: string; label: string; count: number }) {
     return (
       <button onClick={() => setTab(id)} style={{
-        fontFamily:SD.mono, fontSize:11, letterSpacing:1.5, textTransform:'uppercase',
+        fontFamily:SD.mono, fontSize:13, letterSpacing:1.5, textTransform:'uppercase',
         padding:'10px 24px', border:'none', cursor:'pointer',
         background: tab === id ? SD.surface2 : 'transparent',
         color: tab === id ? SD.text : SD.textMuted,
@@ -669,7 +607,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
         transition:'all .15s',
       }}>
         {label}
-        <span style={{ marginLeft:8, fontFamily:SD.mono, fontSize:9,
+        <span style={{ marginLeft:8, fontFamily:SD.mono, fontSize:11,
           color: tab === id ? SD.accent : SD.textMuted }}>({count})</span>
       </button>
     );
@@ -689,7 +627,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
         <div style={{ marginBottom:28, display:'flex', alignItems:'flex-end',
           justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
           <div>
-            <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+            <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Music Library</div>
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:0, color:SD.text, lineHeight:1 }}>YOUR LIBRARY</h1>
@@ -697,7 +635,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             {uploadedTracks ? (
               <>
-                <span style={{ fontFamily:SD.mono, fontSize:10,
+                <span style={{ fontFamily:SD.mono, fontSize:12,
                   color: saving ? SD.accent : enriching ? SD.textSec : SD.green,
                   display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ width:6, height:6, borderRadius:'50%',
@@ -707,13 +645,13 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                   {saving ? 'Saving to cloud...' : enriching ? 'Fetching Last.fm tags...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
                 </span>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
-                  style={{ fontSize:10, padding:'7px 14px' }}>Replace Library</SDButton>
+                  style={{ fontSize:12, padding:'7px 14px' }}>Replace Library</SDButton>
                 <SDButton ghost danger onClick={clearLibrary}
-                  style={{ fontSize:10, padding:'7px 14px', color:SD.textMuted }}>Clear</SDButton>
+                  style={{ fontSize:12, padding:'7px 14px', color:SD.textMuted }}>Clear</SDButton>
               </>
             ) : (
               <SDButton ghost onClick={() => setShowUpload(!showUpload)}
-                style={{ fontSize:10, padding:'9px 18px' }}>
+                style={{ fontSize:12, padding:'9px 18px' }}>
                 + Upload Library
               </SDButton>
             )}
@@ -746,16 +684,16 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             <SDInput value={bpmMin} onChange={setBpmMin} placeholder="BPM min" style={{ width:80 }} />
-            <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>—</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>—</span>
             <SDInput value={bpmMax} onChange={setBpmMax} placeholder="BPM max" style={{ width:80 }} />
           </div>
           {(search || bpmMin || bpmMax) && (
             <SDButton ghost onClick={() => { setSearch(''); setBpmMin(''); setBpmMax(''); }}
-              style={{ fontSize:10, padding:'9px 14px' }}>Clear</SDButton>
+              style={{ fontSize:12, padding:'9px 14px' }}>Clear</SDButton>
           )}
         </div>
 
-        <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:12 }}>
+        <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
           {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
           {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Library</span>}
         </div>
@@ -765,7 +703,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ marginBottom: 16 }}>
             {!spotifyConnected ? (
               <a href="/api/spotify/auth" style={{ textDecoration: 'none' }}>
-                <SDButton ghost style={{ fontSize: 10, padding: '8px 16px' }}>
+                <SDButton ghost style={{ fontSize: 12, padding: '8px 16px' }}>
                   ♫ Connect Spotify
                 </SDButton>
               </a>
@@ -774,12 +712,12 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                 {!showSpotifyPanel ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <SDButton ghost onClick={() => { setShowSpotifyPanel(true); if (!spotifyPlaylists.length) loadSpotifyPlaylists(); }}
-                      style={{ fontSize: 10, padding: '8px 16px' }}>
+                      style={{ fontSize: 12, padding: '8px 16px' }}>
                       ♫ Import from Spotify
                     </SDButton>
-                    <span style={{ fontFamily: SD.mono, fontSize: 9, color: SD.green }}>● Connected</span>
+                    <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.green }}>● Connected</span>
                     <button onClick={handleSpotifyDisconnect}
-                      style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+                      style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted,
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       Disconnect
                     </button>
@@ -787,12 +725,12 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                 ) : (
                   <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
                     borderRadius: 4, padding: '20px 24px' }}>
-                    <div style={{ fontFamily: SD.mono, fontSize: 9, letterSpacing: 2,
+                    <div style={{ fontFamily: SD.mono, fontSize: 11, letterSpacing: 2,
                       color: SD.textMuted, textTransform: 'uppercase', marginBottom: 16 }}>
                       Import from Spotify
                     </div>
                     {spotifyPlaylists.length === 0 ? (
-                      <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+                      <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
                         Loading playlists...
                       </div>
                     ) : (
@@ -801,7 +739,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                           value={selectedPlaylist}
                           onChange={e => setSelectedPlaylist(e.target.value)}
                           style={{
-                            fontFamily: SD.mono, fontSize: 11, color: SD.text,
+                            fontFamily: SD.mono, fontSize: 13, color: SD.text,
                             background: SD.surface2, border: `1px solid ${SD.border}`,
                             borderRadius: 3, padding: '8px 12px', cursor: 'pointer', flex: 1, minWidth: 200,
                           }}>
@@ -811,15 +749,15 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                             </option>
                           ))}
                         </select>
-                        <SDButton onClick={handleSpotifyImport} style={{ fontSize: 11 }}>
+                        <SDButton onClick={handleSpotifyImport} style={{ fontSize: 13 }}>
                           {importing ? 'Importing...' : 'Import'}
                         </SDButton>
                         <SDButton ghost onClick={() => { setShowSpotifyPanel(false); setImportResult(null); }}
-                          style={{ fontSize: 11 }}>Cancel</SDButton>
+                          style={{ fontSize: 13 }}>Cancel</SDButton>
                       </div>
                     )}
                     {importResult && (
-                      <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 11,
+                      <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 13,
                         color: importResult.imported < 0 ? '#E05555' : SD.green }}>
                         {importResult.imported < 0
                           ? 'Import failed — check console'
@@ -838,11 +776,11 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ marginBottom:16 }}>
             {!showAddForm ? (
               <SDButton ghost onClick={() => setShowAddForm(true)}
-                style={{ fontSize:10, padding:'8px 16px' }}>+ Add Track to Wishlist</SDButton>
+                style={{ fontSize:12, padding:'8px 16px' }}>+ Add Track to Wishlist</SDButton>
             ) : (
               <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
                 borderRadius:4, padding:'20px 24px' }}>
-                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2,
                   color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>
                   Add Track to Wishlist
                 </div>
@@ -856,16 +794,16 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                   <SDInput value={addGenre} onChange={setAddGenre} placeholder="Genre (optional)" />
                 </div>
                 {addError && (
-                  <div style={{ fontFamily:SD.mono, fontSize:11, color:'#E05555', marginBottom:10 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:13, color:'#E05555', marginBottom:10 }}>
                     {addError}
                   </div>
                 )}
                 <div style={{ display:'flex', gap:10 }}>
-                  <SDButton onClick={handleAddWishlist} style={{ fontSize:11 }}>
+                  <SDButton onClick={handleAddWishlist} style={{ fontSize:13 }}>
                     {adding ? 'Adding...' : 'Add Track'}
                   </SDButton>
                   <SDButton ghost onClick={() => { setShowAddForm(false); setAddError(null); }}
-                    style={{ fontSize:11 }}>Cancel</SDButton>
+                    style={{ fontSize:13 }}>Cancel</SDButton>
                 </div>
               </div>
             )}
@@ -877,7 +815,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ textAlign:'center', padding:'80px 40px' }}>
             <div style={{ fontFamily:SD.display, fontSize:48, letterSpacing:3,
               color:SD.textMuted, marginBottom:12 }}>NOTHING HERE</div>
-            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
+            <div style={{ fontFamily:SD.mono, fontSize:14, color:SD.textMuted }}>
               {tab === 'wishlist'
                 ? 'Add tracks you want to buy — they\'ll be included when generating your next set.'
                 : 'Upload your Serato or Rekordbox library to see your tracks here.'}
@@ -890,7 +828,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
               <div style={{ display:'grid', gridTemplateColumns:cols, gap:12,
                 padding:'8px 16px', borderBottom:`1px solid ${SD.border}` }}>
                 {headers.map(h => (
-                  <span key={h} style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                  <span key={h} style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
                     letterSpacing:1.5, textTransform:'uppercase' }}>{h}</span>
                 ))}
               </div>
@@ -918,15 +856,15 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
               borderRadius:4, display:'flex', alignItems:'center',
               justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
               <div>
-                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:4 }}>
+                <div style={{ fontFamily:SD.mono, fontSize:14, color:SD.text, marginBottom:4 }}>
                   {filtered.filter(t => t.wishlist).length} tracks ready to download
                 </div>
-                <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>
                   Check store confidence before purchasing.
                 </div>
               </div>
               {openCount > 0 && (
-                <SDButton style={{ fontSize:11 }} onClick={() => {
+                <SDButton style={{ fontSize:13 }} onClick={() => {
                   withLinks.slice(0, 5).forEach(t => window.open(t.beatportSearchUrl, '_blank'));
                 }}>
                   Open {openCount} Beatport Link{openCount !== 1 ? 's' : ''}
