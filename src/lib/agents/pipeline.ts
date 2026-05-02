@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { jsonrepair } from 'jsonrepair';
 import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, GeneratedSetlist,
@@ -14,7 +15,7 @@ function client() {
 function parseJSON<T>(text: string): T {
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
   const raw = match ? match[1] : text;
-  return JSON.parse(raw.trim()) as T;
+  return JSON.parse(jsonrepair(raw.trim())) as T;
 }
 
 async function callAgent<T>(system: string, userMessage: string, maxTokens = 4096): Promise<T> {
@@ -26,6 +27,9 @@ async function callAgent<T>(system: string, userMessage: string, maxTokens = 409
     messages: [{ role: 'user', content: userMessage }],
   });
   const text = msg.content.find(b => b.type === 'text')?.text ?? '';
+  console.log('[pipeline] stop_reason:', msg.stop_reason, 'output_tokens:', msg.usage.output_tokens);
+  console.log('[pipeline] raw output (first 500 chars):', text.slice(0, 500));
+  console.log('[pipeline] raw output (last 500 chars):', text.slice(-500));
   return parseJSON<T>(text);
 }
 
