@@ -4,9 +4,10 @@ import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, GeneratedSetlist,
 } from './types';
-import { PLANNER_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
+import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 
 const MODEL = 'claude-sonnet-4-6';
+const MAX_SELECTOR_TRACKS = 200;
 
 function client() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -27,26 +28,94 @@ async function callAgent<T>(system: string, userMessage: string, maxTokens = 409
     messages: [{ role: 'user', content: userMessage }],
   });
   const text = msg.content.find(b => b.type === 'text')?.text ?? '';
-  console.log('[pipeline] stop_reason:', msg.stop_reason, 'output_tokens:', msg.usage.output_tokens);
-  console.log('[pipeline] raw output (first 500 chars):', text.slice(0, 500));
-  console.log('[pipeline] raw output (last 500 chars):', text.slice(-500));
   return parseJSON<T>(text);
 }
 
-// Call 1: Profile library + assess gig + design blueprint in one pass
-async function runPlanner(
+// Compute library profile from tracks in code — no LLM needed
+function computeLibraryProfile(tracks: LibraryTrack[]): LibraryProfile {
+  const genreCounts: Record<string, number> = {};
+  const artistCounts: Record<string, number> = {};
+  const keyCounts: Record<string, number> = {};
+  let low = 0, mid = 0, high = 0, wishlist = 0;
+  const bpms: number[] = [];
+
+  for (const t of tracks) {
+    const g = t.genre || 'Unknown';
+    genreCounts[g] = (genreCounts[g] ?? 0) + 1;
+    artistCounts[t.artist] = (artistCounts[t.artist] ?? 0) + 1;
+    if (t.key) keyCounts[t.key] = (keyCounts[t.key] ?? 0) + 1;
+    if (t.bpm > 0) bpms.push(t.bpm);
+    if (t.bpm > 0 && t.bpm < 100) low++;
+    else if (t.bpm >= 100 && t.bpm <= 125) mid++;
+    else if (t.bpm > 125) high++;
+    if (t.isWishlist) wishlist++;
+  }
+
+  const total = tracks.length || 1;
+  const genreDistribution = Object.fromEntries(
+    Object.entries(genreCounts).map(([g, c]) => [g, Math.round((c / total) * 100)])
+  );
+  const topArtists = Object.entries(artistCounts)
+    .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([a]) => a);
+  const bpmMin = bpms.length ? Math.min(...bpms) : 0;
+  const bpmMax = bpms.length ? Math.max(...bpms) : 0;
+  const bpmAvg = bpms.length ? Math.round(bpms.reduce((s, b) => s + b, 0) / bpms.length) : 0;
+
+  const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
+  const strengths = topGenres.slice(0, 3).map(([g, c]) => `Strong ${g} selection (${c} tracks)`);
+  const gaps = topGenres.length > 5
+    ? topGenres.slice(-3).map(([g]) => `Limited ${g} representation`)
+    : [];
+
+  return {
+    totalTracks: total, genreDistribution,
+    bpmRange: { min: bpmMin, max: bpmMax, avg: bpmAvg },
+    energySpread: { low, mid, high },
+    topArtists, keyDistribution: keyCounts,
+    wishlistCount: wishlist, strengths, gaps,
+  };
+}
+
+// Filter library down to the most relevant tracks for this gig
+function filterTracksForGig(
   tracks: LibraryTrack[],
+  blueprint: SetBlueprint,
   input: SetlistInput,
-): Promise<{ libraryProfile: LibraryProfile; gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
-  const trackData = tracks.map(t => ({
-    artist: t.artist, title: t.title, bpm: t.bpm, key: t.key,
-    genre: t.genre, lastfmTags: t.lastfmTags ?? [],
-    seratoEnergy: t.seratoEnergy, isWishlist: t.isWishlist,
-  }));
+): LibraryTrack[] {
+  const bpmMin = Math.min(...blueprint.phases.map(p => p.bpmRange.min)) - 15;
+  const bpmMax = Math.max(...blueprint.phases.map(p => p.bpmRange.max)) + 15;
+  const primaryGenre = input.primaryGenre.toLowerCase();
+  const secondaryGenre = input.secondaryGenre?.toLowerCase() ?? '';
+
+  const scored = tracks
+    .filter(t => !t.isWishlist)
+    .map(t => {
+      let score = 0;
+      const g = (t.genre ?? '').toLowerCase();
+      if (g.includes(primaryGenre) || primaryGenre.includes(g)) score += 3;
+      else if (secondaryGenre && (g.includes(secondaryGenre) || secondaryGenre.includes(g))) score += 2;
+      if (t.bpm >= bpmMin && t.bpm <= bpmMax) score += 2;
+      if (t.lastfmTags?.length) score += 1;
+      return { t, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_SELECTOR_TRACKS)
+    .map(({ t }) => t);
+
+  // Always include wishlist tracks
+  const wishlist = tracks.filter(t => t.isWishlist);
+  return [...scored, ...wishlist];
+}
+
+// Call 1: Gig intel + blueprint from pre-computed profile (small input)
+async function runGigBlueprint(
+  profile: LibraryProfile,
+  input: SetlistInput,
+): Promise<{ gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
   return callAgent(
-    PLANNER_SYSTEM,
-    `Library (${tracks.length} tracks):
-${JSON.stringify(trackData, null, 2)}
+    GIG_BLUEPRINT_SYSTEM,
+    `Library profile:
+${JSON.stringify(profile, null, 2)}
 
 Gig context:
 - Venue: ${input.venueContext || 'Not specified'}
@@ -61,7 +130,7 @@ Gig context:
   );
 }
 
-// Call 2: Select tracks and write polished notes in one pass
+// Call 2: Select and write polished notes from filtered tracks
 async function runSelectorReviewer(
   input: SetlistInput,
   tracks: LibraryTrack[],
@@ -86,7 +155,11 @@ Recently played tracks (DO NOT repeat these):
 ${recentlyPlayed.length ? recentlyPlayed.map(t => `- ${t}`).join('\n') : 'None'}
 
 Available tracks (${tracks.length} total):
-${JSON.stringify(tracks, null, 2)}`,
+${JSON.stringify(tracks.map(t => ({
+  id: t.id, artist: t.artist, title: t.title,
+  bpm: t.bpm, key: t.key, genre: t.genre,
+  lastfmTags: t.lastfmTags ?? [], isWishlist: t.isWishlist,
+})), null, 2)}`,
     8192,
   );
 }
@@ -96,14 +169,16 @@ function generateSlug(name: string): string {
     '-' + Math.random().toString(36).slice(2, 7);
 }
 
-// Main pipeline — 2 LLM calls (was 5)
+// Main pipeline — profile in code + 2 LLM calls
 export async function runSetlistPipeline(
   input: SetlistInput,
   tracks: LibraryTrack[],
   recentlyPlayed: string[] = []
 ): Promise<GeneratedSetlist> {
-  const { gigIntel: intel, blueprint } = await runPlanner(tracks, input);
-  const reviewed = await runSelectorReviewer(input, tracks, blueprint, intel, recentlyPlayed);
+  const profile = computeLibraryProfile(tracks);
+  const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input);
+  const filtered = filterTracksForGig(tracks, blueprint, input);
+  const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed);
 
   return {
     name: input.name || 'Untitled Set',

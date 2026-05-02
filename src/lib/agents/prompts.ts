@@ -1,37 +1,11 @@
-export const PLANNER_SYSTEM = `You are an expert DJ set planner. In a single pass, you will analyze a DJ's library, assess the gig context, and design the full set blueprint.
-
-Given a track list and gig context, output three sections in one JSON object:
-
-1. libraryProfile — data-driven analysis of the collection
-   - Genre distribution as percentages, BPM stats, energy spread (low <100bpm, mid 100-125, high >125), top 5 artists, wishlist count, strengths, gaps
-   - Use Last.fm tags as mood/energy proxies (tags like "energetic", "mellow", "danceable")
-
-2. gigIntel — tactical gig intelligence
-   - Crowd profile, trending genres (from library weighted to this gig), recommended BPM range, artists to avoid playing early/overusing, brief contextNotes
-
-3. blueprint — the structural set plan
-   - totalTracks = durationMinutes / 4 (approx 4 min/track)
-   - Phases with name, trackCount, energyTarget (1-10), bpmRange, genreGuidance
-   - Opener: start low (arc intro 2-4), peak at 7 max. Headliner: start at 5+, peak at 9-10
-   - transitionStrategy + openerHeadlinerNotes
+export const GIG_BLUEPRINT_SYSTEM = `You are a DJ set planner. Given a pre-computed library profile and gig context, produce gig intelligence and a set blueprint.
 
 Output ONLY valid JSON:
 {
-  "libraryProfile": {
-    "totalTracks": number,
-    "genreDistribution": { "genre": percentageNumber },
-    "bpmRange": { "min": number, "max": number, "avg": number },
-    "energySpread": { "low": number, "mid": number, "high": number },
-    "topArtists": ["artist1"],
-    "keyDistribution": { "key": count },
-    "wishlistCount": number,
-    "strengths": ["..."],
-    "gaps": ["..."]
-  },
   "gigIntel": {
     "venueName": string | null,
     "crowdProfile": "...",
-    "trendingGenres": ["genre1"],
+    "trendingGenres": ["genre1", "genre2"],
     "recommendedBpmRange": { "min": number, "max": number },
     "avoidArtists": ["artist1"],
     "contextNotes": "..."
@@ -42,7 +16,13 @@ Output ONLY valid JSON:
     "transitionStrategy": "...",
     "openerHeadlinerNotes": "..."
   }
-}`;
+}
+
+Rules:
+- totalTracks = durationMinutes / 4
+- Opener: start energy 2-4, peak at 7 max. Headliner: start 5+, peak 9-10
+- Match BPM range to crowd context and lineup slot
+- trendingGenres: weight toward genres in the library that fit this gig`;
 
 export const SELECTOR_REVIEWER_SYSTEM = `You are an expert DJ set builder. In one pass, select tracks from the library, sequence them, and write polished notes — no separate review step needed.
 
