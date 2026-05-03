@@ -125,9 +125,32 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* non-fatal — generation proceeds without do-not-repeat */ }
 
-    const setlist = await runSetlistPipeline(input, library, recentlyPlayed);
+    const encoder = new TextEncoder();
+    const stream = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = stream.writable.getWriter();
 
-    return NextResponse.json(setlist);
+    // Run pipeline async, stream keep-alive pings so Chrome doesn't suspend
+    (async () => {
+      const keepAlive = setInterval(async () => {
+        try { await writer.write(encoder.encode('\n')); } catch { /* ignore */ }
+      }, 3000);
+      try {
+        const setlist = await runSetlistPipeline(input, library, recentlyPlayed);
+        clearInterval(keepAlive);
+        await writer.write(encoder.encode(JSON.stringify(setlist)));
+      } catch (err) {
+        clearInterval(keepAlive);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        console.error('[generate-setlist] Error:', message);
+        await writer.write(encoder.encode(JSON.stringify({ error: message })));
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(stream.readable, {
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[generate-setlist] Error:', message);
