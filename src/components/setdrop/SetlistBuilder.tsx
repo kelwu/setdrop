@@ -111,13 +111,6 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
     try {
       const durationMinutes = parseInt(duration) || 60;
 
-      // Use uploaded library if available, otherwise API falls back to demo tracks
-      let uploadedTracks: unknown[] | undefined;
-      try {
-        const raw = localStorage.getItem('sd_library');
-        if (raw) uploadedTracks = JSON.parse(raw);
-      } catch { /* ignore */ }
-
       const res = await fetch('/api/generate-setlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,7 +134,6 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
             wordplayTheme: wordplay || undefined,
             venueContext: venueName || undefined,
           },
-          tracks: uploadedTracks,
         }),
       });
 
