@@ -44,12 +44,22 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
           if (lib) {
-            const { data: rows } = await supabase
-              .from('serato_tracks')
-              .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-              .eq('library_id', lib.id)
-              .order('artist');
-            if (rows?.length) {
+            // Fetch genre-matched tracks first (up to 400), then backfill with others (up to 100)
+            const genre = input.primaryGenre;
+            const [{ data: genreRows }, { data: otherRows }] = await Promise.all([
+              supabase.from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                .eq('library_id', lib.id)
+                .ilike('genre', `%${genre}%`)
+                .limit(400),
+              supabase.from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                .eq('library_id', lib.id)
+                .not('genre', 'ilike', `%${genre}%`)
+                .limit(100),
+            ]);
+            const rows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            if (rows.length) {
               library = rows.map(t => ({
                 id: t.id,
                 artist: t.artist ?? '',
@@ -125,32 +135,8 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* non-fatal — generation proceeds without do-not-repeat */ }
 
-    const encoder = new TextEncoder();
-    const stream = new TransformStream<Uint8Array, Uint8Array>();
-    const writer = stream.writable.getWriter();
-
-    // Run pipeline async, stream keep-alive pings so Chrome doesn't suspend
-    (async () => {
-      const keepAlive = setInterval(async () => {
-        try { await writer.write(encoder.encode('\n')); } catch { /* ignore */ }
-      }, 3000);
-      try {
-        const setlist = await runSetlistPipeline(input, library, recentlyPlayed);
-        clearInterval(keepAlive);
-        await writer.write(encoder.encode(JSON.stringify(setlist)));
-      } catch (err) {
-        clearInterval(keepAlive);
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[generate-setlist] Error:', message);
-        await writer.write(encoder.encode(JSON.stringify({ error: message })));
-      } finally {
-        await writer.close();
-      }
-    })();
-
-    return new Response(stream.readable, {
-      headers: { 'Content-Type': 'application/octet-stream' },
-    });
+    const setlist = await runSetlistPipeline(input, library, recentlyPlayed);
+    return NextResponse.json(setlist);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[generate-setlist] Error:', message);

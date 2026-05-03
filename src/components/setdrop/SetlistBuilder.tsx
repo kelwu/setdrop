@@ -137,24 +137,14 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
         }),
       });
 
+      clearInterval(iv);
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || `HTTP ${res.status}`);
       }
 
-      // Read streamed response (server sends keep-alive newlines, then JSON)
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-      }
-      clearInterval(iv);
-      const payload = JSON.parse(buffer.trim());
-      if (payload.error) throw new Error(payload.error);
-      const setlist = payload as GeneratedSetlist;
+      const setlist = await res.json() as GeneratedSetlist;
 
       // Persist to Supabase if authenticated
       let savedId: string | undefined;
