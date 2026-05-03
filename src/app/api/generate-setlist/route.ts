@@ -44,9 +44,16 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
           if (lib) {
-            // Fetch genre-matched tracks first (up to 400), then backfill with others (up to 100)
+            // Fetch genre-matched tracks (up to 400) + backfill others (up to 100) + seed tracks (always)
             const genre = input.primaryGenre;
-            const [{ data: genreRows }, { data: otherRows }] = await Promise.all([
+            const seedQueries = (input.seedTracks ?? []).map(seed =>
+              supabase.from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                .eq('library_id', lib.id)
+                .or(`title.ilike.%${seed}%,artist.ilike.%${seed}%`)
+                .limit(5)
+            );
+            const [{ data: genreRows }, { data: otherRows }, ...seedResults] = await Promise.all([
               supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
@@ -57,8 +64,14 @@ export async function POST(req: NextRequest) {
                 .eq('library_id', lib.id)
                 .not('genre', 'ilike', `%${genre}%`)
                 .limit(100),
+              ...seedQueries,
             ]);
-            const rows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            const seedRows = seedResults.flatMap(r => r.data ?? []);
+            const allRows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            // Ensure seed tracks are always included, deduped by id
+            const seen = new Set(allRows.map(r => r.id));
+            for (const r of seedRows) { if (!seen.has(r.id)) { allRows.push(r); seen.add(r.id); } }
+            const rows = allRows;
             if (rows.length) {
               library = rows.map(t => ({
                 id: t.id,

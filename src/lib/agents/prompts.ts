@@ -33,6 +33,7 @@ Selection rules:
 - Genre transition rules: Hip Hop ±5 BPM, House ±3 BPM, Afrobeats ±8 BPM, R&B ±10 BPM
 - Use lastfmTags for mood/energy signals (e.g. "energetic", "mellow", "danceable", "dark")
 - No same artist within 3 tracks; no two tracks with same BPM±2 AND same key back-to-back
+- MUST include every seed track listed in user preferences — place them at a fitting position in the set
 - Avoid every track on the "recently played" list unless no suitable alternative exists
 - Assign tracks to phases from the blueprint in order
 - whyThisTrack: 1-2 sentences on why this track AND why at this point in the set

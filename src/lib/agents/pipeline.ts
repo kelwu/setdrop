@@ -86,9 +86,13 @@ function filterTracksForGig(
   const bpmMax = Math.max(...blueprint.phases.map(p => p.bpmRange.max)) + 15;
   const primaryGenre = input.primaryGenre.toLowerCase();
   const secondaryGenre = input.secondaryGenre?.toLowerCase() ?? '';
+  const seeds = (input.seedTracks ?? []).map(s => s.toLowerCase());
+
+  const isSeed = (t: LibraryTrack) =>
+    seeds.some(s => t.title.toLowerCase().includes(s) || t.artist.toLowerCase().includes(s));
 
   const scored = tracks
-    .filter(t => !t.isWishlist)
+    .filter(t => !t.isWishlist && !isSeed(t))
     .map(t => {
       let score = 0;
       const g = (t.genre ?? '').toLowerCase();
@@ -102,9 +106,9 @@ function filterTracksForGig(
     .slice(0, MAX_SELECTOR_TRACKS)
     .map(({ t }) => t);
 
-  // Always include wishlist tracks
-  const wishlist = tracks.filter(t => t.isWishlist);
-  return [...scored, ...wishlist];
+  // Always include seed tracks and wishlist tracks
+  const pinned = tracks.filter(t => t.isWishlist || isSeed(t));
+  return [...pinned, ...scored];
 }
 
 // Call 1: Gig intel + blueprint from pre-computed profile (small input)
