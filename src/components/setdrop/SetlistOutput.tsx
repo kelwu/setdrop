@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack, LibraryTrack } from '@/lib/agents/types';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
+import { buildRekordboxXml, downloadRekordboxXml } from '@/lib/setdrop/rekordbox-export';
 import { createClient } from '@/lib/supabase/client';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
@@ -96,31 +97,34 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     }
   };
 
-  const handleExportCrate = () => {
-    if (!setlist) return;
-
-    let library: LibraryTrack[] = [];
+  const getLibrary = (): LibraryTrack[] => {
     try {
       const raw = localStorage.getItem('sd_library');
-      if (raw) library = JSON.parse(raw);
-    } catch { /* ignore */ }
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  };
 
-    if (!library.length) {
-      setCrateStatus('Upload your Serato library first so we can match file paths.');
-      return;
-    }
-
+  const handleExportCrate = () => {
+    if (!setlist) return;
+    const library = getLibrary();
+    if (!library.length) { setCrateStatus('Upload your Serato library first so we can match file paths.'); return; }
     const { paths, matched } = matchFilePaths(setlist.tracks, library);
-
-    if (!paths.length) {
-      setCrateStatus('No tracks matched your library. Re-upload your Serato CSV to include file paths.');
-      return;
-    }
-
+    if (!paths.length) { setCrateStatus('No tracks matched. Re-upload your Serato DB V2 file.'); return; }
     const data = buildCrate(paths);
     downloadCrate(data, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
     setTimeout(() => setCrateStatus(null), 8000);
+  };
+
+  const handleExportRekordbox = () => {
+    if (!setlist) return;
+    const library = getLibrary();
+    if (!library.length) { setCrateStatus('Upload your Rekordbox library first so we can match file paths.'); return; }
+    const { xml, matched } = buildRekordboxXml(setlist.name, setlist.tracks, library);
+    if (!matched) { setCrateStatus('No tracks matched. Re-upload your Rekordbox XML file.'); return; }
+    downloadRekordboxXml(xml, setlist.name);
+    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import Playlist and select the XML file.`);
+    setTimeout(() => setCrateStatus(null), 10000);
   };
 
   const displayTracks = setlist
@@ -188,6 +192,9 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
             </SDButton>
             <SDButton style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportCrate}>
               Export Serato Crate
+            </SDButton>
+            <SDButton ghost style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportRekordbox}>
+              Export Rekordbox XML
             </SDButton>
           </div>
         </div>
