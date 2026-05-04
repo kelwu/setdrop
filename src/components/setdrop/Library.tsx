@@ -251,49 +251,14 @@ function UploadZone({
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
 async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  // Find or create the library row
-  const { data: existing } = await supabase
-    .from('serato_libraries')
-    .select('id')
-    .eq('user_id', user.id)
-    .single();
-
-  let libraryId: string;
-  const now = new Date().toISOString();
-
-  if (existing) {
-    await supabase.from('serato_libraries')
-      .update({ total_tracks: tracks.length, last_synced: now })
-      .eq('id', existing.id);
-    await supabase.from('serato_tracks').delete().eq('library_id', existing.id);
-    libraryId = existing.id;
-  } else {
-    const { data } = await supabase.from('serato_libraries')
-      .insert({ user_id: user.id, total_tracks: tracks.length, last_synced: now, is_public: false })
-      .select('id').single();
-    if (!data) return;
-    libraryId = data.id;
-  }
-
-  // Batch insert tracks (500 at a time)
-  const BATCH = 500;
-  for (let i = 0; i < tracks.length; i += BATCH) {
-    const rows = tracks.slice(i, i + BATCH).map(t => ({
-      library_id: libraryId,
-      artist: t.artist || null,
-      title: t.title || null,
-      bpm: t.bpm || null,
-      key: t.key || null,
-      genre: t.genre || null,
-      file_path: t.filePath || null,
-      play_count: 0,
-      in_library: true,
-    }));
-    await supabase.from('serato_tracks').insert(rows);
+  const res = await fetch('/api/library/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tracks }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error ?? `Library save failed (${res.status})`);
   }
 }
 
