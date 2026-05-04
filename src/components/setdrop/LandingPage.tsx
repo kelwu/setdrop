@@ -6,7 +6,7 @@ import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
 export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
   const HOW_IT_WORKS = [
-    { n:'01', label:'Discover', desc:"Connect Spotify. Save tracks to your wishlist as you listen. SetDrop watches your saves in real time." },
+    { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
     { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
     { n:'03', label:'Bridge', desc:"SetDrop checks Beatport, Traxsource, and BPM Supreme to tell you where each track is purchasable." },
     { n:'04', label:'Sync', desc:"Download and import to Serato. SetDrop tracks what's in your library and what still needs to get there." },
@@ -15,7 +15,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
   ];
 
   const FEATURES = [
-    { title:'Spotify → Serato Pipeline', desc:"The only tool that closes the gap between discovering music on Spotify and playing it on Serato." },
+    { title:'Serato + Rekordbox Ready', desc:"Import from Serato DB or Rekordbox XML. Export your AI-built set back as a Serato crate or Rekordbox playlist — one click." },
     { title:'Do-Not-Repeat Logic', desc:"Tracks played in previous sets are flagged. AI never pulls from tracks you've already used this month." },
     { title:'Opener / Headliner Mode', desc:"Tell the AI your slot. Energy arc, track selection, and pacing adapt to your position on the lineup." },
     { title:'Genre-Specific Transition Rules', desc:"Afrobeats to House transitions follow different rules than Hip Hop to R&B. The AI knows." },
@@ -179,7 +179,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
             display:'flex', alignItems:'center', justifyContent:'center', gap:12,
           }}>
             <span style={{ width:32, height:1, background:SD.accent, display:'inline-block' }}/>
-            From Spotify to Serato
+            Your Library. Your Set.
             <span style={{ width:32, height:1, background:SD.accent, display:'inline-block' }}/>
           </div>
 
@@ -320,7 +320,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
           <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.textMuted,
             textTransform:'uppercase', marginBottom:32 }}>Works with your tools</div>
           <div style={{ display:'flex', justifyContent:'center', gap:64, flexWrap:'wrap', alignItems:'center' }}>
-            {['Serato DJ Pro','Beatport','Spotify','Traxsource','BPM Supreme'].map(p => (
+            {['Serato DJ Pro','Rekordbox','Beatport','Traxsource','BPM Supreme'].map(p => (
               <div key={p} style={{ fontFamily:SD.display, fontSize:18, letterSpacing:2,
                 color:SD.textMuted }}>{p.toUpperCase()}</div>
             ))}
@@ -342,7 +342,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
           </h2>
           <p style={{ fontFamily:SD.mono, fontSize:14, color:SD.textSec,
             margin:'0 auto 48px', maxWidth:480, lineHeight:1.8 }}>
-            Connect your Spotify and start planning your next set. Free to start.
+            Upload your library and start planning your next set. Free to start.
           </p>
           <SDButton onClick={() => setPage('builder')} style={{ fontSize:14, padding:'16px 48px' }}>
             Get Started — It&apos;s Free
