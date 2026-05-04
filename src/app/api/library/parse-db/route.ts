@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await (file as File).arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const tracks = parseSeratoDatabase(buffer);
+    const { tracks, firstTrackTags, withFilePaths } = parseSeratoDatabase(buffer);
 
-    return NextResponse.json({ tracks });
+    return NextResponse.json({ tracks, firstTrackTags, withFilePaths });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[parse-db] Error:', message);

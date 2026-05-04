@@ -11,6 +11,10 @@ function decodeUtf16BE(buf: Buffer): string {
   return swapped.toString('utf16le');
 }
 
+function decodeUtf8(buf: Buffer): string {
+  return buf.toString('utf8');
+}
+
 interface SubTags {
   filePath?: string;
   title?: string;
@@ -38,23 +42,43 @@ function walkTags(buf: Buffer): Map<string, Buffer[]> {
 
 function parseOtrk(payload: Buffer): SubTags {
   const tags = walkTags(payload);
-  const str = (name: string) => {
+
+  const str16 = (name: string) => {
     const bufs = tags.get(name);
-    return bufs?.length ? decodeUtf16BE(bufs[0]) : undefined;
+    if (!bufs?.length) return undefined;
+    const decoded = decodeUtf16BE(bufs[0]);
+    return decoded || undefined;
   };
-  // prefer tpth (newer) over ptrk for file path
-  const filePath = str('tpth') ?? str('ptrk');
+
+  const str8 = (name: string) => {
+    const bufs = tags.get(name);
+    if (!bufs?.length) return undefined;
+    const decoded = decodeUtf8(bufs[0]);
+    return decoded || undefined;
+  };
+
+  // Try both UTF-16 BE and UTF-8 for path tags across Serato versions
+  const filePath =
+    str16('tpth') ?? str16('ptrk') ?? str16('pfil') ??
+    str8('tpth')  ?? str8('ptrk')  ?? str8('pfil');
+
   return {
     filePath,
-    title:  str('tsng'),
-    artist: str('tart'),
-    bpmStr: str('tbpm'),
-    key:    str('tkey'),
-    genre:  str('tgen'),
+    title:  str16('tsng') ?? str8('tsng'),
+    artist: str16('tart') ?? str8('tart'),
+    bpmStr: str16('tbpm') ?? str8('tbpm'),
+    key:    str16('tkey') ?? str8('tkey'),
+    genre:  str16('tgen') ?? str8('tgen'),
   };
 }
 
-export function parseSeratoDatabase(buffer: Buffer): LibraryTrack[] {
+export interface ParseSeratoDatabaseResult {
+  tracks: LibraryTrack[];
+  firstTrackTags: string[];  // tag names in first otrk — for diagnosing missing paths
+  withFilePaths: number;
+}
+
+export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
   let buf = buffer;
 
   // Strip leading BOM if present (UTF-8: EF BB BF, UTF-16 LE: FF FE)
@@ -66,6 +90,10 @@ export function parseSeratoDatabase(buffer: Buffer): LibraryTrack[] {
 
   const topTags = walkTags(buf);
   const otrkList = topTags.get('otrk') ?? [];
+
+  const firstTrackTags = otrkList.length > 0
+    ? Array.from(walkTags(otrkList[0]).keys())
+    : [];
 
   const tracks: LibraryTrack[] = [];
   for (let i = 0; i < otrkList.length; i++) {
@@ -89,5 +117,8 @@ export function parseSeratoDatabase(buffer: Buffer): LibraryTrack[] {
     throw new Error('No tracks found — is this a Serato database V2 file?');
   }
 
-  return tracks;
+  const withFilePaths = tracks.filter(t => t.filePath).length;
+  console.log(`[parse-db] ${tracks.length} tracks, ${withFilePaths} with file paths, first track tags: ${firstTrackTags.join(', ')}`);
+
+  return { tracks, firstTrackTags, withFilePaths };
 }

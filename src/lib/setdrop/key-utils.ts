@@ -40,8 +40,8 @@ export function toCamelot(raw: string): string {
     .replace(/\s+/g, '')
     .replace(/major/g, 'maj')
     .replace(/minor/g, 'min')
-    // "Am" / "F#m" short minor form (trailing 'm' not preceded by 'a')
-    .replace(/(?<![a-z])m$/, 'min')
+    // "Am" / "Em" / "Ebm" short minor form — key root + optional flat/sharp + trailing 'm'
+    .replace(/([a-g][b#]?)m$/, '$1min')
     // "A" alone with no suffix → assume major (rare but safe fallback)
     .replace(/^([a-g][b#]?)$/, '$1maj');
 

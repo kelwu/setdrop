@@ -449,9 +449,13 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       form.append('file', file);
       fetch('/api/library/parse-db', { method: 'POST', body: form })
         .then(res => res.json())
-        .then(async (data: { tracks?: LibraryTrack[]; error?: string }) => {
+        .then(async (data: { tracks?: LibraryTrack[]; error?: string; firstTrackTags?: string[]; withFilePaths?: number }) => {
           if (data.error) throw new Error(data.error);
           const tracks = data.tracks!;
+          console.log('[parse-db] tags in first track:', data.firstTrackTags, '| tracks with file paths:', data.withFilePaths);
+          if (!data.withFilePaths) {
+            console.warn('[parse-db] No file paths found. Tag names present:', data.firstTrackTags?.join(', ') ?? 'none');
+          }
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setParseError(null);

@@ -139,16 +139,27 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
         if (user) {
           const { data: lib } = await supabase.from('serato_libraries').select('id').eq('user_id', user.id).single();
           if (lib) {
-            const { data: rows } = await supabase
-              .from('serato_tracks')
-              .select('id, artist, title, bpm, key, genre, file_path')
-              .eq('library_id', lib.id);
-            if (rows?.length) {
-              library = rows.map(t => ({
+            const PAGE = 1000;
+            let offset = 0;
+            const allRows: LibraryTrack[] = [];
+            while (true) {
+              const { data: page } = await supabase
+                .from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path')
+                .eq('library_id', lib.id)
+                .order('artist')
+                .range(offset, offset + PAGE - 1);
+              if (!page?.length) break;
+              allRows.push(...page.map(t => ({
                 id: t.id, artist: t.artist ?? '', title: t.title ?? '',
                 bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
                 filePath: t.file_path ?? undefined, isWishlist: false,
-              }));
+              })));
+              if (page.length < PAGE) break;
+              offset += PAGE;
+            }
+            if (allRows.length) {
+              library = allRows;
               localStorage.setItem('sd_library', JSON.stringify(library));
             }
           }
@@ -159,7 +170,15 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     if (!library.length) { setCrateStatus('Upload your Serato library first so we can match file paths.'); return; }
     const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
     const { paths, matched } = matchFilePaths(tracks, library);
-    if (!paths.length) { setCrateStatus('No tracks matched. Re-upload your Serato DB V2 file.'); return; }
+    if (!paths.length) {
+      const anyFound = tracks.some(t => library.find(l =>
+        l.artist.toLowerCase() === t.artist.toLowerCase() && l.title.toLowerCase() === t.title.toLowerCase()
+      ));
+      setCrateStatus(anyFound
+        ? 'Tracks found but no file paths — re-upload your Serato DB V2 file to restore export.'
+        : 'No tracks matched. Re-upload your Serato DB V2 file.');
+      return;
+    }
     const data = buildCrate(paths);
     downloadCrate(data, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
@@ -178,16 +197,27 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
         if (user) {
           const { data: lib } = await supabase.from('serato_libraries').select('id').eq('user_id', user.id).single();
           if (lib) {
-            const { data: rows } = await supabase
-              .from('serato_tracks')
-              .select('id, artist, title, bpm, key, genre, file_path')
-              .eq('library_id', lib.id);
-            if (rows?.length) {
-              library = rows.map(t => ({
+            const PAGE = 1000;
+            let offset = 0;
+            const allRows: LibraryTrack[] = [];
+            while (true) {
+              const { data: page } = await supabase
+                .from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path')
+                .eq('library_id', lib.id)
+                .order('artist')
+                .range(offset, offset + PAGE - 1);
+              if (!page?.length) break;
+              allRows.push(...page.map(t => ({
                 id: t.id, artist: t.artist ?? '', title: t.title ?? '',
                 bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
                 filePath: t.file_path ?? undefined, isWishlist: false,
-              }));
+              })));
+              if (page.length < PAGE) break;
+              offset += PAGE;
+            }
+            if (allRows.length) {
+              library = allRows;
               localStorage.setItem('sd_library', JSON.stringify(library));
             }
           }
