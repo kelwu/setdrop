@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { SD, ConfidenceStatus, SampleTrack } from '@/lib/setdrop/constants';
+import { SD, ConfidenceStatus, SampleTrack, TrackStores } from '@/lib/setdrop/constants';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
 interface NavProps { page: string; setPage: (p: string) => void; user?: User | null; }
@@ -193,14 +193,32 @@ export function SDButton({ children, onClick, small, ghost, disabled, full, styl
 }
 
 // ─── ConfidenceBadge ───────────────────────────────────────────────────────
-export function ConfidenceBadge({ status, label }: { status: ConfidenceStatus; label: string }) {
+export function ConfidenceBadge({ status, label, href }: { status: ConfidenceStatus; label: string; href?: string }) {
   const c = { green:SD.green, yellow:SD.yellow, red:SD.red }[status];
-  return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:4,
-      fontFamily:SD.mono, fontSize:10, color:SD.textSec, letterSpacing:.3 }}>
+  const inner = (
+    <>
       <span style={{ width:6, height:6, borderRadius:'50%', background:c, display:'inline-block',
         boxShadow:`0 0 5px ${c}66` }} />
       {label}
+    </>
+  );
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer"
+        onClick={e => e.stopPropagation()}
+        style={{ display:'inline-flex', alignItems:'center', gap:4,
+          fontFamily:SD.mono, fontSize:10, color:SD.textSec, letterSpacing:.3,
+          textDecoration:'none', cursor:'pointer' }}
+        onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
+        onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4,
+      fontFamily:SD.mono, fontSize:10, color:SD.textSec, letterSpacing:.3 }}>
+      {inner}
     </span>
   );
 }
@@ -256,7 +274,9 @@ export function TrackRow({ track }: { track: SampleTrack }) {
           {hov && !exp && (
             <div style={{ display:'flex', gap:8 }}>
               {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
-                <ConfidenceBadge key={s} status={v} label={s==='bpmSupreme'?'BPM':s[0].toUpperCase()+s.slice(1)} />
+                <ConfidenceBadge key={s} status={v}
+                  label={s==='bpmSupreme'?'BPM':s[0].toUpperCase()+s.slice(1)}
+                  href={track.storeUrls?.[s as keyof TrackStores]} />
               ))}
             </div>
           )}
@@ -282,7 +302,8 @@ export function TrackRow({ track }: { track: SampleTrack }) {
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginTop:8 }}>
             {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
               <ConfidenceBadge key={s} status={v}
-                label={s==='bpmSupreme'?'BPM Supreme':s[0].toUpperCase()+s.slice(1)} />
+                label={s==='bpmSupreme'?'BPM Supreme':s[0].toUpperCase()+s.slice(1)}
+                href={track.storeUrls?.[s as keyof TrackStores]} />
             ))}
           </div>
         </div>

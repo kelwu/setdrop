@@ -35,6 +35,15 @@ function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { path
   return { paths, matched: paths.length };
 }
 
+function storeSearchUrls(artist: string, title: string, t: SetlistTrack) {
+  const q = encodeURIComponent(`${artist} ${title}`);
+  return {
+    beatport: `https://www.beatport.com/search/tracks?q=${q}`,
+    bpmSupreme: t.bpmSupremeSearchUrl ?? `https://www.bpmsupreme.com/search?q=${q}`,
+    traxsource: t.traxsourceSearchUrl ?? `https://www.traxsource.com/search?term=${q}`,
+  };
+}
+
 function toDisplayTrack(t: SetlistTrack, idx: number) {
   return {
     pos: t.position || idx + 1,
@@ -53,6 +62,7 @@ function toDisplayTrack(t: SetlistTrack, idx: number) {
       traxsource: 'yellow' as const,
       spotify: 'green' as const,
     },
+    storeUrls: storeSearchUrls(t.artist, t.title, t),
   };
 }
 
@@ -61,6 +71,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
   const [showRegen, setShowRegen] = useState(false);
   const [regenNote, setRegenNote] = useState('');
   const [crateStatus, setCrateStatus] = useState<string | null>(null);
+  const [libraryOnly, setLibraryOnly] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [making, setMaking] = useState(false);
   const [showGigForm, setShowGigForm] = useState(false);
@@ -120,11 +131,12 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     if (!setlist) return;
     const library = getLibrary();
     if (!library.length) { setCrateStatus('Upload your Serato library first so we can match file paths.'); return; }
-    const { paths, matched } = matchFilePaths(setlist.tracks, library);
+    const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
+    const { paths, matched } = matchFilePaths(tracks, library);
     if (!paths.length) { setCrateStatus('No tracks matched. Re-upload your Serato DB V2 file.'); return; }
     const data = buildCrate(paths);
     downloadCrate(data, setlist.name);
-    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
+    setCrateStatus(`Downloaded ${matched}/${tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
     setTimeout(() => setCrateStatus(null), 8000);
   };
 
@@ -158,7 +170,8 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     }
 
     if (!library.length) { setCrateStatus('Upload your Rekordbox library first so we can match file paths.'); return; }
-    const { xml, matched } = buildRekordboxXml(setlist.name, setlist.tracks, library);
+    const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
+    const { xml, matched } = buildRekordboxXml(setlist.name, tracks, library);
     if (!matched) { setCrateStatus('No tracks matched. Re-upload your Rekordbox XML file in the Library tab.'); return; }
     downloadRekordboxXml(xml, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import Playlist and select the XML file.`);
@@ -236,6 +249,33 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
             </SDButton>
           </div>
         </div>
+
+        {/* Library-only export toggle */}
+        {setlist && setlist.tracks.some(t => t.isWishlistTrack) && (
+          <div style={{ marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
+            <button
+              onClick={() => setLibraryOnly(v => !v)}
+              style={{
+                width:36, height:20, borderRadius:10, border:'none', cursor:'pointer', padding:2,
+                background: libraryOnly ? SD.accent : SD.surface2,
+                transition:'background .15s', position:'relative', flexShrink:0,
+              }}>
+              <span style={{
+                display:'block', width:16, height:16, borderRadius:'50%',
+                background: libraryOnly ? '#000' : SD.textMuted,
+                transform: libraryOnly ? 'translateX(16px)' : 'translateX(0)',
+                transition:'transform .15s',
+              }}/>
+            </button>
+            <span style={{ fontFamily:SD.mono, fontSize:11, color: libraryOnly ? SD.text : SD.textSec }}>
+              Export library tracks only
+            </span>
+            <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
+              ({setlist.tracks.filter(t => !t.isWishlistTrack).length} tracks — hides{' '}
+              {setlist.tracks.filter(t => t.isWishlistTrack).length} wishlist tracks not yet purchased)
+            </span>
+          </div>
+        )}
 
         {crateStatus && (
           <div style={{

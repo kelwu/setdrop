@@ -47,6 +47,7 @@ export interface SampleTrack {
   why: string;
   transition: string;
   stores: TrackStores;
+  storeUrls?: Partial<Record<keyof TrackStores, string>>;
 }
 
 export const SAMPLE_TRACKS: SampleTrack[] = [
