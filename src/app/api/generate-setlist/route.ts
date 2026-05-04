@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
               supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
-                .or(`genre.is.null,genre.not.ilike.%${genre}%`)
+                .or(`genre.is.null,not.genre.ilike.%${genre}%`)
                 .limit(100),
               ...seedQueries,
             ]);
