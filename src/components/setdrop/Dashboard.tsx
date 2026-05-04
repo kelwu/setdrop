@@ -199,7 +199,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
-                { n:1, done: libraryStats !== null, label:'Upload your Serato library', sub:'Drag in your database V2 file or a history CSV export', page:'library', cta:'Upload Library' },
+                { n:1, done: libraryStats !== null, label:'Upload your library', sub:'Import your Serato DB, Rekordbox XML, or add tracks manually to your wishlist', page:'library', cta:'Upload Library' },
                 { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd — it handles the rest', page:'builder', cta:'Build Set' },
               ].map(step => (
                 <div key={step.n} style={{ display:'flex', alignItems:'center', gap:16,
