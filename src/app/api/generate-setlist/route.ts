@@ -44,31 +44,38 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
           if (lib) {
-            // Fetch genre-matched tracks (up to 400) + backfill others (up to 100) + seed tracks (always)
             const genre = input.primaryGenre;
-            const seedQueries = (input.seedTracks ?? []).map(seed =>
-              supabase.from('serato_tracks')
+            // Seed queries: sanitize seed strings to avoid commas/special chars breaking PostgREST .or()
+            const sanitizeSeed = (s: string) => s.replace(/[,()[\]—–]/g, ' ').replace(/\s+/g, ' ').trim();
+            const seedQueries = (input.seedTracks ?? []).map(seed => {
+              const safe = sanitizeSeed(seed);
+              return supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
-                .or(`title.ilike.%${seed}%,artist.ilike.%${seed}%`)
-                .limit(5)
-            );
-            const [{ data: genreRows }, { data: otherRows }, ...seedResults] = await Promise.all([
+                .or(`title.ilike.%${safe}%,artist.ilike.%${safe}%`)
+                .limit(5);
+            });
+            // Three queries: genre-matched + null-genre + non-matching genre (split to avoid broken OR syntax)
+            const [{ data: genreRows }, { data: nullGenreRows }, { data: otherRows }, ...seedResults] = await Promise.all([
               supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
                 .ilike('genre', `%${genre}%`)
                 .limit(400),
-              // Include tracks with null genre — NOT ILIKE excludes NULLs in Postgres
               supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
-                .or(`genre.is.null,not.genre.ilike.%${genre}%`)
+                .is('genre', null)
+                .limit(100),
+              supabase.from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                .eq('library_id', lib.id)
+                .not('genre', 'ilike', `%${genre}%`)
                 .limit(100),
               ...seedQueries,
             ]);
             const seedRows = seedResults.flatMap(r => r.data ?? []);
-            let allRows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            let allRows = [...(genreRows ?? []), ...(nullGenreRows ?? []), ...(otherRows ?? [])];
             // If both genre queries returned nothing (e.g. library has no genre metadata),
             // fall back to fetching all tracks so the user's library is actually used
             if (!allRows.length) {
