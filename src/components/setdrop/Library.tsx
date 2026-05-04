@@ -378,6 +378,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [enriching, setEnriching] = useState(false);
+  const [enrichingBpmKey, setEnrichingBpmKey] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<{ id: string; name: string; trackCount: number }[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState('');
@@ -455,6 +456,17 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
     fetch('/api/library/enrich-lastfm', { method: 'POST' })
       .then(() => setEnriching(false))
       .catch(() => setEnriching(false));
+  };
+
+  const triggerBpmKeyEnrichment = async () => {
+    setEnrichingBpmKey(true);
+    try {
+      await fetch('/api/library/enrich-bpm-key', { method: 'POST' });
+      const tracks = await loadLibraryFromSupabase();
+      if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
+    } catch { /* non-fatal */ } finally {
+      setEnrichingBpmKey(false);
+    }
   };
 
   const handleFile = (file: File) => {
@@ -551,6 +563,10 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       const tracks = await loadLibraryFromSupabase();
       if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
       fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
+      fetch('/api/library/enrich-bpm-key', { method: 'POST' }).then(async () => {
+        const updated = await loadLibraryFromSupabase();
+        if (updated) { setUploadedTracks(updated); localStorage.setItem('sd_library', JSON.stringify(updated)); }
+      }).catch(() => {});
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Failed to add track');
     } finally {
@@ -850,6 +866,7 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
         {tab === 'wishlist' && filtered.length > 0 && (() => {
           const withLinks = (uploadedTracks ?? []).filter(t => t.isWishlist && t.beatportSearchUrl);
           const openCount = Math.min(withLinks.length, 5);
+          const missingBpmKey = (uploadedTracks ?? []).filter(t => t.isWishlist && (!t.bpm || t.key === '—'));
           return (
             <div style={{ marginTop:24, padding:'20px 24px',
               background:SD.accentDim, border:`1px solid ${SD.accent}33`,
@@ -863,13 +880,22 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
                   Check store confidence before purchasing.
                 </div>
               </div>
-              {openCount > 0 && (
-                <SDButton style={{ fontSize:13 }} onClick={() => {
-                  withLinks.slice(0, 5).forEach(t => window.open(t.beatportSearchUrl, '_blank'));
-                }}>
-                  Open {openCount} Beatport Link{openCount !== 1 ? 's' : ''}
-                </SDButton>
-              )}
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                {missingBpmKey.length > 0 && (
+                  <SDButton ghost style={{ fontSize:13 }}
+                    onClick={triggerBpmKeyEnrichment}
+                    disabled={enrichingBpmKey}>
+                    {enrichingBpmKey ? 'Looking up BPM & Key...' : `Enrich ${missingBpmKey.length} Track${missingBpmKey.length !== 1 ? 's' : ''}`}
+                  </SDButton>
+                )}
+                {openCount > 0 && (
+                  <SDButton style={{ fontSize:13 }} onClick={() => {
+                    withLinks.slice(0, 5).forEach(t => window.open(t.beatportSearchUrl, '_blank'));
+                  }}>
+                    Open {openCount} Beatport Link{openCount !== 1 ? 's' : ''}
+                  </SDButton>
+                )}
+              </div>
             </div>
           );
         })()}
