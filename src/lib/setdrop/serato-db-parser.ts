@@ -1,4 +1,5 @@
 import { LibraryTrack } from '@/lib/agents/types';
+import { toCamelot } from './key-utils';
 
 function decodeUtf16BE(buf: Buffer): string {
   const len = buf.length & ~1; // round down to even
@@ -75,7 +76,7 @@ export function parseSeratoDatabase(buffer: Buffer): LibraryTrack[] {
       artist: artist ?? '',
       title:  title  ?? '',
       bpm:    parseFloat(bpmStr ?? '0') || 0,
-      key:    key    ?? '',
+      key:    toCamelot(key ?? ''),
       genre:  genre  ?? undefined,
       filePath: filePath ?? undefined,
       isWishlist: false,

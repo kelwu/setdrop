@@ -1,4 +1,5 @@
 import { LibraryTrack } from '@/lib/agents/types';
+import { toCamelot } from './key-utils';
 
 export function parseRekordboxXML(text: string): LibraryTrack[] {
   const parser = new DOMParser();
@@ -20,7 +21,7 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
     if (!artist && !title) return;
 
     const bpmRaw = el.getAttribute('AverageBpm') || el.getAttribute('Bpm') || '0';
-    const key = el.getAttribute('Tonality') || '';
+    const key = toCamelot(el.getAttribute('Tonality') || '');
     const genre = el.getAttribute('Genre') || '';
     const location = el.getAttribute('Location') || '';
 
