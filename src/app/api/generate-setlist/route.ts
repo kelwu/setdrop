@@ -59,15 +59,25 @@ export async function POST(req: NextRequest) {
                 .eq('library_id', lib.id)
                 .ilike('genre', `%${genre}%`)
                 .limit(400),
+              // Include tracks with null genre — NOT ILIKE excludes NULLs in Postgres
               supabase.from('serato_tracks')
                 .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
                 .eq('library_id', lib.id)
-                .not('genre', 'ilike', `%${genre}%`)
+                .or(`genre.is.null,genre.not.ilike.%${genre}%`)
                 .limit(100),
               ...seedQueries,
             ]);
             const seedRows = seedResults.flatMap(r => r.data ?? []);
-            const allRows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            let allRows = [...(genreRows ?? []), ...(otherRows ?? [])];
+            // If both genre queries returned nothing (e.g. library has no genre metadata),
+            // fall back to fetching all tracks so the user's library is actually used
+            if (!allRows.length) {
+              const { data: fallbackRows } = await supabase.from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                .eq('library_id', lib.id)
+                .limit(500);
+              allRows = fallbackRows ?? [];
+            }
             // Ensure seed tracks are always included, deduped by id
             const seen = new Set(allRows.map(r => r.id));
             for (const r of seedRows) { if (!seen.has(r.id)) { allRows.push(r); seen.add(r.id); } }

@@ -127,9 +127,35 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     } catch { return []; }
   };
 
-  const handleExportCrate = () => {
+  const handleExportCrate = async () => {
     if (!setlist) return;
-    const library = getLibrary();
+    let library = getLibrary();
+
+    // If localStorage is empty or stale (no file paths), fetch fresh from Supabase
+    if (!library.length || !library.some(t => t.filePath)) {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: lib } = await supabase.from('serato_libraries').select('id').eq('user_id', user.id).single();
+          if (lib) {
+            const { data: rows } = await supabase
+              .from('serato_tracks')
+              .select('id, artist, title, bpm, key, genre, file_path')
+              .eq('library_id', lib.id);
+            if (rows?.length) {
+              library = rows.map(t => ({
+                id: t.id, artist: t.artist ?? '', title: t.title ?? '',
+                bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                filePath: t.file_path ?? undefined, isWishlist: false,
+              }));
+              localStorage.setItem('sd_library', JSON.stringify(library));
+            }
+          }
+        }
+      } catch { /* fall through with what we have */ }
+    }
+
     if (!library.length) { setCrateStatus('Upload your Serato library first so we can match file paths.'); return; }
     const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
     const { paths, matched } = matchFilePaths(tracks, library);
