@@ -192,7 +192,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
             fontFamily:SD.mono, fontSize:16, color:SD.textSec,
             letterSpacing:1, lineHeight:1.7, margin:'32px auto 48px', maxWidth:560,
           }}>
-            SetDrop connects your entire DJ workflow — from discovering tracks to exporting a Serato-ready crate file.
+            SetDrop connects your entire DJ workflow — from building your library to walking into the booth ready to play.
           </p>
 
           <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
