@@ -12,12 +12,24 @@ function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function findLibraryTrack(artist: string, title: string, library: LibraryTrack[]): LibraryTrack | undefined {
+  const na = normalize(artist);
+  const nt = normalize(title);
+  const exact = library.find(l => normalize(l.artist) === na && normalize(l.title) === nt);
+  if (exact) return exact;
+  return library.find(l => {
+    const la = normalize(l.artist);
+    const lt = normalize(l.title);
+    const artistMatch = la === na || la.startsWith(na) || na.startsWith(la);
+    const titleMatch = lt === nt || lt.startsWith(nt) || nt.startsWith(lt);
+    return artistMatch && titleMatch;
+  });
+}
+
 function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { paths: string[]; matched: number } {
   const paths: string[] = [];
   for (const t of tracks) {
-    const na = normalize(t.artist);
-    const nt = normalize(t.title);
-    const found = library.find(l => normalize(l.artist) === na && normalize(l.title) === nt);
+    const found = findLibraryTrack(t.artist, t.title, library);
     if (found?.filePath) paths.push(found.filePath);
   }
   return { paths, matched: paths.length };
@@ -116,12 +128,38 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
     setTimeout(() => setCrateStatus(null), 8000);
   };
 
-  const handleExportRekordbox = () => {
+  const handleExportRekordbox = async () => {
     if (!setlist) return;
-    const library = getLibrary();
+    let library = getLibrary();
+
+    // If localStorage is empty or stale, fetch fresh from Supabase
+    if (!library.length || !library.some(t => t.filePath)) {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: lib } = await supabase.from('serato_libraries').select('id').eq('user_id', user.id).single();
+          if (lib) {
+            const { data: rows } = await supabase
+              .from('serato_tracks')
+              .select('id, artist, title, bpm, key, genre, file_path')
+              .eq('library_id', lib.id);
+            if (rows?.length) {
+              library = rows.map(t => ({
+                id: t.id, artist: t.artist ?? '', title: t.title ?? '',
+                bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                filePath: t.file_path ?? undefined, isWishlist: false,
+              }));
+              localStorage.setItem('sd_library', JSON.stringify(library));
+            }
+          }
+        }
+      } catch { /* fall through with what we have */ }
+    }
+
     if (!library.length) { setCrateStatus('Upload your Rekordbox library first so we can match file paths.'); return; }
     const { xml, matched } = buildRekordboxXml(setlist.name, setlist.tracks, library);
-    if (!matched) { setCrateStatus('No tracks matched. Re-upload your Rekordbox XML file.'); return; }
+    if (!matched) { setCrateStatus('No tracks matched. Re-upload your Rekordbox XML file in the Library tab.'); return; }
     downloadRekordboxXml(xml, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import Playlist and select the XML file.`);
     setTimeout(() => setCrateStatus(null), 10000);

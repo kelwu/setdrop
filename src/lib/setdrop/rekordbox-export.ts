@@ -5,6 +5,21 @@ function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+// Exact normalized match first; fuzzy fallback handles AI-added "feat. X" or minor title differences
+function findLibraryTrack(artist: string, title: string, library: LibraryTrack[]): LibraryTrack | undefined {
+  const na = normalize(artist);
+  const nt = normalize(title);
+  const exact = library.find(l => normalize(l.artist) === na && normalize(l.title) === nt);
+  if (exact) return exact;
+  return library.find(l => {
+    const la = normalize(l.artist);
+    const lt = normalize(l.title);
+    const artistMatch = la === na || la.startsWith(na) || na.startsWith(la);
+    const titleMatch = lt === nt || lt.startsWith(nt) || nt.startsWith(lt);
+    return artistMatch && titleMatch;
+  });
+}
+
 function toRekordboxLocation(filePath: string): string {
   let path = filePath.trim();
   // Already a file URI
@@ -37,11 +52,9 @@ export function buildRekordboxXml(
   let idCounter = 1;
 
   for (const t of tracks) {
-    const na = normalize(t.artist);
-    const nt = normalize(t.title);
-    const found = library.find(l => normalize(l.artist) === na && normalize(l.title) === nt);
-    if (found?.filePath) {
-      matched.push({ track: t, filePath: found.filePath, id: idCounter++ });
+    const found = findLibraryTrack(t.artist, t.title, library);
+    if (found) {
+      matched.push({ track: t, filePath: found.filePath ?? '', id: idCounter++ });
     }
   }
 
