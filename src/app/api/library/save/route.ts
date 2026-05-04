@@ -14,6 +14,15 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     const now = new Date().toISOString();
 
+    // Deduplicate by artist+title (case-insensitive) — keep first occurrence
+    const seen = new Set<string>();
+    const dedupedTracks = tracks.filter(t => {
+      const key = `${(t.artist ?? '').toLowerCase().trim()}|${(t.title ?? '').toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     const { data: existing } = await admin
       .from('serato_libraries')
       .select('id')
@@ -24,13 +33,13 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       await admin.from('serato_libraries')
-        .update({ total_tracks: tracks.length, last_synced: now })
+        .update({ total_tracks: dedupedTracks.length, last_synced: now })
         .eq('id', existing.id);
       await admin.from('serato_tracks').delete().eq('library_id', existing.id);
       libraryId = existing.id;
     } else {
       const { data, error } = await admin.from('serato_libraries')
-        .insert({ user_id: user.id, total_tracks: tracks.length, last_synced: now, is_public: false })
+        .insert({ user_id: user.id, total_tracks: dedupedTracks.length, last_synced: now, is_public: false })
         .select('id').single();
       if (error || !data) {
         return NextResponse.json({ error: error?.message ?? 'Failed to create library record' }, { status: 500 });
@@ -39,8 +48,8 @@ export async function POST(req: NextRequest) {
     }
 
     const BATCH = 500;
-    for (let i = 0; i < tracks.length; i += BATCH) {
-      const rows = tracks.slice(i, i + BATCH).map(t => ({
+    for (let i = 0; i < dedupedTracks.length; i += BATCH) {
+      const rows = dedupedTracks.slice(i, i + BATCH).map(t => ({
         library_id: libraryId,
         artist: t.artist || null,
         title: t.title || null,
@@ -58,7 +67,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, libraryId, trackCount: tracks.length });
+    return NextResponse.json({ ok: true, libraryId, trackCount: dedupedTracks.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[save-library] Error:', message);

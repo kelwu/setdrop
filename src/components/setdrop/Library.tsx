@@ -276,13 +276,18 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
     .single();
 
   if (library) {
-    const { data: tracks } = await supabase
-      .from('serato_tracks')
-      .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-      .eq('library_id', library.id)
-      .order('artist');
-    if (tracks?.length) {
-      seratoTracks.push(...tracks.map(t => ({
+    // Paginate — PostgREST default cap is 1000 rows
+    const PAGE = 1000;
+    let offset = 0;
+    while (true) {
+      const { data: page } = await supabase
+        .from('serato_tracks')
+        .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+        .eq('library_id', library.id)
+        .order('artist')
+        .range(offset, offset + PAGE - 1);
+      if (!page?.length) break;
+      seratoTracks.push(...page.map(t => ({
         id: t.id,
         artist: t.artist ?? '',
         title: t.title ?? '',
@@ -294,6 +299,8 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
         lastfmTags: t.lastfm_tags ?? [],
         enrichmentSource: 'serato' as const,
       })));
+      if (page.length < PAGE) break;
+      offset += PAGE;
     }
   }
 
