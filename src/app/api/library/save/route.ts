@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { LibraryTrack } from '@/lib/agents/types';
 
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
