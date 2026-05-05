@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from './shared';
 
@@ -37,7 +38,8 @@ interface GigEntry {
   playedAt: string;
 }
 
-export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
+export function Dashboard() {
+  const router = useRouter();
   const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
   const [recentSets, setRecentSets] = useState<RecentSet[] | null>(null);
   const [gigHistory, setGigHistory] = useState<GigEntry[] | null>(null);
@@ -176,7 +178,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:0, color:SD.text, lineHeight:1 }}>{greeting()}, {djName}</h1>
           </div>
-          <SDButton onClick={() => setPage('builder')} style={{ fontSize:13, padding:'13px 32px' }}>
+          <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
             + Build New Set
           </SDButton>
         </div>
@@ -221,7 +223,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                     <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>{step.sub}</div>
                   </div>
                   {!step.done && (
-                    <SDButton ghost onClick={() => setPage(step.page)}
+                    <SDButton ghost onClick={() => router.push('/' + step.page)}
                       style={{ fontSize:10, padding:'6px 14px', flexShrink:0 }}>
                       {step.cta}
                     </SDButton>
@@ -261,7 +263,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                 </div>
               )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10, padding:'7px 16px' }}>
                   {libraryStats ? 'Manage Library' : 'Upload Library'}
                 </SDButton>
               </div>
@@ -280,7 +282,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
               <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks to download</div>
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10, padding:'7px 16px' }}>
                   {wishlistItems?.length ? 'View Wishlist' : 'Add to Wishlist'}
                 </SDButton>
               </div>
@@ -312,7 +314,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                 </div>
               )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => setPage('history')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:10, padding:'7px 16px' }}>
                   View History
                 </SDButton>
               </div>
@@ -355,7 +357,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
         <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <Card>
             <CardHeader title="Wishlist — Download Queue" action={
-              <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:9, padding:'5px 12px' }}>
+              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:9, padding:'5px 12px' }}>
                 View All
               </SDButton>
             }/>
@@ -368,7 +370,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                   <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
                     No wishlist tracks yet
                   </div>
-                  <SDButton ghost onClick={() => setPage('library')} style={{ fontSize:10 }}>Add Tracks</SDButton>
+                  <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10 }}>Add Tracks</SDButton>
                 </div>
               ) : wishlistItems.map((t, i) => (
                 <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
@@ -399,7 +401,7 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
 
           <Card>
             <CardHeader title="Recent Setlists" action={
-              <SDButton ghost onClick={() => setPage('history')} style={{ fontSize:9, padding:'5px 12px' }}>
+              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:9, padding:'5px 12px' }}>
                 View All
               </SDButton>
             }/>
@@ -412,10 +414,10 @@ export function Dashboard({ setPage }: { setPage: (p: string) => void }) {
                   <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
                     No sets yet
                   </div>
-                  <SDButton onClick={() => setPage('builder')} style={{ fontSize:10 }}>Build Your First Set</SDButton>
+                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:10 }}>Build Your First Set</SDButton>
                 </div>
               ) : recentSets.map((s) => (
-                <div key={s.id} onClick={() => setPage('history')}
+                <div key={s.id} onClick={() => router.push('/history')}
                   style={{ padding:'18px 16px', marginBottom:8,
                     background:SD.bg, border:`1px solid ${SD.border}`,
                     borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}

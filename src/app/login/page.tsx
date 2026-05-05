@@ -19,7 +19,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'auth_failed') setError('Authentication failed. Please try again.');
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace('/?goto=dashboard');
+      if (user) router.replace('/dashboard');
     });
   }, []);
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-      else router.push('/?goto=dashboard');
+      else router.push('/dashboard');
     }
 
     setLoading(false);

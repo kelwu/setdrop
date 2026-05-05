@@ -3,15 +3,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores } from '@/lib/setdrop/constants';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
-interface NavProps { page: string; setPage: (p: string) => void; user?: User | null; }
-export function Nav({ page, setPage, user }: NavProps) {
+export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
   useEffect(() => {
@@ -22,6 +23,17 @@ export function Nav({ page, setPage, user }: NavProps) {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        supabase.from('users').upsert({ id: user.id, email: user.email }, { onConflict: 'id' });
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSignOut = async () => {
@@ -53,22 +65,22 @@ export function Nav({ page, setPage, user }: NavProps) {
         background:'rgba(10,10,10,0.96)', backdropFilter:'blur(16px)',
         borderBottom:`1px solid ${SD.border}`,
       }}>
-        <span onClick={() => setPage('landing')} style={{
+        <span onClick={() => router.push('/')} style={{
           fontFamily:SD.display, fontSize:26, letterSpacing:4, cursor:'pointer', color:SD.text,
         }}>
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
         <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
           {links.map(l => (
-            <span key={l.id} onClick={() => setPage(l.id)} style={{
+            <span key={l.id} onClick={() => router.push('/' + l.id)} style={{
               fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
               textTransform:'uppercase', cursor:'pointer',
-              color: page === l.id ? SD.accent : SD.textSec,
-              borderBottom: page === l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
+              color: pathname === '/' + l.id ? SD.accent : SD.textSec,
+              borderBottom: pathname === '/' + l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
               paddingBottom:2, transition:'color .15s',
             }}>{l.label}</span>
           ))}
-          <SDButton onClick={() => setPage('builder')} small>Build Set</SDButton>
+          <SDButton onClick={() => router.push('/builder')} small>Build Set</SDButton>
           <div ref={menuRef} style={{ position:'relative' }}>
             <div
               onClick={() => setMenuOpen(o => !o)}
@@ -134,11 +146,11 @@ export function Nav({ page, setPage, user }: NavProps) {
         borderTop:`1px solid ${SD.border}`,
       }}>
         {mobileNavItems.map(item => (
-          <div key={item.id} onClick={() => setPage(item.id)} style={{
+          <div key={item.id} onClick={() => router.push('/' + item.id)} style={{
             flex:1, display:'flex', flexDirection:'column', alignItems:'center',
             justifyContent:'center', gap:3, cursor:'pointer',
-            color: page === item.id ? SD.accent : SD.textMuted,
-            borderTop: page === item.id ? `2px solid ${SD.accent}` : '2px solid transparent',
+            color: pathname === '/' + item.id ? SD.accent : SD.textMuted,
+            borderTop: pathname === '/' + item.id ? `2px solid ${SD.accent}` : '2px solid transparent',
             transition:'color .15s',
           }}>
             <span style={{ fontSize:15, lineHeight:1 }}>{item.icon}</span>

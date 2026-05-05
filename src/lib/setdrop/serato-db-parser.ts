@@ -49,9 +49,8 @@ function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist
     return decoded || undefined;
   };
 
-  // For path tags: try UTF-16 BE first, then UTF-8 — but only accept strings
-  // that actually look like file paths. This guards against pfil being garbled
-  // when decoded with the wrong encoding (which would bloat the JSON response).
+  // pfil/tpth/ptrk are UTF-16 BE; fall back to UTF-8 for older databases.
+  // looksLikePath rejects garbled decodings (no slash = not a path).
   const pathCandidates = ['tpth', 'ptrk', 'pfil'].flatMap(tag => [str16(tag), str8(tag)]);
   const filePath = pathCandidates.find(c => c && looksLikePath(c));
 
@@ -67,9 +66,7 @@ function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist
 
 export interface ParseSeratoDatabaseResult {
   tracks: LibraryTrack[];
-  firstTrackTags: string[];
-  withFilePaths: number;
-  pfilDiag?: { hex: string; utf8: string; utf16: string };
+  count: number;
 }
 
 export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
@@ -83,19 +80,6 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
 
   const topTags = walkTags(buf);
   const otrkList = topTags.get('otrk') ?? [];
-
-  const firstTrackSubTags = otrkList.length > 0 ? walkTags(otrkList[0]) : new Map<string, Buffer[]>();
-  const firstTrackTags = Array.from(firstTrackSubTags.keys());
-
-  let pfilDiag: ParseSeratoDatabaseResult['pfilDiag'];
-  if (firstTrackSubTags.has('pfil')) {
-    const pfilBuf = firstTrackSubTags.get('pfil')![0];
-    pfilDiag = {
-      hex:   pfilBuf.slice(0, 40).toString('hex').match(/.{2}/g)?.join(' ') ?? '',
-      utf8:  pfilBuf.toString('utf8').slice(0, 200),
-      utf16: decodeUtf16BE(pfilBuf).slice(0, 200),
-    };
-  }
 
   const tracks: LibraryTrack[] = [];
   for (let i = 0; i < otrkList.length; i++) {
@@ -119,8 +103,5 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
     throw new Error('No tracks found — is this a Serato database V2 file?');
   }
 
-  const withFilePaths = tracks.filter(t => t.filePath).length;
-  console.log(`[parse-db] ${tracks.length} tracks, ${withFilePaths} with file paths, first track tags: ${firstTrackTags.join(', ')}`);
-
-  return { tracks, firstTrackTags, withFilePaths, pfilDiag };
+  return { tracks, count: tracks.length };
 }

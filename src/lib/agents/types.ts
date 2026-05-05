@@ -35,7 +35,7 @@ export interface LibraryTrack {
   // Serato analysis data (available for tracks already in library)
   seratoEnergy?: number;       // 0-10 scale from Serato's own analysis
   // Source metadata
-  enrichmentSource?: 'beatport' | 'serato' | 'lastfm' | 'manual' | 'pending';
+  enrichmentSource?: 'beatport' | 'serato' | 'rekordbox' | 'lastfm' | 'manual' | 'pending';
   isWishlist: boolean;
   beatportUrl?: string;
   beatportSearchUrl?: string;

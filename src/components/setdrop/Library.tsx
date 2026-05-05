@@ -330,7 +330,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
   return [...seratoTracks, ...wishlistTracks];
 }
 
-export function Library({ setPage }: { setPage: (p: string) => void }) {
+export function Library() {
   const [tab, setTab] = useState('library');
   const [search, setSearch] = useState('');
   const [bpmMin, setBpmMin] = useState('');
@@ -452,15 +452,9 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
           return res.json();
         })
-        .then(async (data: { tracks?: LibraryTrack[]; error?: string; firstTrackTags?: string[]; withFilePaths?: number; pfilDiag?: { hex: string; utf8: string; utf16: string } }) => {
+        .then(async (data: { tracks?: LibraryTrack[]; error?: string; count?: number }) => {
           if (data.error) throw new Error(`Parse error: ${data.error}`);
           const tracks = data.tracks!;
-          console.log('[parse-db] tracks with file paths:', data.withFilePaths, '/', tracks.length);
-          if (data.pfilDiag) {
-            console.log('[parse-db] pfil hex:', data.pfilDiag.hex);
-            console.log('[parse-db] pfil as UTF-8:', data.pfilDiag.utf8);
-            console.log('[parse-db] pfil as UTF-16BE:', data.pfilDiag.utf16);
-          }
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setParseError(null);

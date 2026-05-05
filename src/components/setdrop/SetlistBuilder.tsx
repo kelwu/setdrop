@@ -2,16 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenrePillSelector, SDInput, AgentProgress } from './shared';
 
-interface SetlistBuilderProps {
-  setPage: (p: string) => void;
-  onSetlistGenerated: (setlist: GeneratedSetlist) => void;
-}
-
-export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderProps) {
+export function SetlistBuilder() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [genStep, setGenStep] = useState(0);
@@ -190,7 +187,10 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
           lineupSlot: slot,
         },
       };
-      setTimeout(() => onSetlistGenerated(withMeta), 400);
+      setTimeout(() => {
+        sessionStorage.setItem('sd_current_setlist', JSON.stringify(withMeta));
+        router.push('/output');
+      }, 400);
     } catch (err) {
       clearInterval(iv);
       setGenerating(false);
@@ -354,7 +354,7 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
                 : 'No library uploaded — will use demo tracks'}
             </span>
           </div>
-          <span onClick={() => setPage('library')} style={{
+          <span onClick={() => router.push('/library')} style={{
             fontFamily:SD.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase',
             color:SD.accent, cursor:'pointer', textDecoration:'underline',
           }}>

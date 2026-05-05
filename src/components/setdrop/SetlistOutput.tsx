@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack, LibraryTrack } from '@/lib/agents/types';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
@@ -66,8 +67,17 @@ function toDisplayTrack(t: SetlistTrack, idx: number) {
   };
 }
 
-export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => void; setlist: GeneratedSetlist | null }) {
+export function SetlistOutput() {
+  const router = useRouter();
+  const [setlist, setSetlist] = useState<GeneratedSetlist | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('sd_current_setlist');
+      if (raw) setSetlist(JSON.parse(raw));
+    } catch { /* ignore corrupted data */ }
+  }, []);
   const [showRegen, setShowRegen] = useState(false);
   const [regenNote, setRegenNote] = useState('');
   const [crateStatus, setCrateStatus] = useState<string | null>(null);
@@ -294,7 +304,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
               style={{ fontSize:10, padding:'8px 16px' }}>
               {copied ? '✓ Copied' : 'Copy List'}
             </SDButton>
-            <SDButton ghost onClick={() => setPage('share')} style={{ fontSize:10, padding:'8px 16px' }}>
+            <SDButton ghost onClick={() => setlist?.dbSlug && router.push('/set/' + setlist.dbSlug)} style={{ fontSize:10, padding:'8px 16px' }}>
               Share ↗
             </SDButton>
             <SDButton style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportCrate}>
@@ -358,7 +368,7 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
               onFocus={e => (e.target.style.borderColor = SD.accent)}
               onBlur={e => (e.target.style.borderColor = SD.border)}
             />
-            <SDButton onClick={() => { setShowRegen(false); setPage('builder'); }}>Rebuild</SDButton>
+            <SDButton onClick={() => { setShowRegen(false); router.push('/builder'); }}>Rebuild</SDButton>
           </div>
         )}
 
@@ -454,9 +464,11 @@ export function SetlistOutput({ setPage, setlist }: { setPage: (p: string) => vo
                         {making ? 'Publishing...' : 'Make Public + Copy Link'}
                       </SDButton>
                     )}
-                    <SDButton ghost full onClick={() => setPage('share')} style={{ fontSize:10 }}>
-                      Preview ↗
-                    </SDButton>
+                    {setlist?.dbSlug && (
+                      <SDButton ghost full onClick={() => router.push('/set/' + setlist.dbSlug)} style={{ fontSize:10 }}>
+                        Preview ↗
+                      </SDButton>
+                    )}
                   </div>
                 </>
               ) : (

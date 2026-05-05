@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
-export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
+export function LandingPage() {
+  const router = useRouter();
   const HOW_IT_WORKS = [
     { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
     { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
@@ -37,7 +39,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
         borderBottom:`1px solid ${SD.border}`,
       }}>
         <span style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, cursor:'pointer' }}
-          onClick={() => setPage('landing')}>
+          onClick={() => router.push('/')}>
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -196,7 +198,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
           </p>
 
           <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
-            <SDButton onClick={() => setPage('builder')} style={{ fontSize:13, padding:'14px 36px' }}>
+            <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'14px 36px' }}>
               Start Building Your Set
             </SDButton>
             <SDButton ghost
@@ -282,7 +284,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
             {DEMO_TRACKS.map(t => <TrackRow key={t.pos} track={t} />)}
           </div>
           <div style={{ textAlign:'center', marginTop:32 }}>
-            <SDButton onClick={() => setPage('builder')}>Build Your Own Set</SDButton>
+            <SDButton onClick={() => router.push('/builder')}>Build Your Own Set</SDButton>
           </div>
         </div>
       </section>
@@ -344,7 +346,7 @@ export function LandingPage({ setPage }: { setPage: (p: string) => void }) {
             margin:'0 auto 48px', maxWidth:480, lineHeight:1.8 }}>
             Upload your library and start planning your next set. Free to start.
           </p>
-          <SDButton onClick={() => setPage('builder')} style={{ fontSize:14, padding:'16px 48px' }}>
+          <SDButton onClick={() => router.push('/builder')} style={{ fontSize:14, padding:'16px 48px' }}>
             Get Started — It&apos;s Free
           </SDButton>
           <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>setdrop.app</div>

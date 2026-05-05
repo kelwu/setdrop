@@ -22,15 +22,15 @@ function findLibraryTrack(artist: string, title: string, library: LibraryTrack[]
 
 function toRekordboxLocation(filePath: string): string {
   let path = filePath.trim();
-  // Already a file URI
   if (path.startsWith('file://')) {
-    // Encode spaces if not already encoded
     return path.replace(/ /g, '%20');
   }
-  // Windows absolute path: /C:/... or C:\...
-  if (/^[A-Za-z]:/.test(path)) {
+  // Windows absolute path: C:\... → /C:/...
+  if (/^[A-Za-z]:[/\\]/.test(path)) {
     path = '/' + path.replace(/\\/g, '/');
   }
+  // Bare relative path (e.g. pfil on macOS): Users/... → /Users/...
+  if (!path.startsWith('/')) path = '/' + path;
   return 'file://' + path.replace(/ /g, '%20');
 }
 

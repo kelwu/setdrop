@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, DM_Mono } from "next/font/google";
 import "./globals.css";
+import { NavWrapper } from "@/components/setdrop/NavWrapper";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -38,6 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmMono.variable}`}>
       <body style={{ background: "#0A0A0A", margin: 0, padding: 0 }}>
+        <NavWrapper />
         {children}
       </body>
     </html>

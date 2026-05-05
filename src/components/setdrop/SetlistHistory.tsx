@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack } from '@/lib/agents/types';
 import { SDButton } from './shared';
@@ -49,13 +50,8 @@ function groupByMonth(sets: DbSetlist[]): { label: string; items: DbSetlist[] }[
   return Array.from(map.entries()).map(([label, items]) => ({ label, items }));
 }
 
-export function SetlistHistory({
-  setPage,
-  onLoad,
-}: {
-  setPage: (p: string) => void;
-  onLoad: (setlist: GeneratedSetlist) => void;
-}) {
+export function SetlistHistory() {
+  const router = useRouter();
   const [sets, setSets] = useState<DbSetlist[] | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -76,7 +72,8 @@ export function SetlistHistory({
 
   const handleLoad = (row: DbSetlist) => {
     setLoadingId(row.id);
-    onLoad(dbToSetlist(row));
+    sessionStorage.setItem('sd_current_setlist', JSON.stringify(dbToSetlist(row)));
+    router.push('/output');
   };
 
   const handleDelete = async (id: string) => {
@@ -103,7 +100,7 @@ export function SetlistHistory({
               YOUR SETS
             </h1>
           </div>
-          <SDButton onClick={() => setPage('builder')} style={{ fontSize: 13, padding: '13px 32px' }}>
+          <SDButton onClick={() => router.push('/builder')} style={{ fontSize: 13, padding: '13px 32px' }}>
             + Build New Set
           </SDButton>
         </div>
@@ -120,7 +117,7 @@ export function SetlistHistory({
             <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, marginBottom: 24 }}>
               Generate your first set to see it here.
             </div>
-            <SDButton onClick={() => setPage('builder')}>Build Your First Set</SDButton>
+            <SDButton onClick={() => router.push('/builder')}>Build Your First Set</SDButton>
           </div>
         ) : (
           groups.map(({ label, items }) => (

@@ -3,9 +3,11 @@
 // Strings are UTF-16 Big Endian, no BOM
 
 function encodeUtf16BE(str: string): Uint8Array {
+  // str.length counts UTF-16 code units (surrogates count as 2), so this
+  // allocation is always large enough even for emoji/supplementary chars.
   const out = new Uint8Array(str.length * 2);
   for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i);
+    const code = str.charCodeAt(i); // returns the raw UTF-16 code unit
     out[i * 2]     = (code >>> 8) & 0xFF;
     out[i * 2 + 1] = code & 0xFF;
   }
@@ -40,6 +42,10 @@ function toSeratoPath(raw: string): string {
   if (/^[A-Za-z]:[/\\]/.test(path)) {
     path = '/' + path.replace(/\\/g, '/');
   }
+
+  // Serato stores all paths with a leading slash; bare relative paths (e.g.
+  // "Users/..." from pfil on macOS) need one added.
+  if (!path.startsWith('/')) path = '/' + path;
 
   return path;
 }

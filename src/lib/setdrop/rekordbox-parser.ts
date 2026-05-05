@@ -28,7 +28,13 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
     let filePath: string | undefined;
     if (location) {
       try {
-        filePath = decodeURIComponent(location.replace(/^file:\/\/localhost/, ''));
+        // macOS Rekordbox: file://localhost/Users/... → /Users/...
+        // Windows Rekordbox: file:///C:/...           → /C:/...
+        // Generic file URI:  file:///Users/...        → /Users/...
+        const stripped = location
+          .replace(/^file:\/\/localhost/, '')
+          .replace(/^file:\/\/\//, '/');
+        filePath = decodeURIComponent(stripped);
       } catch {
         filePath = location;
       }
@@ -44,7 +50,7 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
       filePath,
       isWishlist: false,
       lastfmTags: [],
-      enrichmentSource: 'serato',
+      enrichmentSource: 'rekordbox',
     });
   });
 
