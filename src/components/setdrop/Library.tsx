@@ -452,12 +452,14 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
           return res.json();
         })
-        .then(async (data: { tracks?: LibraryTrack[]; error?: string; firstTrackTags?: string[]; withFilePaths?: number }) => {
+        .then(async (data: { tracks?: LibraryTrack[]; error?: string; firstTrackTags?: string[]; withFilePaths?: number; pfilDiag?: { hex: string; utf8: string; utf16: string } }) => {
           if (data.error) throw new Error(`Parse error: ${data.error}`);
           const tracks = data.tracks!;
-          console.log('[parse-db] tags in first track:', data.firstTrackTags, '| tracks with file paths:', data.withFilePaths);
-          if (!data.withFilePaths) {
-            console.warn('[parse-db] No file paths found. Tag names present:', data.firstTrackTags?.join(', ') ?? 'none');
+          console.log('[parse-db] tracks with file paths:', data.withFilePaths, '/', tracks.length);
+          if (data.pfilDiag) {
+            console.log('[parse-db] pfil hex:', data.pfilDiag.hex);
+            console.log('[parse-db] pfil as UTF-8:', data.pfilDiag.utf8);
+            console.log('[parse-db] pfil as UTF-16BE:', data.pfilDiag.utf16);
           }
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
