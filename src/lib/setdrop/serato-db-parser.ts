@@ -83,9 +83,19 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
   const topTags = walkTags(buf);
   const otrkList = topTags.get('otrk') ?? [];
 
-  const firstTrackTags = otrkList.length > 0
-    ? Array.from(walkTags(otrkList[0]).keys())
-    : [];
+  const firstTrackSubTags = otrkList.length > 0 ? walkTags(otrkList[0]) : new Map<string, Buffer[]>();
+  const firstTrackTags = Array.from(firstTrackSubTags.keys());
+
+  // Log raw pfil content from first track to diagnose encoding
+  if (firstTrackSubTags.has('pfil')) {
+    const pfilBuf = firstTrackSubTags.get('pfil')![0];
+    const hexPreview = pfilBuf.slice(0, 40).toString('hex').match(/.{2}/g)?.join(' ');
+    const utf8val = pfilBuf.toString('utf8').slice(0, 120);
+    const utf16val = decodeUtf16BE(pfilBuf).slice(0, 120);
+    console.log(`[parse-db] pfil hex (first 40 bytes): ${hexPreview}`);
+    console.log(`[parse-db] pfil as UTF-8: ${utf8val}`);
+    console.log(`[parse-db] pfil as UTF-16 BE: ${utf16val}`);
+  }
 
   const tracks: LibraryTrack[] = [];
   for (let i = 0; i < otrkList.length; i++) {
