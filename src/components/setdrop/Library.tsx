@@ -448,9 +448,12 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
       const form = new FormData();
       form.append('file', file);
       fetch('/api/library/parse-db', { method: 'POST', body: form })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
+          return res.json();
+        })
         .then(async (data: { tracks?: LibraryTrack[]; error?: string; firstTrackTags?: string[]; withFilePaths?: number }) => {
-          if (data.error) throw new Error(data.error);
+          if (data.error) throw new Error(`Parse error: ${data.error}`);
           const tracks = data.tracks!;
           console.log('[parse-db] tags in first track:', data.firstTrackTags, '| tracks with file paths:', data.withFilePaths);
           if (!data.withFilePaths) {
@@ -460,13 +463,17 @@ export function Library({ setPage }: { setPage: (p: string) => void }) {
           setUploadedTracks(tracks);
           setParseError(null);
           setShowUpload(false);
-          await saveLibraryToSupabase(tracks);
+          try {
+            await saveLibraryToSupabase(tracks);
+          } catch (saveErr) {
+            throw new Error(`Save error: ${saveErr instanceof Error ? saveErr.message : 'unknown'}`);
+          }
           setSaving(false);
           triggerEnrichment();
         })
         .catch(err => {
           setSaving(false);
-          setParseError(err instanceof Error ? err.message : 'Failed to parse database V2 file');
+          setParseError(err instanceof Error ? err.message : 'Failed to upload library');
         });
     } else {
       const reader = new FileReader();

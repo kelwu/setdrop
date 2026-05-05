@@ -2,26 +2,13 @@ import { LibraryTrack } from '@/lib/agents/types';
 import { toCamelot } from './key-utils';
 
 function decodeUtf16BE(buf: Buffer): string {
-  const len = buf.length & ~1; // round down to even
+  const len = buf.length & ~1;
   const swapped = Buffer.allocUnsafe(len);
   for (let i = 0; i < len; i += 2) {
     swapped[i]     = buf[i + 1];
     swapped[i + 1] = buf[i];
   }
   return swapped.toString('utf16le');
-}
-
-function decodeUtf8(buf: Buffer): string {
-  return buf.toString('utf8');
-}
-
-interface SubTags {
-  filePath?: string;
-  title?: string;
-  artist?: string;
-  bpmStr?: string;
-  key?: string;
-  genre?: string;
 }
 
 function walkTags(buf: Buffer): Map<string, Buffer[]> {
@@ -40,27 +27,33 @@ function walkTags(buf: Buffer): Map<string, Buffer[]> {
   return tags;
 }
 
-function parseOtrk(payload: Buffer): SubTags {
+// A real file path always contains a slash or backslash and is <2KB
+function looksLikePath(s: string): boolean {
+  return s.length > 3 && s.length < 2000 && (s.includes('/') || s.includes('\\'));
+}
+
+function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist?: string; bpmStr?: string; key?: string; genre?: string } {
   const tags = walkTags(payload);
 
-  const str16 = (name: string) => {
+  const str16 = (name: string): string | undefined => {
     const bufs = tags.get(name);
     if (!bufs?.length) return undefined;
     const decoded = decodeUtf16BE(bufs[0]);
     return decoded || undefined;
   };
 
-  const str8 = (name: string) => {
+  const str8 = (name: string): string | undefined => {
     const bufs = tags.get(name);
     if (!bufs?.length) return undefined;
-    const decoded = decodeUtf8(bufs[0]);
+    const decoded = bufs[0].toString('utf8');
     return decoded || undefined;
   };
 
-  // Try both UTF-16 BE and UTF-8 for path tags across Serato versions
-  const filePath =
-    str16('tpth') ?? str16('ptrk') ?? str16('pfil') ??
-    str8('tpth')  ?? str8('ptrk')  ?? str8('pfil');
+  // For path tags: try UTF-16 BE first, then UTF-8 — but only accept strings
+  // that actually look like file paths. This guards against pfil being garbled
+  // when decoded with the wrong encoding (which would bloat the JSON response).
+  const pathCandidates = ['tpth', 'ptrk', 'pfil'].flatMap(tag => [str16(tag), str8(tag)]);
+  const filePath = pathCandidates.find(c => c && looksLikePath(c));
 
   return {
     filePath,
@@ -74,14 +67,13 @@ function parseOtrk(payload: Buffer): SubTags {
 
 export interface ParseSeratoDatabaseResult {
   tracks: LibraryTrack[];
-  firstTrackTags: string[];  // tag names in first otrk — for diagnosing missing paths
+  firstTrackTags: string[];
   withFilePaths: number;
 }
 
 export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
   let buf = buffer;
 
-  // Strip leading BOM if present (UTF-8: EF BB BF, UTF-16 LE: FF FE)
   if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
     buf = buf.subarray(3);
   } else if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
