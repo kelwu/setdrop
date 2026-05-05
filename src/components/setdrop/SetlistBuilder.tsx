@@ -468,10 +468,10 @@ export function SetlistBuilder({ setPage, onSetlistGenerated }: SetlistBuilderPr
                 {seedSearch && (
                   <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:10,
                     background:SD.surface2, border:`1px solid ${SD.border}`,
-                    borderTop:'none', borderRadius:'0 0 3px 3px', overflow:'hidden' }}>
+                    borderTop:'none', borderRadius:'0 0 3px 3px', overflow:'auto', maxHeight:320 }}>
                     {(libraryTracks.length ? libraryTracks : LIBRARY_TRACKS)
                       .filter(t => `${t.artist} ${t.title}`.toLowerCase().includes(seedSearch.toLowerCase()))
-                      .slice(0, 6)
+                      .slice(0, 20)
                       .map((t, i) => (
                         <div key={i} onClick={() => setSeedSearch(`${t.artist} — ${t.title}`)}
                           style={{ padding:'12px 16px', cursor:'pointer',
