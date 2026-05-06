@@ -107,6 +107,17 @@ export function Nav() {
                     {user.email}
                   </div>
                 )}
+                <a href="/account"
+                  style={{
+                    display:'block', padding:'10px 14px', fontSize:11, color:SD.textSec,
+                    fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
+                    cursor:'pointer', transition:'background .12s', textDecoration:'none',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = SD.surface)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  Account
+                </a>
                 <a href="/invoice"
                   style={{
                     display:'block', padding:'10px 14px', fontSize:11, color:SD.textSec,

@@ -1,0 +1,174 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { SD } from '@/lib/setdrop/constants';
+import { SDButton } from './shared';
+import { createClient } from '@/lib/supabase/client';
+
+interface AccountProps {
+  email: string;
+  tier: string;
+  setsUsed: number;
+  limit: number;
+  hasStripeCustomer: boolean;
+  upgraded: boolean;
+}
+
+export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgraded }: AccountProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState<'upgrade' | 'billing' | 'signout' | null>(null);
+
+  const handleUpgrade = async () => {
+    setLoading('upgrade');
+    try {
+      const res = await fetch('/api/checkout', { method: 'POST' });
+      const data = await res.json() as { url?: string };
+      if (data.url) window.location.href = data.url;
+      else setLoading(null);
+    } catch {
+      setLoading(null);
+    }
+  };
+
+  const handleBillingPortal = async () => {
+    setLoading('billing');
+    try {
+      const res = await fetch('/api/billing-portal', { method: 'POST' });
+      const data = await res.json() as { url?: string };
+      if (data.url) window.location.href = data.url;
+      else setLoading(null);
+    } catch {
+      setLoading(null);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setLoading('signout');
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  const isPro = tier === 'pro';
+  const usagePct = Math.min((setsUsed / limit) * 100, 100);
+  const usageColor = usagePct >= 100 ? SD.red : usagePct >= 80 ? SD.yellow : SD.accent;
+
+  return (
+    <div style={{ background: SD.bg, minHeight: '100vh', paddingTop: 56, color: SD.text }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth: 600, margin: '0 auto', padding: '48px 40px' }}>
+
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+            letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Your Account</div>
+          <h1 style={{ fontFamily: SD.display, fontSize: 52, letterSpacing: 4,
+            margin: 0, color: SD.text, lineHeight: 1 }}>ACCOUNT</h1>
+        </div>
+
+        {upgraded && (
+          <div style={{ marginBottom: 24, padding: '16px 20px',
+            background: SD.greenDim, border: `1px solid ${SD.green}44`,
+            borderRadius: 4, fontFamily: SD.mono, fontSize: 12, color: SD.green }}>
+            ✓ You&apos;re now on SetDrop Pro. Enjoy unlimited generation.
+          </div>
+        )}
+
+        {/* Plan card */}
+        <div style={{ background: SD.surface,
+          border: `1px solid ${isPro ? SD.accent + '55' : SD.border}`,
+          borderRadius: 4, padding: '24px', marginBottom: 16 }}>
+
+          <div style={{ display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', marginBottom: 24 }}>
+            <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+              letterSpacing: 2, textTransform: 'uppercase' }}>Plan</div>
+            <span style={{
+              fontFamily: SD.mono, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase',
+              padding: '4px 12px', borderRadius: 2,
+              background: isPro ? SD.accentDim : SD.surface2,
+              border: `1px solid ${isPro ? SD.accent + '66' : SD.border}`,
+              color: isPro ? SD.accent : SD.textSec,
+            }}>
+              {isPro ? 'Pro' : 'Free'}
+            </span>
+          </div>
+
+          {/* Usage bar */}
+          <div style={{ marginBottom: isPro ? 0 : 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between',
+              alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textSec }}>
+                Sets generated this month
+              </span>
+              <span style={{ fontFamily: SD.mono, fontSize: 13,
+                color: usagePct >= 100 ? SD.red : SD.text }}>
+                {setsUsed}<span style={{ color: SD.textMuted, fontSize: 11 }}>/{limit}</span>
+              </span>
+            </div>
+            <div style={{ height: 4, background: SD.surface2, borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 2,
+                width: `${usagePct}%`,
+                background: usageColor,
+                transition: 'width .4s ease',
+              }} />
+            </div>
+          </div>
+
+          {!isPro && (
+            <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4 }}>
+              <div style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted,
+                lineHeight: 1.8, marginBottom: 16 }}>
+                Pro includes 50 sets/month, priority processing, and unlimited crate exports.
+              </div>
+              <SDButton
+                onClick={handleUpgrade}
+                style={{ fontSize: 12, padding: '12px 32px',
+                  opacity: loading === 'upgrade' ? 0.6 : 1,
+                  pointerEvents: loading ? 'none' : 'auto' }}>
+                {loading === 'upgrade' ? 'Redirecting to Stripe...' : 'Upgrade to Pro →'}
+              </SDButton>
+            </div>
+          )}
+
+          {isPro && (
+            <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 12 }}>
+              <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted }}>
+                Billing managed via Stripe
+              </span>
+              {hasStripeCustomer && (
+                <SDButton ghost onClick={handleBillingPortal}
+                  style={{ fontSize: 11, opacity: loading === 'billing' ? 0.6 : 1,
+                    pointerEvents: loading ? 'none' : 'auto' }}>
+                  {loading === 'billing' ? 'Opening...' : 'Manage Billing ↗'}
+                </SDButton>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Profile card */}
+        <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
+          borderRadius: 4, padding: '24px' }}>
+          <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+            letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Profile</div>
+          <div style={{ display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec,
+              wordBreak: 'break-all' }}>{email}</span>
+            <SDButton ghost onClick={handleSignOut}
+              style={{ fontSize: 11, color: SD.red,
+                borderColor: `${SD.red}44`,
+                opacity: loading === 'signout' ? 0.6 : 1,
+                pointerEvents: loading ? 'none' : 'auto' }}>
+              {loading === 'signout' ? 'Signing out...' : 'Sign Out'}
+            </SDButton>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
