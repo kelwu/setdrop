@@ -41,6 +41,7 @@ export interface LibraryTrack {
   beatportSearchUrl?: string;
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
+  djcitySearchUrl?: string;
   spotifyUrl?: string;
 }
 
@@ -110,6 +111,7 @@ export interface SetlistTrack {
   spotifyUrl?: string;
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
+  djcitySearchUrl?: string;
 }
 
 export interface GeneratedSetlist {
@@ -120,6 +122,8 @@ export interface GeneratedSetlist {
   dbId?: string;
   dbSlug?: string;
   generatedAt?: string;
+  excludedCount?: number;
+  libraryTracksUsed?: number;
   input?: {
     primaryGenre: string;
     secondaryGenre?: string;

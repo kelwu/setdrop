@@ -36,16 +36,21 @@ function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { path
   return { paths, matched: paths.length };
 }
 
+interface ResolvedUrls { beatportUrl?: string }
+
 function storeSearchUrls(artist: string, title: string, t: SetlistTrack) {
   const q = encodeURIComponent(`${artist} ${title}`);
   return {
     beatport: `https://www.beatport.com/search/tracks?q=${q}`,
     bpmSupreme: t.bpmSupremeSearchUrl ?? `https://www.bpmsupreme.com/search?q=${q}`,
     traxsource: t.traxsourceSearchUrl ?? `https://www.traxsource.com/search?term=${q}`,
+    djcity: t.djcitySearchUrl ?? `https://www.djcity.com/search?q=${q}`,
   };
 }
 
-function toDisplayTrack(t: SetlistTrack, idx: number) {
+function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls) {
+  const base = storeSearchUrls(t.artist, t.title, t);
+  const hasBeatport = !!resolved?.beatportUrl;
   return {
     pos: t.position || idx + 1,
     artist: t.artist,
@@ -58,12 +63,16 @@ function toDisplayTrack(t: SetlistTrack, idx: number) {
     why: t.whyThisTrack,
     transition: t.transitionNotes,
     stores: {
-      beatport: 'green' as const,
+      beatport: hasBeatport ? 'green' as const : 'yellow' as const,
       bpmSupreme: 'yellow' as const,
       traxsource: 'yellow' as const,
+      djcity: 'yellow' as const,
       spotify: 'green' as const,
     },
-    storeUrls: storeSearchUrls(t.artist, t.title, t),
+    storeUrls: {
+      ...base,
+      beatport: resolved?.beatportUrl ?? base.beatport,
+    },
   };
 }
 
@@ -71,11 +80,39 @@ export function SetlistOutput() {
   const router = useRouter();
   const [setlist, setSetlist] = useState<GeneratedSetlist | null>(null);
   const [copied, setCopied] = useState(false);
+  const [resolvedUrls, setResolvedUrls] = useState<Record<number, ResolvedUrls>>({});
+  const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem('sd_current_setlist');
-      if (raw) setSetlist(JSON.parse(raw));
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as GeneratedSetlist;
+      setSetlist(parsed);
+      if (parsed.tracks?.length) {
+        setResolving(true);
+        fetch('/api/setlist/resolve-urls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tracks: parsed.tracks.map((t, i) => ({
+              position: t.position || i + 1,
+              artist: t.artist,
+              title: t.title,
+            })),
+          }),
+        })
+          .then(r => r.json())
+          .then((data: { resolved?: Array<{ position: number; beatportUrl?: string }> }) => {
+            const map: Record<number, ResolvedUrls> = {};
+            for (const r of data.resolved ?? []) {
+              if (r.beatportUrl) map[r.position] = { beatportUrl: r.beatportUrl };
+            }
+            setResolvedUrls(map);
+          })
+          .catch(() => { /* silent — search URLs remain */ })
+          .finally(() => setResolving(false));
+      }
     } catch { /* ignore corrupted data */ }
   }, []);
   const [showRegen, setShowRegen] = useState(false);
@@ -245,7 +282,7 @@ export function SetlistOutput() {
   };
 
   const displayTracks = setlist
-    ? setlist.tracks.map((t, i) => toDisplayTrack(t, i))
+    ? setlist.tracks.map((t, i) => toDisplayTrack(t, i, resolvedUrls[t.position || i + 1]))
     : SAMPLE_TRACKS;
   const setlistName = setlist?.name ?? 'Friday Night Affair';
   const inp = setlist?.input;
@@ -381,12 +418,20 @@ export function SetlistOutput() {
               letterSpacing:2, textTransform:'uppercase', marginBottom:12,
               display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span>Tracklist — {displayTracks.length} tracks</span>
-              {wishCount > 0 && (
-                <span style={{ color:SD.accent, display:'flex', alignItems:'center', gap:5 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background:SD.accent, display:'inline-block' }}/>
-                  {wishCount} need downloading
-                </span>
-              )}
+              <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                {resolving && (
+                  <span style={{ color:SD.textMuted, display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ display:'inline-block', animation:'sdSpin 1s linear infinite' }}>↻</span>
+                    Resolving links
+                  </span>
+                )}
+                {wishCount > 0 && (
+                  <span style={{ color:SD.accent, display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ width:6, height:6, borderRadius:'50%', background:SD.accent, display:'inline-block' }}/>
+                    {wishCount} need downloading
+                  </span>
+                )}
+              </div>
             </div>
             {displayTracks.map(t => <TrackRow key={t.pos} track={t} />)}
           </div>
@@ -430,6 +475,8 @@ export function SetlistOutput() {
                 ['Genre', genreLabel],
                 ['Crowd', crowdLabel],
                 ['Slot', slotLabel],
+                ...(setlist?.libraryTracksUsed ? [['Library', `${setlist.libraryTracksUsed} tracks`]] : []),
+                ...(setlist?.excludedCount ? [['Excluded', `${setlist.excludedCount} recent`]] : []),
               ].map(([label, value]) => (
                 <div key={label} style={{ display:'flex', justifyContent:'space-between',
                   marginBottom:10, alignItems:'baseline' }}>
@@ -471,9 +518,18 @@ export function SetlistOutput() {
                     )}
                   </div>
                 </>
+              ) : setlist ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, lineHeight:1.7 }}>
+                    Sign in to save and share this set.
+                  </div>
+                  <SDButton ghost full href="/login" style={{ fontSize:10 }}>
+                    Sign In to Save
+                  </SDButton>
+                </div>
               ) : (
                 <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
-                  Generate a setlist to get a share link
+                  Generate a setlist to get a share link.
                 </div>
               )}
             </div>

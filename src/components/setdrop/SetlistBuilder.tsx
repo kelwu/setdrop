@@ -13,6 +13,7 @@ export function SetlistBuilder() {
   const [generating, setGenerating] = useState(false);
   const [genStep, setGenStep] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState<{ tier: string; limit: number } | null>(null);
 
   const [mixName, setMixName] = useState('');
   const [primaryGenre, setPrimaryGenre] = useState('');
@@ -97,18 +98,13 @@ export function SetlistBuilder() {
     setGenerating(true);
     setGenStep(0);
     setGenError(null);
+    setRateLimited(null);
 
-    // Animate steps while waiting for the API
-    let s = 0;
-    const iv = setInterval(() => {
-      s = Math.min(s + 1, GEN_STEPS.length - 1);
-      setGenStep(s);
-    }, 2000);
+    const durationMinutes = parseInt(duration) || 60;
 
+    let res: Response;
     try {
-      const durationMinutes = parseInt(duration) || 60;
-
-      const res = await fetch('/api/generate-setlist', {
+      res = await fetch('/api/generate-setlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,11 +116,8 @@ export function SetlistBuilder() {
             crowdContext: crowd,
             durationMinutes,
             energyArc: {
-              intro: arcPoints[0],
-              buildup: arcPoints[1],
-              peak: arcPoints[2],
-              sustain: arcPoints[3],
-              cooldown: arcPoints[4],
+              intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2],
+              sustain: arcPoints[3], cooldown: arcPoints[4],
             },
             lineupSlot: slot,
             seedTracks: seedSearch ? [seedSearch] : undefined,
@@ -133,69 +126,117 @@ export function SetlistBuilder() {
           },
         }),
       });
+    } catch {
+      setGenerating(false);
+      setGenError('Network error — check your connection.');
+      return;
+    }
 
-      clearInterval(iv);
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({ tier: 'free', limit: 5 })) as { tier: string; limit: number };
+      setGenerating(false);
+      setRateLimited({ tier: data.tier, limit: data.limit });
+      return;
+    }
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      setGenerating(false);
+      setGenError(data.error || `HTTP ${res.status}`);
+      return;
+    }
 
-      const setlist = await res.json() as GeneratedSetlist;
+    // Read SSE stream — progress events update the UI in real time
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalSetlist: GeneratedSetlist | null = null;
+    let excludedCount = 0;
+    let libraryTracksUsed = 0;
 
-      // Persist to Supabase if authenticated
-      let savedId: string | undefined;
-      let savedSlug: string | undefined;
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const crowdVal = crowd.toLowerCase().replace(' ', '-') as
-            'club' | 'lounge' | 'wedding' | 'festival' | 'house-party' | 'radio' | 'corporate';
-          const slotVal = slot.toLowerCase() as 'opener' | 'middle' | 'headliner' | 'closing';
-          const base = (setlist.shareSlug || setlist.name)
-            .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-          savedSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
-          const { data: saved } = await supabase.from('setlists').insert({
-            user_id: user.id,
-            name: setlist.name,
-            primary_genre: primaryGenre || null,
-            secondary_genre: secondaryGenre || null,
-            crowd_context: crowdVal,
-            duration_minutes: durationMinutes as 30 | 60 | 90 | 120,
-            lineup_slot: slotVal,
-            energy_arc: { intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2], sustain: arcPoints[3], cooldown: arcPoints[4] },
-            is_public: false,
-            share_url: savedSlug,
-            tracks_json: setlist.tracks,
-          }).select('id').single();
-          savedId = saved?.id;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const messages = buffer.split('\n\n');
+        buffer = messages.pop() ?? '';
+        for (const msg of messages) {
+          if (!msg.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(msg.slice(6)) as
+              | { type: 'step'; step: number; message: string }
+              | { type: 'complete'; setlist: GeneratedSetlist; excludedCount: number; libraryTracksUsed: number }
+              | { type: 'error'; message: string };
+            if (event.type === 'step') {
+              setGenStep(event.step);
+            } else if (event.type === 'complete') {
+              finalSetlist = event.setlist;
+              excludedCount = event.excludedCount;
+              libraryTracksUsed = event.libraryTracksUsed;
+              setGenStep(GEN_STEPS.length);
+            } else if (event.type === 'error') {
+              throw new Error(event.message);
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== 'Unexpected end of JSON input') throw e;
+          }
         }
-      } catch { /* non-fatal — setlist still works in memory */ }
+      }
+    } catch (err) {
+      setGenerating(false);
+      setGenError(err instanceof Error ? err.message : 'Generation failed. Check your ANTHROPIC_API_KEY.');
+      return;
+    }
 
-      setGenStep(GEN_STEPS.length);
-      const withMeta = {
-        ...setlist,
+    if (!finalSetlist) {
+      setGenerating(false);
+      setGenError('Generation completed but no setlist was returned.');
+      return;
+    }
+
+    // Persist to Supabase if authenticated
+    let savedId: string | undefined;
+    let savedSlug: string | undefined;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const crowdVal = crowd.toLowerCase().replace(' ', '-') as
+          'club' | 'lounge' | 'wedding' | 'festival' | 'house-party' | 'radio' | 'corporate';
+        const slotVal = slot.toLowerCase() as 'opener' | 'middle' | 'headliner' | 'closing';
+        const base = (finalSetlist.shareSlug || finalSetlist.name)
+          .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        savedSlug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+        const { data: saved } = await supabase.from('setlists').insert({
+          user_id: user.id,
+          name: finalSetlist.name,
+          primary_genre: primaryGenre || null,
+          secondary_genre: secondaryGenre || null,
+          crowd_context: crowdVal,
+          duration_minutes: durationMinutes as 30 | 60 | 90 | 120,
+          lineup_slot: slotVal,
+          energy_arc: { intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2], sustain: arcPoints[3], cooldown: arcPoints[4] },
+          is_public: false,
+          share_url: savedSlug,
+          tracks_json: finalSetlist.tracks,
+        }).select('id').single();
+        savedId = saved?.id;
+      }
+    } catch { /* non-fatal */ }
+
+    setTimeout(() => {
+      sessionStorage.setItem('sd_current_setlist', JSON.stringify({
+        ...finalSetlist,
         dbId: savedId,
         dbSlug: savedSlug,
         generatedAt: new Date().toISOString(),
-        input: {
-          primaryGenre,
-          secondaryGenre: secondaryGenre || undefined,
-          crowdContext: crowd,
-          durationMinutes,
-          lineupSlot: slot,
-        },
-      };
-      setTimeout(() => {
-        sessionStorage.setItem('sd_current_setlist', JSON.stringify(withMeta));
-        router.push('/output');
-      }, 400);
-    } catch (err) {
-      clearInterval(iv);
-      setGenerating(false);
-      setGenError(err instanceof Error ? err.message : 'Generation failed. Check your ANTHROPIC_API_KEY.');
-    }
+        excludedCount,
+        libraryTracksUsed,
+        input: { primaryGenre, secondaryGenre: secondaryGenre || undefined, crowdContext: crowd, durationMinutes, lineupSlot: slot },
+      }));
+      router.push('/output');
+    }, 400);
   };
 
   const stepValid = (s: number) => {
@@ -296,6 +337,32 @@ export function SetlistBuilder() {
   const labelStyle: React.CSSProperties = { fontFamily:SD.mono, fontSize:9, color:SD.textSec,
     letterSpacing:2, textTransform:'uppercase' };
 
+  if (rateLimited) {
+    return (
+      <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56,
+        display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px', textAlign:'center' }}>
+          <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:4, color:SD.accent, marginBottom:8 }}>
+            LIMIT REACHED
+          </div>
+          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, lineHeight:1.8, marginBottom:32 }}>
+            Free plan includes {rateLimited.limit} sets per month.{' '}
+            Upgrade to Pro for unlimited generation, priority processing, and more.
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <SDButton onClick={() => router.push('/account')} style={{ fontSize:13, padding:'14px 40px' }}>
+              Upgrade to Pro
+            </SDButton>
+            <SDButton ghost onClick={() => { setRateLimited(null); setGenerating(false); }}
+              style={{ fontSize:11, padding:'10px 24px' }}>
+              ← Back to Builder
+            </SDButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (generating) {
     return (
       <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56,
@@ -314,7 +381,7 @@ export function SetlistBuilder() {
             <div style={{
               height:'100%', background:SD.accent, borderRadius:2,
               width:`${(genStep / GEN_STEPS.length) * 100}%`,
-              transition:'width 2s ease',
+              transition:'width 4s ease',
             }}/>
           </div>
           {genError && (

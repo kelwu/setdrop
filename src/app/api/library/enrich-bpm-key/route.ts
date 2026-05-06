@@ -50,24 +50,23 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: tracks } = await supabase
+  const BATCH = 10;
+  let enriched = 0;
+
+  // Wishlist tracks missing BPM or key
+  const { data: wishlistTracks } = await supabase
     .from('wishlist_tracks')
     .select('id, artist, title, bpm, key')
     .eq('user_id', user.id)
     .or('bpm.is.null,key.is.null');
 
-  const toEnrich = (tracks ?? []).filter(t => !t.bpm || !t.key);
-  if (!toEnrich.length) return NextResponse.json({ enriched: 0 });
+  const wishlistToEnrich = (wishlistTracks ?? []).filter(t => !t.bpm || !t.key);
 
-  const BATCH = 10;
-  let enriched = 0;
-
-  for (let i = 0; i < toEnrich.length; i += BATCH) {
-    const batch = toEnrich.slice(i, i + BATCH);
+  for (let i = 0; i < wishlistToEnrich.length; i += BATCH) {
+    const batch = wishlistToEnrich.slice(i, i + BATCH);
     const results = await lookupBpmKey(
       batch.map(t => ({ id: t.id, artist: t.artist ?? '', title: t.title ?? '' })),
     );
-
     await Promise.all(results.map(async (r) => {
       const orig = batch.find(t => t.id === r.id);
       if (!orig) return;
@@ -79,6 +78,42 @@ export async function POST() {
         enriched++;
       }
     }));
+  }
+
+  // Library tracks (serato_tracks) missing BPM or key — mainly Rekordbox imports
+  const { data: library } = await supabase
+    .from('serato_libraries')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (library) {
+    const { data: libTracks } = await supabase
+      .from('serato_tracks')
+      .select('id, artist, title, bpm, key')
+      .eq('library_id', library.id)
+      .or('bpm.is.null,bpm.eq.0,key.is.null')
+      .limit(50);
+
+    const libToEnrich = (libTracks ?? []).filter(t => !t.bpm || !t.key);
+
+    for (let i = 0; i < libToEnrich.length; i += BATCH) {
+      const batch = libToEnrich.slice(i, i + BATCH);
+      const results = await lookupBpmKey(
+        batch.map(t => ({ id: t.id, artist: t.artist ?? '', title: t.title ?? '' })),
+      );
+      await Promise.all(results.map(async (r) => {
+        const orig = batch.find(t => t.id === r.id);
+        if (!orig) return;
+        const update: Record<string, number | string> = {};
+        if (r.bpm !== null && !orig.bpm) update.bpm = r.bpm;
+        if (r.key !== null && !orig.key) update.key = r.key;
+        if (Object.keys(update).length) {
+          await supabase.from('serato_tracks').update(update).eq('id', r.id);
+          enriched++;
+        }
+      }));
+    }
   }
 
   return NextResponse.json({ enriched });

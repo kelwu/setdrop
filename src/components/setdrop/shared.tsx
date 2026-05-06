@@ -167,6 +167,7 @@ export function Nav() {
 interface SDButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
+  href?: string;
   small?: boolean;
   ghost?: boolean;
   danger?: boolean;
@@ -174,33 +175,39 @@ interface SDButtonProps {
   full?: boolean;
   style?: React.CSSProperties;
 }
-export function SDButton({ children, onClick, small, ghost, disabled, full, style: extraStyle = {} }: SDButtonProps) {
+export function SDButton({ children, onClick, href, small, ghost, disabled, full, style: extraStyle = {} }: SDButtonProps) {
   const [hov, setHov] = useState(false);
   const base: React.CSSProperties = {
     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
     border:'none', borderRadius:2, cursor: disabled ? 'not-allowed' : 'pointer',
     transition:'all .15s', display:'inline-flex', alignItems:'center', justifyContent:'center',
-    gap:8, opacity: disabled ? 0.4 : 1,
+    gap:8, opacity: disabled ? 0.4 : 1, textDecoration:'none',
     ...(full ? { width:'100%' } : {}),
     ...(small ? { fontSize:10, padding:'7px 16px' } : { fontSize:12, padding:'11px 24px' }),
   };
+  const hoverProps = { onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false) };
+  const ghostStyle = { ...base,
+    background: hov ? SD.accentDim : 'transparent',
+    border:`1px solid ${hov ? SD.accent : SD.borderMid}`,
+    color: hov ? SD.accent : SD.textSec,
+    ...extraStyle,
+  };
+  const solidStyle = { ...base,
+    background: hov ? SD.accentHover : SD.accent,
+    color:'#000', fontWeight:700,
+    transform: hov ? 'scale(1.02)' : 'scale(1)',
+    ...extraStyle,
+  };
+  if (href) {
+    return <a href={href} style={ghost ? ghostStyle : solidStyle} {...hoverProps}>{children}</a>;
+  }
   if (ghost) {
     return (
-      <button onClick={onClick} disabled={disabled} style={{ ...base,
-        background: hov ? SD.accentDim : 'transparent',
-        border:`1px solid ${hov ? SD.accent : SD.borderMid}`,
-        color: hov ? SD.accent : SD.textSec,
-        ...extraStyle,
-      }} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>{children}</button>
+      <button onClick={onClick} disabled={disabled} style={ghostStyle} {...hoverProps}>{children}</button>
     );
   }
   return (
-    <button onClick={onClick} disabled={disabled} style={{ ...base,
-      background: hov ? SD.accentHover : SD.accent,
-      color:'#000', fontWeight:700,
-      transform: hov ? 'scale(1.02)' : 'scale(1)',
-      ...extraStyle,
-    }} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>{children}</button>
+    <button onClick={onClick} disabled={disabled} style={solidStyle} {...hoverProps}>{children}</button>
   );
 }
 
@@ -287,7 +294,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
             <div style={{ display:'flex', gap:8 }}>
               {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
                 <ConfidenceBadge key={s} status={v}
-                  label={s==='bpmSupreme'?'BPM':s[0].toUpperCase()+s.slice(1)}
+                  label={s==='bpmSupreme'?'BPM':s==='djcity'?'DJcity':s[0].toUpperCase()+s.slice(1)}
                   href={track.storeUrls?.[s as keyof TrackStores]} />
               ))}
             </div>
@@ -314,7 +321,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginTop:8 }}>
             {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
               <ConfidenceBadge key={s} status={v}
-                label={s==='bpmSupreme'?'BPM Supreme':s[0].toUpperCase()+s.slice(1)}
+                label={s==='bpmSupreme'?'BPM Supreme':s==='djcity'?'DJcity':s[0].toUpperCase()+s.slice(1)}
                 href={track.storeUrls?.[s as keyof TrackStores]} />
             ))}
           </div>

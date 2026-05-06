@@ -12,8 +12,11 @@ export type Database = {
           spotify_refresh_token: string | null
           spotify_wishlist_playlist_id: string | null
           created_at: string
+          subscription_tier: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
         }
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'subscription_tier'> & { id?: string; created_at?: string; subscription_tier?: string }
         Update: Partial<Database['public']['Tables']['users']['Insert']>
       }
       serato_libraries: {
@@ -84,6 +87,7 @@ export type Database = {
           beatport_bpm: number | null
           beatport_key: string | null
           beatport_url: string | null
+          djcity_search_url: string | null
         }
         Insert: Omit<Database['public']['Tables']['wishlist_tracks']['Row'], 'id' | 'added_at'> & { id?: string; added_at?: string }
         Update: Partial<Database['public']['Tables']['wishlist_tracks']['Insert']>

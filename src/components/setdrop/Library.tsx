@@ -20,7 +20,7 @@ function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
     wordplay: null,
     why: '',
     transition: '',
-    stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', spotify: 'yellow' },
+    stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', djcity: 'yellow', spotify: 'yellow' },
   };
 }
 
@@ -32,6 +32,7 @@ function buildStoreUrls(artist: string, title: string) {
     beatport_search_url: `https://www.beatport.com/search/tracks?q=${q}`,
     bpm_supreme_search_url: `https://www.bpmsupreme.com/search?q=${q}`,
     traxsource_search_url: `https://www.traxsource.com/search?term=${q}`,
+    djcity_search_url: `https://www.djcity.com/search?q=${q}`,
   };
 }
 
@@ -248,6 +249,144 @@ function UploadZone({
   );
 }
 
+// ─── Stage Tracker ────────────────────────────────────────────────────────────
+
+type UploadStage = 'idle' | 'parse' | 'save' | 'enrich' | 'done';
+
+function StageSpinner() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14"
+      style={{ animation: 'sdSpin 0.75s linear infinite', display: 'block', color: SD.accent }}>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.5"
+        strokeDasharray="22 9" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function StageTracker({ stage, parsedCount, uploadMode }: {
+  stage: Exclude<UploadStage, 'idle'>;
+  parsedCount: number | null;
+  uploadMode: UploadMode;
+}) {
+  const stageOrder: UploadStage[] = ['parse', 'save', 'enrich', 'done'];
+  const currentIdx = stageOrder.indexOf(stage);
+
+  function status(id: UploadStage): 'pending' | 'active' | 'done' {
+    const idx = stageOrder.indexOf(id);
+    if (stage === 'done') return 'done';
+    if (idx < currentIdx) return 'done';
+    if (idx === currentIdx) return 'active';
+    return 'pending';
+  }
+
+  const rows: { id: UploadStage; label: string; detail: () => string }[] = [
+    {
+      id: 'parse',
+      label: 'PARSE',
+      detail: () => {
+        const s = status('parse');
+        if (s === 'active') return uploadMode === 'db' ? 'Reading Database V2...' : 'Reading Rekordbox XML...';
+        if (s === 'done' && parsedCount !== null) return `${parsedCount.toLocaleString()} tracks found`;
+        return 'Complete';
+      },
+    },
+    {
+      id: 'save',
+      label: 'SAVE',
+      detail: () => {
+        const s = status('save');
+        if (s === 'pending') return 'Pending';
+        if (s === 'active') return 'Uploading to cloud...';
+        return 'Saved to cloud';
+      },
+    },
+    {
+      id: 'enrich',
+      label: 'ENRICH',
+      detail: () => {
+        const s = status('enrich');
+        if (s === 'pending') return 'Pending';
+        if (s === 'active') return 'Fetching Last.fm tags...';
+        return 'Running in background';
+      },
+    },
+  ];
+
+  return (
+    <div style={{
+      marginBottom: 28, border: `1px solid ${SD.border}`, borderRadius: 4,
+      background: SD.surface, overflow: 'hidden',
+    }}>
+      <div style={{
+        padding: '24px 32px 20px',
+        borderBottom: `1px solid ${SD.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontFamily: SD.mono, fontSize: 9, letterSpacing: 2, color: SD.textMuted,
+            textTransform: 'uppercase', marginBottom: 6 }}>
+            {uploadMode === 'db' ? 'Serato DB V2' : 'Rekordbox XML'}
+          </div>
+          <div style={{ fontFamily: SD.display, fontSize: 28, letterSpacing: 3, color: SD.text }}>
+            {stage === 'done' ? 'IMPORT COMPLETE' : 'IMPORTING LIBRARY'}
+          </div>
+        </div>
+        {stage === 'done' && (
+          <div style={{ width: 40, height: 40, borderRadius: '50%',
+            background: SD.greenDim, border: `1px solid ${SD.green}44`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: SD.mono, fontSize: 18, color: SD.green }}>✓</div>
+        )}
+      </div>
+
+      <div style={{ padding: '8px 0' }}>
+        {rows.map((row, i) => {
+          const s = status(row.id);
+          const isLast = i === rows.length - 1;
+          return (
+            <div key={row.id} style={{
+              display: 'grid', gridTemplateColumns: '48px 110px 1fr',
+              alignItems: 'center', gap: 0,
+              padding: '14px 32px',
+              borderBottom: isLast ? 'none' : `1px solid ${SD.border}`,
+              background: s === 'active' ? `rgba(245,166,35,0.04)` : 'transparent',
+              transition: 'background .3s',
+            }}>
+              {/* Icon */}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {s === 'done' ? (
+                  <span style={{ fontFamily: SD.mono, fontSize: 14, color: SD.green }}>✓</span>
+                ) : s === 'active' ? (
+                  <StageSpinner />
+                ) : (
+                  <span style={{ width: 6, height: 6, borderRadius: '50%',
+                    background: SD.border, display: 'inline-block' }}/>
+                )}
+              </div>
+              {/* Label */}
+              <span style={{
+                fontFamily: SD.display, fontSize: 16, letterSpacing: 2,
+                color: s === 'pending' ? SD.textMuted : s === 'active' ? SD.accent : SD.text,
+                transition: 'color .3s',
+              }}>
+                {row.label}
+              </span>
+              {/* Detail */}
+              <span style={{
+                fontFamily: SD.mono, fontSize: 12,
+                color: s === 'pending' ? SD.textMuted : s === 'active' ? SD.textSec : SD.textSec,
+                transition: 'color .3s',
+              }}>
+                {row.detail()}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
 async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
@@ -306,7 +445,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
 
   const { data: wishlistRows } = await supabase
     .from('wishlist_tracks')
-    .select('id, artist, title, bpm, key, genre, beatport_search_url, bpm_supreme_search_url, traxsource_search_url, lastfm_tags')
+    .select('id, artist, title, bpm, key, genre, beatport_search_url, bpm_supreme_search_url, traxsource_search_url, djcity_search_url, lastfm_tags')
     .eq('user_id', user.id)
     .eq('status', 'wishlist')
     .order('added_at', { ascending: false });
@@ -324,6 +463,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
     beatportSearchUrl: w.beatport_search_url ?? undefined,
     bpmSupremeSearchUrl: w.bpm_supreme_search_url ?? undefined,
     traxsourceSearchUrl: w.traxsource_search_url ?? undefined,
+    djcitySearchUrl: w.djcity_search_url ?? undefined,
   }));
 
   if (!seratoTracks.length && !wishlistTracks.length) return null;
@@ -339,7 +479,8 @@ export function Library() {
   const [dragOver, setDragOver] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [uploadStage, setUploadStage] = useState<UploadStage>('idle');
+  const [parsedCount, setParsedCount] = useState<number | null>(null);
   const [uploadMode, setUploadMode] = useState<UploadMode>('db');
   const [showAddForm, setShowAddForm] = useState(false);
   const [addArtist, setAddArtist] = useState('');
@@ -441,10 +582,20 @@ export function Library() {
     }
   };
 
+  const finishUpload = () => {
+    setUploadStage('enrich');
+    fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
+    setTimeout(() => {
+      setUploadStage('done');
+      setTimeout(() => { setUploadStage('idle'); setShowUpload(false); }, 2000);
+    }, 2000);
+  };
+
   const handleFile = (file: File) => {
+    setParseError(null);
+    setParsedCount(null);
     if (uploadMode === 'db') {
-      setSaving(true);
-      setParseError(null);
+      setUploadStage('parse');
       const form = new FormData();
       form.append('file', file);
       fetch('/api/library/parse-db', { method: 'POST', body: form })
@@ -455,38 +606,36 @@ export function Library() {
         .then(async (data: { tracks?: LibraryTrack[]; error?: string; count?: number }) => {
           if (data.error) throw new Error(`Parse error: ${data.error}`);
           const tracks = data.tracks!;
+          setParsedCount(tracks.length);
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
-          setParseError(null);
-          setShowUpload(false);
+          setUploadStage('save');
           try {
             await saveLibraryToSupabase(tracks);
           } catch (saveErr) {
             throw new Error(`Save error: ${saveErr instanceof Error ? saveErr.message : 'unknown'}`);
           }
-          setSaving(false);
-          triggerEnrichment();
+          finishUpload();
         })
         .catch(err => {
-          setSaving(false);
+          setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to upload library');
         });
     } else {
+      setUploadStage('parse');
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const text = e.target?.result as string;
           const tracks = parseRekordboxXML(text);
+          setParsedCount(tracks.length);
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
-          setParseError(null);
-          setShowUpload(false);
-          setSaving(true);
+          setUploadStage('save');
           await saveLibraryToSupabase(tracks);
-          setSaving(false);
-          triggerEnrichment();
+          finishUpload();
         } catch (err) {
-          setSaving(false);
+          setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to parse Rekordbox XML');
         }
       };
@@ -630,15 +779,26 @@ export function Library() {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             {uploadedTracks ? (
               <>
-                <span style={{ fontFamily:SD.mono, fontSize:12,
-                  color: saving ? SD.accent : enriching ? SD.textSec : SD.green,
-                  display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%',
-                    background: saving ? SD.accent : enriching ? SD.textSec : SD.green,
-                    display:'inline-block',
-                    boxShadow:`0 0 6px ${saving ? SD.accent : enriching ? SD.textSec : SD.green}` }}/>
-                  {saving ? 'Saving to cloud...' : enriching ? 'Fetching Last.fm tags...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`}
-                </span>
+                {(() => {
+                  const busy = uploadStage !== 'idle' && uploadStage !== 'done';
+                  const dotColor = busy ? SD.accent : enriching ? SD.textSec : SD.green;
+                  const label = busy
+                    ? (uploadStage === 'parse' ? 'Reading file...' : uploadStage === 'save' ? 'Saving to cloud...' : 'Enriching tags...')
+                    : enriching ? 'Refreshing tags...' : `${uploadedTracks.length.toLocaleString()} tracks loaded`;
+                  return (
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:dotColor,
+                      display:'flex', alignItems:'center', gap:6 }}>
+                      <span style={{ width:6, height:6, borderRadius:'50%',
+                        background:dotColor, display:'inline-block',
+                        boxShadow:`0 0 6px ${dotColor}` }}/>
+                      {label}
+                    </span>
+                  );
+                })()}
+                <SDButton ghost onClick={triggerEnrichment} disabled={enriching || uploadStage !== 'idle'}
+                  style={{ fontSize:11, padding:'6px 12px', color:SD.textMuted }}>
+                  {enriching ? 'Enriching...' : 'Refresh Tags'}
+                </SDButton>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
                   style={{ fontSize:12, padding:'7px 14px' }}>Replace Library</SDButton>
                 <SDButton ghost danger onClick={clearLibrary}
@@ -653,8 +813,17 @@ export function Library() {
           </div>
         </div>
 
-        {/* Upload zone — shown when toggled or when no library yet */}
-        {(showUpload || (!uploadedTracks && tab === 'library')) && (
+        {/* Stage tracker — shown while file is being processed */}
+        {uploadStage !== 'idle' && (
+          <StageTracker
+            stage={uploadStage}
+            parsedCount={parsedCount}
+            uploadMode={uploadMode}
+          />
+        )}
+
+        {/* Upload zone — shown when toggled or when no library yet, hidden during upload */}
+        {uploadStage === 'idle' && (showUpload || (!uploadedTracks && tab === 'library')) && (
           <UploadZone
             onFile={handleFile}
             dragOver={dragOver}
@@ -840,6 +1009,47 @@ export function Library() {
             </div>
           </div>
         )}
+
+        {/* Library tab enrichment actions */}
+        {tab === 'library' && uploadedTracks && (() => {
+          const missingBpmKey = uploadedTracks.filter(t => !t.isWishlist && (!t.bpm || !t.key));
+          const untagged = uploadedTracks.filter(t => !t.isWishlist && (!t.lastfmTags || t.lastfmTags.length === 0));
+          if (!missingBpmKey.length && !untagged.length) return null;
+          return (
+            <div style={{ marginTop:24, padding:'16px 20px',
+              background:SD.surface, border:`1px solid ${SD.border}`,
+              borderRadius:4, display:'flex', alignItems:'center',
+              justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, marginBottom:2 }}>
+                  Library enrichment available
+                </div>
+                <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
+                  {[
+                    missingBpmKey.length ? `${missingBpmKey.length} tracks missing BPM/key` : '',
+                    untagged.length ? `${untagged.length} tracks without mood tags` : '',
+                  ].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                {untagged.length > 0 && (
+                  <SDButton ghost style={{ fontSize:12 }}
+                    onClick={triggerEnrichment}
+                    disabled={enriching}>
+                    {enriching ? 'Fetching Tags...' : `Tag ${untagged.length} Tracks`}
+                  </SDButton>
+                )}
+                {missingBpmKey.length > 0 && (
+                  <SDButton ghost style={{ fontSize:12 }}
+                    onClick={triggerBpmKeyEnrichment}
+                    disabled={enrichingBpmKey}>
+                    {enrichingBpmKey ? 'Looking up BPM/Key...' : `Fill ${missingBpmKey.length} Missing BPM/Key`}
+                  </SDButton>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Wishlist actions */}
         {tab === 'wishlist' && filtered.length > 0 && (() => {

@@ -173,16 +173,27 @@ function generateSlug(name: string): string {
     '-' + Math.random().toString(36).slice(2, 7);
 }
 
+export type PipelineProgressEvent = { type: 'step'; step: number; message: string };
+
 // Main pipeline — profile in code + 2 LLM calls
 export async function runSetlistPipeline(
   input: SetlistInput,
   tracks: LibraryTrack[],
-  recentlyPlayed: string[] = []
+  recentlyPlayed: string[] = [],
+  onProgress?: (event: PipelineProgressEvent) => void,
 ): Promise<GeneratedSetlist> {
+  onProgress?.({ type: 'step', step: 1, message: 'Gathering gig intel...' });
   const profile = computeLibraryProfile(tracks);
+
+  onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
   const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input);
+
+  onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
   const filtered = filterTracksForGig(tracks, blueprint, input);
+
   const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed);
+
+  onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
 
   return {
     name: input.name || 'Untitled Set',

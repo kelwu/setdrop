@@ -1,12 +1,8 @@
-'use client';
-
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
 export function LandingPage() {
-  const router = useRouter();
   const HOW_IT_WORKS = [
     { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
     { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
@@ -38,30 +34,25 @@ export function LandingPage() {
         background:'rgba(10,10,10,0.85)', backdropFilter:'blur(12px)',
         borderBottom:`1px solid ${SD.border}`,
       }}>
-        <span style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, cursor:'pointer' }}
-          onClick={() => router.push('/')}>
+        <a href="/" style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, textDecoration:'none' }}>
           SET<span style={{ color:SD.accent }}>DROP</span>
-        </span>
+        </a>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <button className="sd-landing-login" onClick={() => window.location.assign('/login')} style={{
+          <a href="/login" className="sd-landing-login" style={{
             fontFamily:SD.mono, fontSize:11, letterSpacing:1, color:SD.textSec,
             background:'none', padding:'7px 16px',
-            border:`1px solid transparent`, borderRadius:3, transition:'color .15s', cursor:'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
-          onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+            border:'1px solid transparent', borderRadius:3, display:'inline-block',
+          }}>
             Log In
-          </button>
-          <button onClick={() => window.location.assign('/login')} style={{
+          </a>
+          <a href="/login" className="sd-landing-signup" style={{
             fontFamily:SD.mono, fontSize:11, letterSpacing:1, fontWeight:600,
             color:'#000', background:SD.accent,
-            padding:'8px 18px', borderRadius:3, transition:'background .15s', whiteSpace:'nowrap',
-            border:'none', cursor:'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = SD.accentHover)}
-          onMouseLeave={e => (e.currentTarget.style.background = SD.accent)}>
+            padding:'8px 18px', borderRadius:3, whiteSpace:'nowrap',
+            textDecoration:'none', display:'inline-block',
+          }}>
             Sign Up Free
-          </button>
+          </a>
         </div>
       </nav>
 
@@ -198,12 +189,10 @@ export function LandingPage() {
           </p>
 
           <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
-            <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'14px 36px' }}>
+            <SDButton href="/builder" style={{ fontSize:13, padding:'14px 36px' }}>
               Start Building Your Set
             </SDButton>
-            <SDButton ghost
-              onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior:'smooth' })}
-              style={{ fontSize:13, padding:'14px 36px' }}>
+            <SDButton ghost href="#demo" style={{ fontSize:13, padding:'14px 36px' }}>
               See It In Action
             </SDButton>
           </div>
@@ -284,7 +273,7 @@ export function LandingPage() {
             {DEMO_TRACKS.map(t => <TrackRow key={t.pos} track={t} />)}
           </div>
           <div style={{ textAlign:'center', marginTop:32 }}>
-            <SDButton onClick={() => router.push('/builder')}>Build Your Own Set</SDButton>
+            <SDButton href="/builder">Build Your Own Set</SDButton>
           </div>
         </div>
       </section>
@@ -346,7 +335,7 @@ export function LandingPage() {
             margin:'0 auto 48px', maxWidth:480, lineHeight:1.8 }}>
             Upload your library and start planning your next set. Free to start.
           </p>
-          <SDButton onClick={() => router.push('/builder')} style={{ fontSize:14, padding:'16px 48px' }}>
+          <SDButton href="/builder" style={{ fontSize:14, padding:'16px 48px' }}>
             Get Started — It&apos;s Free
           </SDButton>
           <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>setdrop.app</div>

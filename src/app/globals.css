@@ -148,6 +148,10 @@ input::placeholder { color: #4A4A4A; }
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .5; transform: scale(1.3); }
 }
+@keyframes sdSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 @media (max-width: 768px) {
   .sd-decorative { display: none !important; }
   .sd-grid-3 { grid-template-columns: 1fr !important; }
@@ -155,6 +159,7 @@ input::placeholder { color: #4A4A4A; }
   .sd-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
   .sd-nav-links { display: none !important; }
   .sd-landing-login { display: none !important; }
+  .sd-landing-signup { font-size: 10px !important; padding: 6px 14px !important; }
   .sd-pad-x { padding-left: 20px !important; padding-right: 20px !important; }
   .sd-landing-nav { padding-left: 20px !important; padding-right: 20px !important; }
   .sd-hero-pad { padding: 100px 20px 60px !important; }
@@ -162,3 +167,9 @@ input::placeholder { color: #4A4A4A; }
   .sd-arc-wrap { overflow-x: auto; }
   .sd-bottom-nav { display: flex !important; }
 }
+
+/* Landing page nav link hover effects */
+a.sd-landing-login { transition: color .15s; }
+a.sd-landing-login:hover { color: #F0F0F0 !important; }
+a.sd-landing-signup { transition: background .15s; }
+a.sd-landing-signup:hover { background: #E09A1C !important; }
