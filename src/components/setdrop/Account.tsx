@@ -18,6 +18,7 @@ interface AccountProps {
 export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgraded }: AccountProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<'upgrade' | 'billing' | 'signout' | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -35,12 +36,14 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
 
   const handleUpgrade = async () => {
     setLoading('upgrade');
+    setStripeError(null);
     try {
       const res = await fetch('/api/checkout', { method: 'POST' });
-      const data = await res.json() as { url?: string };
+      const data = await res.json() as { url?: string; error?: string };
       if (data.url) window.location.href = data.url;
-      else setLoading(null);
-    } catch {
+      else { setStripeError(data.error ?? 'No checkout URL returned'); setLoading(null); }
+    } catch (e) {
+      setStripeError(e instanceof Error ? e.message : 'Request failed');
       setLoading(null);
     }
   };
@@ -142,6 +145,11 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
                   pointerEvents: loading ? 'none' : 'auto' }}>
                 {loading === 'upgrade' ? 'Redirecting to Stripe...' : 'Upgrade to Pro →'}
               </SDButton>
+              {stripeError && (
+                <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 12, color: SD.red }}>
+                  Error: {stripeError}
+                </div>
+              )}
             </div>
           )}
 
