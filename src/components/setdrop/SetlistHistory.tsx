@@ -56,6 +56,8 @@ export function SetlistHistory() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -69,6 +71,15 @@ export function SetlistHistory() {
       setSets(data as DbSetlist[] ?? []);
     });
   }, []);
+
+  const handleRename = async (id: string, newName: string) => {
+    const trimmed = newName.trim();
+    setRenamingId(null);
+    if (!trimmed) return;
+    setSets(prev => prev?.map(s => s.id === id ? { ...s, name: trimmed } : s) ?? prev);
+    const supabase = createClient();
+    await supabase.from('setlists').update({ name: trimmed }).eq('id', id);
+  };
 
   const handleLoad = (row: DbSetlist) => {
     setLoadingId(row.id);
@@ -146,10 +157,25 @@ export function SetlistHistory() {
                     >
                       {/* Main info */}
                       <div style={{ flex: 1, minWidth: 200 }}>
-                        <div style={{ fontFamily: SD.mono, fontSize: 14, fontWeight: 600, color: SD.text, marginBottom: 6 }}>
-                          {row.name}
+                        <div style={{ fontFamily: SD.mono, fontSize: 14, fontWeight: 600, color: SD.text, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {renamingId === row.id ? (
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={e => setRenameValue(e.target.value)}
+                              onBlur={() => handleRename(row.id, renameValue)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleRename(row.id, renameValue); if (e.key === 'Escape') setRenamingId(null); }}
+                              style={{ fontFamily: SD.mono, fontSize: 14, fontWeight: 600, color: SD.text, background: 'transparent', border: 'none', borderBottom: `1px solid ${SD.accent}`, outline: 'none', padding: '0 2px', width: Math.max(120, renameValue.length * 9) }}
+                            />
+                          ) : (
+                            <span
+                              title="Click to rename"
+                              onClick={() => { setRenamingId(row.id); setRenameValue(row.name); }}
+                              style={{ cursor: 'text' }}
+                            >{row.name}</span>
+                          )}
                           {row.is_public && (
-                            <span style={{ marginLeft: 10, fontFamily: SD.mono, fontSize: 12, color: SD.green, background: SD.greenDim, border: `1px solid ${SD.green}44`, borderRadius: 2, padding: '2px 6px', letterSpacing: 1, textTransform: 'uppercase' }}>
+                            <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.green, background: SD.greenDim, border: `1px solid ${SD.green}44`, borderRadius: 2, padding: '2px 6px', letterSpacing: 1, textTransform: 'uppercase' }}>
                               Public
                             </span>
                           )}

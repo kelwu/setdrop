@@ -82,6 +82,8 @@ export function SetlistOutput() {
   const [copied, setCopied] = useState(false);
   const [resolvedUrls, setResolvedUrls] = useState<Record<number, ResolvedUrls>>({});
   const [resolving, setResolving] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
     try {
@@ -284,6 +286,19 @@ export function SetlistOutput() {
   const displayTracks = setlist
     ? setlist.tracks.map((t, i) => toDisplayTrack(t, i, resolvedUrls[t.position || i + 1]))
     : SAMPLE_TRACKS;
+  const handleRename = async (newName: string) => {
+    const trimmed = newName.trim();
+    setRenaming(false);
+    if (!trimmed || !setlist) return;
+    const updated = { ...setlist, name: trimmed };
+    setSetlist(updated);
+    sessionStorage.setItem('sd_current_setlist', JSON.stringify(updated));
+    if (setlist.dbId) {
+      const supabase = createClient();
+      await supabase.from('setlists').update({ name: trimmed }).eq('id', setlist.dbId);
+    }
+  };
+
   const setlistName = setlist?.name ?? 'Friday Night Affair';
   const inp = setlist?.input;
   const genreLabel = inp
@@ -322,8 +337,26 @@ export function SetlistOutput() {
           <div>
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Generated Set</div>
-            <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
-              margin:'0 0 8px', color:SD.text, lineHeight:1 }}>{setlistName.toUpperCase()}</h1>
+            {renaming ? (
+              <input
+                autoFocus
+                value={renameValue}
+                onChange={e => setRenameValue(e.target.value)}
+                onBlur={() => handleRename(renameValue)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(renameValue); if (e.key === 'Escape') setRenaming(false); }}
+                style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4, color:SD.text,
+                  background:'transparent', border:'none', borderBottom:`2px solid ${SD.accent}`,
+                  outline:'none', padding:'0 2px', margin:'0 0 8px', lineHeight:1,
+                  width: Math.max(200, renameValue.length * 32) }}
+              />
+            ) : (
+              <h1
+                title="Click to rename"
+                onClick={() => { setRenaming(true); setRenameValue(setlistName); }}
+                style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
+                  margin:'0 0 8px', color:SD.text, lineHeight:1, cursor:'text' }}
+              >{setlistName.toUpperCase()}</h1>
+            )}
             <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
               {[genreLabel, crowdLabel, durationLabel, slotLabel, dateLabel].map((v, i) => (
                 <span key={i} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>
