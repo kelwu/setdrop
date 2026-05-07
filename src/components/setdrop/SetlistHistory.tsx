@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -93,7 +93,7 @@ export function SetlistHistory() {
 
         <div style={{ marginBottom: 36, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
               Set History
             </div>
             <h1 style={{ fontFamily: SD.display, fontSize: 52, letterSpacing: 4, margin: 0, color: SD.text, lineHeight: 1 }}>
@@ -106,7 +106,7 @@ export function SetlistHistory() {
         </div>
 
         {sets === null ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+          <div style={{ padding: '80px 0', textAlign: 'center', fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
             Loading...
           </div>
         ) : sets.length === 0 ? (
@@ -122,20 +122,20 @@ export function SetlistHistory() {
         ) : (
           groups.map(({ label, items }) => (
             <div key={label} style={{ marginBottom: 40 }}>
-              <div style={{ fontFamily: SD.mono, fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${SD.border}` }}>
+              <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 16, paddingBottom: 8, borderBottom: `1px solid ${SD.border}` }}>
                 {label} · {items.length} set{items.length !== 1 ? 's' : ''}
               </div>
               {items.map(row => (
                 <div key={row.id} style={{ marginBottom: 8 }}>
                   {confirmDeleteId === row.id ? (
                     <div style={{ padding: '16px 20px', background: 'rgba(220,50,50,0.06)', border: '1px solid rgba(220,50,50,0.25)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.text, flex: 1 }}>Delete &ldquo;{row.name}&rdquo;?</span>
+                      <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.text, flex: 1 }}>Delete &ldquo;{row.name}&rdquo;?</span>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <SDButton onClick={() => handleDelete(row.id)}
-                          style={{ fontSize: 10, background: 'rgba(220,50,50,0.15)', borderColor: 'rgba(220,50,50,0.4)', color: '#E05555', opacity: deletingId === row.id ? 0.6 : 1 }}>
+                          style={{ fontSize: 12, background: 'rgba(220,50,50,0.15)', borderColor: 'rgba(220,50,50,0.4)', color: '#E05555', opacity: deletingId === row.id ? 0.6 : 1 }}>
                           {deletingId === row.id ? 'Deleting...' : 'Delete'}
                         </SDButton>
-                        <SDButton ghost onClick={() => setConfirmDeleteId(null)} style={{ fontSize: 10 }}>Cancel</SDButton>
+                        <SDButton ghost onClick={() => setConfirmDeleteId(null)} style={{ fontSize: 12 }}>Cancel</SDButton>
                       </div>
                     </div>
                   ) : (
@@ -149,15 +149,15 @@ export function SetlistHistory() {
                         <div style={{ fontFamily: SD.mono, fontSize: 14, fontWeight: 600, color: SD.text, marginBottom: 6 }}>
                           {row.name}
                           {row.is_public && (
-                            <span style={{ marginLeft: 10, fontFamily: SD.mono, fontSize: 9, color: SD.green, background: SD.greenDim, border: `1px solid ${SD.green}44`, borderRadius: 2, padding: '2px 6px', letterSpacing: 1, textTransform: 'uppercase' }}>
+                            <span style={{ marginLeft: 10, fontFamily: SD.mono, fontSize: 12, color: SD.green, background: SD.greenDim, border: `1px solid ${SD.green}44`, borderRadius: 2, padding: '2px 6px', letterSpacing: 1, textTransform: 'uppercase' }}>
                               Public
                             </span>
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textSec }}>{genre(row)}</span>
-                          {row.crowd_context && <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted }}>{row.crowd_context}</span>}
-                          {row.lineup_slot && <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted }}>{row.lineup_slot}</span>}
+                          <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{genre(row)}</span>
+                          {row.crowd_context && <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>{row.crowd_context}</span>}
+                          {row.lineup_slot && <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>{row.lineup_slot}</span>}
                         </div>
                       </div>
 
@@ -165,25 +165,25 @@ export function SetlistHistory() {
                       <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ fontFamily: SD.mono, fontSize: 16, fontWeight: 600, color: SD.accent }}>{trackCount(row)}</div>
-                          <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>tracks</div>
+                          <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>tracks</div>
                         </div>
                         {row.duration_minutes && (
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontFamily: SD.mono, fontSize: 16, fontWeight: 600, color: SD.text }}>{row.duration_minutes}m</div>
-                            <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>duration</div>
+                            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>duration</div>
                           </div>
                         )}
-                        <div style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted }}>
+                        <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
                           {new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       </div>
 
                       {/* Actions */}
                       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        <SDButton onClick={() => handleLoad(row)} style={{ fontSize: 10, padding: '7px 18px', opacity: loadingId === row.id ? 0.6 : 1 }}>
+                        <SDButton onClick={() => handleLoad(row)} style={{ fontSize: 12, padding: '7px 18px', opacity: loadingId === row.id ? 0.6 : 1 }}>
                           {loadingId === row.id ? 'Loading...' : 'View Set →'}
                         </SDButton>
-                        <SDButton ghost onClick={() => setConfirmDeleteId(row.id)} style={{ fontSize: 10, padding: '7px 12px', color: SD.textMuted }}>
+                        <SDButton ghost onClick={() => setConfirmDeleteId(row.id)} style={{ fontSize: 12, padding: '7px 12px', color: SD.textMuted }}>
                           ✕
                         </SDButton>
                       </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -323,7 +323,7 @@ function StageTracker({ stage, parsedCount, uploadMode }: {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div>
-          <div style={{ fontFamily: SD.mono, fontSize: 9, letterSpacing: 2, color: SD.textMuted,
+          <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textMuted,
             textTransform: 'uppercase', marginBottom: 6 }}>
             {uploadMode === 'db' ? 'Serato DB V2' : 'Rekordbox XML'}
           </div>
@@ -879,9 +879,9 @@ export function Library() {
                       style={{ fontSize: 12, padding: '8px 16px' }}>
                       ♫ Import from Spotify
                     </SDButton>
-                    <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.green }}>● Connected</span>
+                    <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.green }}>● Connected</span>
                     <button onClick={handleSpotifyDisconnect}
-                      style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted,
+                      style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted,
                         background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       Disconnect
                     </button>
@@ -889,7 +889,7 @@ export function Library() {
                 ) : (
                   <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
                     borderRadius: 4, padding: '20px 24px' }}>
-                    <div style={{ fontFamily: SD.mono, fontSize: 11, letterSpacing: 2,
+                    <div style={{ fontFamily: SD.mono, fontSize: 13, letterSpacing: 2,
                       color: SD.textMuted, textTransform: 'uppercase', marginBottom: 16 }}>
                       Import from Spotify
                     </div>

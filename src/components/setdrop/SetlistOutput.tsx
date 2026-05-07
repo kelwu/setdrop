@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -385,7 +385,7 @@ export function SetlistOutput() {
             marginBottom: 20, padding: '12px 16px',
             background: crateStatus.startsWith('Downloaded') ? SD.greenDim : SD.accentDim,
             border: `1px solid ${crateStatus.startsWith('Downloaded') ? SD.green + '44' : SD.accent + '44'}`,
-            borderRadius: 3, fontFamily: SD.mono, fontSize: 11,
+            borderRadius: 3, fontFamily: SD.mono, fontSize: 13,
             color: crateStatus.startsWith('Downloaded') ? SD.green : SD.accent,
           }}>
             {crateStatus}

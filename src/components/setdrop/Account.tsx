@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -59,7 +59,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth: 600, margin: '0 auto', padding: '48px 40px' }}>
 
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+          <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Your Account</div>
           <h1 style={{ fontFamily: SD.display, fontSize: 52, letterSpacing: 4,
             margin: 0, color: SD.text, lineHeight: 1 }}>ACCOUNT</h1>
@@ -80,10 +80,10 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
 
           <div style={{ display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', marginBottom: 24 }}>
-            <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
               letterSpacing: 2, textTransform: 'uppercase' }}>Plan</div>
             <span style={{
-              fontFamily: SD.mono, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase',
+              fontFamily: SD.mono, fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase',
               padding: '4px 12px', borderRadius: 2,
               background: isPro ? SD.accentDim : SD.surface2,
               border: `1px solid ${isPro ? SD.accent + '66' : SD.border}`,
@@ -97,12 +97,12 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
           <div style={{ marginBottom: isPro ? 0 : 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between',
               alignItems: 'baseline', marginBottom: 10 }}>
-              <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textSec }}>
+              <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
                 Sets generated this month
               </span>
               <span style={{ fontFamily: SD.mono, fontSize: 13,
                 color: usagePct >= 100 ? SD.red : SD.text }}>
-                {setsUsed}<span style={{ color: SD.textMuted, fontSize: 11 }}>/{limit}</span>
+                {setsUsed}<span style={{ color: SD.textMuted, fontSize: 13 }}>/{limit}</span>
               </span>
             </div>
             <div style={{ height: 4, background: SD.surface2, borderRadius: 2, overflow: 'hidden' }}>
@@ -117,7 +117,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
 
           {!isPro && (
             <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4 }}>
-              <div style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted,
+              <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
                 lineHeight: 1.8, marginBottom: 16 }}>
                 Pro includes 50 sets/month, priority processing, and unlimited crate exports.
               </div>
@@ -135,12 +135,12 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
             <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               flexWrap: 'wrap', gap: 12 }}>
-              <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted }}>
+              <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
                 Billing managed via Stripe
               </span>
               {hasStripeCustomer && (
                 <SDButton ghost onClick={handleBillingPortal}
-                  style={{ fontSize: 11, opacity: loading === 'billing' ? 0.6 : 1,
+                  style={{ fontSize: 13, opacity: loading === 'billing' ? 0.6 : 1,
                     pointerEvents: loading ? 'none' : 'auto' }}>
                   {loading === 'billing' ? 'Opening...' : 'Manage Billing ↗'}
                 </SDButton>
@@ -152,14 +152,14 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
         {/* Profile card */}
         <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
           borderRadius: 4, padding: '24px' }}>
-          <div style={{ fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+          <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Profile</div>
           <div style={{ display: 'flex', alignItems: 'center',
             justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec,
               wordBreak: 'break-all' }}>{email}</span>
             <SDButton ghost onClick={handleSignOut}
-              style={{ fontSize: 11, color: SD.red,
+              style={{ fontSize: 13, color: SD.red,
                 borderColor: `${SD.red}44`,
                 opacity: loading === 'signout' ? 0.6 : 1,
                 pointerEvents: loading ? 'none' : 'auto' }}>
