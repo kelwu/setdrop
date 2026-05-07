@@ -48,7 +48,7 @@ function storeSearchUrls(artist: string, title: string, t: SetlistTrack) {
   };
 }
 
-function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls) {
+function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls, genre?: string) {
   const base = storeSearchUrls(t.artist, t.title, t);
   const hasBeatport = !!resolved?.beatportUrl;
   return {
@@ -73,6 +73,7 @@ function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls) {
       ...base,
       beatport: resolved?.beatportUrl ?? base.beatport,
     },
+    genre,
   };
 }
 
@@ -284,7 +285,7 @@ export function SetlistOutput() {
   };
 
   const displayTracks = setlist
-    ? setlist.tracks.map((t, i) => toDisplayTrack(t, i, resolvedUrls[t.position || i + 1]))
+    ? setlist.tracks.map((t, i) => toDisplayTrack(t, i, resolvedUrls[t.position || i + 1], setlist.input?.primaryGenre))
     : SAMPLE_TRACKS;
   const handleRename = async (newName: string) => {
     const trimmed = newName.trim();

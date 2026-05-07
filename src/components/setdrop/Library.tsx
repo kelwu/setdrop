@@ -21,6 +21,7 @@ function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
     why: '',
     transition: '',
     stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', djcity: 'yellow', spotify: 'yellow' },
+    genre: t.genre,
   };
 }
 

@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
-import { SD, ConfidenceStatus, SampleTrack, TrackStores } from '@/lib/setdrop/constants';
+import { SD, ConfidenceStatus, SampleTrack, TrackStores, orderedStores } from '@/lib/setdrop/constants';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
 export function Nav() {
@@ -305,10 +305,10 @@ export function TrackRow({ track }: { track: SampleTrack }) {
           <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{track.energy}/10</span>
           {hov && !exp && (
             <div style={{ display:'flex', gap:8 }}>
-              {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
-                <ConfidenceBadge key={s} status={v}
+              {orderedStores(track.genre).map(s => (
+                <ConfidenceBadge key={s} status={track.stores[s]}
                   label={s==='bpmSupreme'?'BPM':s==='djcity'?'DJcity':s[0].toUpperCase()+s.slice(1)}
-                  href={track.storeUrls?.[s as keyof TrackStores]} />
+                  href={track.storeUrls?.[s]} />
               ))}
             </div>
           )}
@@ -332,10 +332,10 @@ export function TrackRow({ track }: { track: SampleTrack }) {
             </div>
           )}
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginTop:8 }}>
-            {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
-              <ConfidenceBadge key={s} status={v}
+            {orderedStores(track.genre).map(s => (
+              <ConfidenceBadge key={s} status={track.stores[s]}
                 label={s==='bpmSupreme'?'BPM Supreme':s==='djcity'?'DJcity':s[0].toUpperCase()+s.slice(1)}
-                href={track.storeUrls?.[s as keyof TrackStores]} />
+                href={track.storeUrls?.[s]} />
             ))}
           </div>
         </div>

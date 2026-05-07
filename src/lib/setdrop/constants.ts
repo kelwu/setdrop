@@ -49,6 +49,17 @@ export interface SampleTrack {
   transition: string;
   stores: TrackStores;
   storeUrls?: Partial<Record<keyof TrackStores, string>>;
+  genre?: string;
+}
+
+const ELECTRONIC_GENRES = new Set(['house', 'techno', 'drum & bass', 'dnb', 'trance', 'edm', 'electronic', 'dance', 'garage', 'uk garage', 'dubstep', 'ambient']);
+const URBAN_GENRES = new Set(['hip hop', 'r&b', 'afrobeats', 'afrobeat', 'dancehall', 'latin', 'reggaeton', 'trap', 'grime']);
+
+export function orderedStores(genre?: string): (keyof TrackStores)[] {
+  const g = (genre ?? '').toLowerCase();
+  if (ELECTRONIC_GENRES.has(g)) return ['beatport', 'traxsource', 'bpmSupreme', 'djcity', 'spotify'];
+  if (URBAN_GENRES.has(g))      return ['djcity', 'bpmSupreme', 'traxsource', 'beatport', 'spotify'];
+  return ['beatport', 'bpmSupreme', 'traxsource', 'djcity', 'spotify'];
 }
 
 export const SAMPLE_TRACKS: SampleTrack[] = [
