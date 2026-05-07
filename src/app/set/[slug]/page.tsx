@@ -1,4 +1,4 @@
-﻿import { notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
@@ -25,9 +25,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const genre = [data.primary_genre, data.secondary_genre].filter(Boolean).join(' / ');
   const desc = genre ? `${genre} setlist, built with SetDrop` : 'Built with SetDrop';
   return {
-    title: `${data.name} â€” SetDrop`,
+    title: `${data.name} — SetDrop`,
     description: desc,
-    openGraph: { title: `${data.name} â€” SetDrop`, description: desc, siteName: 'SetDrop' },
+    openGraph: { title: `${data.name} — SetDrop`, description: desc, siteName: 'SetDrop' },
   };
 }
 
@@ -91,7 +91,7 @@ export default async function PublicSetPage({ params }: Props) {
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
             {[genre, crowd, dur, `${tracks.length} tracks`].filter(Boolean).map((v, i) => (
               <span key={i} style={{ fontFamily: S.mono, fontSize: 13, color: S.textSec }}>
-                {i > 0 && <span style={{ color: S.textMuted, marginRight: 16 }}>Â·</span>}
+                {i > 0 && <span style={{ color: S.textMuted, marginRight: 16 }}>·</span>}
                 {v}
               </span>
             ))}
@@ -151,7 +151,7 @@ export default async function PublicSetPage({ params }: Props) {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 600,
                     color: S.text }}>{t.artist}</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>â€” {t.title}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>— {t.title}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
                   <span style={{ fontFamily: S.mono, fontSize: 12, color: S.accent }}>{t.bpm} BPM</span>

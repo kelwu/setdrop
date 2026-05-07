@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores } from '@/lib/setdrop/constants';
 
-// â”€â”€â”€ Nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Nav ───────────────────────────────────────────────────────────────────
 export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -50,10 +50,10 @@ export function Nav() {
     { id:'library', label:'Library' },
   ];
   const mobileNavItems = [
-    { id:'dashboard', label:'Dash', icon:'âŠž' },
+    { id:'dashboard', label:'Dash', icon:'⊞' },
     { id:'builder',   label:'Build', icon:'+' },
-    { id:'history',   label:'History', icon:'â†º' },
-    { id:'library',   label:'Library', icon:'â™¬' },
+    { id:'history',   label:'History', icon:'↺' },
+    { id:'library',   label:'Library', icon:'♬' },
   ];
 
   return (
@@ -174,7 +174,7 @@ export function Nav() {
   );
 }
 
-// â”€â”€â”€ Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Button ────────────────────────────────────────────────────────────────
 interface SDButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
@@ -222,7 +222,7 @@ export function SDButton({ children, onClick, href, small, ghost, disabled, full
   );
 }
 
-// â”€â”€â”€ ConfidenceBadge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ConfidenceBadge ───────────────────────────────────────────────────────
 export function ConfidenceBadge({ status, label, href }: { status: ConfidenceStatus; label: string; href?: string }) {
   const c = { green:SD.green, yellow:SD.yellow, red:SD.red }[status];
   const inner = (
@@ -253,14 +253,14 @@ export function ConfidenceBadge({ status, label, href }: { status: ConfidenceSta
   );
 }
 
-// â”€â”€â”€ Energy dot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Energy dot ────────────────────────────────────────────────────────────
 export function EnergyDot({ energy, size = 8 }: { energy: number; size?: number }) {
   const c = energy<=3?'#22C55E':energy<=6?'#EAB308':energy<=8?'#F5A623':'#EF4444';
   return <span style={{ width:size, height:size, borderRadius:'50%', background:c,
     display:'inline-block', boxShadow:`0 0 6px ${c}88`, flexShrink:0 }} />;
 }
 
-// â”€â”€â”€ TrackRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── TrackRow ──────────────────────────────────────────────────────────────
 export function TrackRow({ track }: { track: SampleTrack }) {
   const [exp, setExp] = useState(false);
   const [hov, setHov] = useState(false);
@@ -284,7 +284,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:8, flexWrap:'wrap' }}>
             <span style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text }}>{track.artist}</span>
-            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>â€” {track.title}</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>— {track.title}</span>
           </div>
           <div style={{ display:'flex', gap:12, marginTop:3, alignItems:'center', flexWrap:'wrap' }}>
             <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, letterSpacing:.5 }}>{track.bpm} BPM</span>
@@ -293,7 +293,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
               <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                 background:SD.accentDim, border:`1px solid ${SD.accent}44`,
                 borderRadius:2, padding:'1px 6px', letterSpacing:.5, textTransform:'uppercase' }}>
-                âš  Download before gig
+                ⚠ Download before gig
               </span>
             )}
           </div>
@@ -310,7 +310,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
               ))}
             </div>
           )}
-          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginLeft:4 }}>{exp ? 'â–²' : 'â–¼'}</span>
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginLeft:4 }}>{exp ? '▲' : '▼'}</span>
         </div>
       </div>
       {exp && (
@@ -342,7 +342,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
   );
 }
 
-// â”€â”€â”€ GenrePillSelector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── GenrePillSelector ─────────────────────────────────────────────────────
 interface GenrePillSelectorProps {
   selected: string | string[];
   onChange: (g: string) => void;
@@ -369,7 +369,7 @@ export function GenrePillSelector({ selected, onChange, genres }: GenrePillSelec
   );
 }
 
-// â”€â”€â”€ Energy Arc Chart (static, read-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Energy Arc Chart (static, read-only) ────────────────────────────────
 export function EnergyArcChart({ tracks, width = 640, height = 200 }: {
   tracks: SampleTrack[]; width?: number; height?: number;
 }) {
@@ -418,7 +418,7 @@ export function EnergyArcChart({ tracks, width = 640, height = 200 }: {
   );
 }
 
-// â”€â”€â”€ Agent Progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Agent Progress ─────────────────────────────────────────────────────────
 export function AgentProgress({ steps, currentStep }: { steps: string[]; currentStep: number }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -434,7 +434,7 @@ export function AgentProgress({ steps, currentStep }: { steps: string[]; current
               transition:'all .3s',
             }}>
               {done
-                ? <span style={{ color:SD.accent, fontSize:12, fontWeight:700 }}>âœ“</span>
+                ? <span style={{ color:SD.accent, fontSize:12, fontWeight:700 }}>✓</span>
                 : active
                 ? <span style={{ width:8, height:8, borderRadius:'50%', background:SD.accent,
                     display:'block', animation:'sdPulse 1.2s ease-in-out infinite' }}/>
@@ -451,7 +451,7 @@ export function AgentProgress({ steps, currentStep }: { steps: string[]; current
   );
 }
 
-// â”€â”€â”€ SDInput â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SDInput ───────────────────────────────────────────────────────────────
 interface SDInputProps {
   value: string;
   onChange: (v: string) => void;
@@ -482,7 +482,7 @@ export function SDInput({ value, onChange, placeholder, label, type = 'text', st
   );
 }
 
-// â”€â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Section label ──────────────────────────────────────────────────────────
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
