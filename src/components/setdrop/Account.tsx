@@ -18,6 +18,20 @@ interface AccountProps {
 export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgraded }: AccountProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<'upgrade' | 'billing' | 'signout' | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await fetch('/api/account/delete', { method: 'POST' });
+      localStorage.clear();
+      window.location.href = '/';
+    } catch {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   const handleUpgrade = async () => {
     setLoading('upgrade');
@@ -166,6 +180,39 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
               {loading === 'signout' ? 'Signing out...' : 'Sign Out'}
             </SDButton>
           </div>
+        </div>
+
+        {/* Danger zone */}
+        <div style={{ marginTop: 16, borderTop: `1px solid ${SD.border}`, paddingTop: 24 }}>
+          <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
+            letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Danger Zone</div>
+          {!showDeleteConfirm ? (
+            <SDButton ghost onClick={() => setShowDeleteConfirm(true)}
+              style={{ fontSize: 12, padding: '7px 16px', color: '#E05555', borderColor: 'rgba(220,50,50,0.3)' }}>
+              Delete Account
+            </SDButton>
+          ) : (
+            <div style={{ background: 'rgba(220,50,50,0.06)', border: '1px solid rgba(220,50,50,0.25)',
+              borderRadius: 4, padding: '20px 24px' }}>
+              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.text, marginBottom: 8 }}>
+                Delete your account?
+              </div>
+              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec, marginBottom: 20, lineHeight: 1.7 }}>
+                This permanently deletes your library, setlists, wishlist, and gig history. This cannot be undone.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <SDButton onClick={handleDeleteAccount}
+                  style={{ fontSize: 13, background: 'rgba(220,50,50,0.15)',
+                    borderColor: 'rgba(220,50,50,0.4)', color: '#E05555',
+                    opacity: deleting ? 0.6 : 1, pointerEvents: deleting ? 'none' : 'auto' }}>
+                  {deleting ? 'Deleting...' : 'Yes, delete everything'}
+                </SDButton>
+                <SDButton ghost onClick={() => setShowDeleteConfirm(false)} style={{ fontSize: 13 }}>
+                  Cancel
+                </SDButton>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

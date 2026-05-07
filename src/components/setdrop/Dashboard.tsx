@@ -45,8 +45,6 @@ export function Dashboard() {
   const [gigHistory, setGigHistory] = useState<GigEntry[] | null>(null);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[] | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sd_onboarding_done') === '1';
@@ -96,9 +94,9 @@ export function Dashboard() {
       if (setsRes.data) {
         setRecentSets(setsRes.data.map(s => {
           const trackCount = Array.isArray(s.tracks_json) ? (s.tracks_json as unknown[]).length : 0;
-          const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || 'â€”';
+          const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || '—';
           const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const duration = s.duration_minutes ? `${s.duration_minutes} min` : 'â€”';
+          const duration = s.duration_minutes ? `${s.duration_minutes} min` : '—';
           return { id: s.id, name: s.name, genre, date, createdAtRaw: s.created_at, duration, trackCount };
         }));
       }
@@ -135,17 +133,6 @@ export function Dashboard() {
 
   const djName = userEmail ? userEmail.split('@')[0].toUpperCase() : 'DJ';
 
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
-    try {
-      await fetch('/api/account/delete', { method: 'POST' });
-      localStorage.clear();
-      window.location.href = '/';
-    } catch {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  };
 
   function Card({ children, style: extra = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
@@ -183,7 +170,7 @@ export function Dashboard() {
           </SDButton>
         </div>
 
-        {/* Onboarding â€” shown until library uploaded + first set built */}
+        {/* Onboarding — shown until library uploaded + first set built */}
         {!onboardingDismissed && (libraryStats === null || (recentSets !== null && recentSets.length === 0)) && (
           <div style={{ background:SD.surface, border:`1px solid ${SD.borderMid}`,
             borderRadius:4, padding:'24px 28px', marginBottom:24 }}>
@@ -197,12 +184,12 @@ export function Dashboard() {
               </div>
               <button onClick={() => { setOnboardingDismissed(true); localStorage.setItem('sd_onboarding_done','1'); }}
                 style={{ background:'none', border:'none', cursor:'pointer',
-                  fontFamily:SD.mono, fontSize:12, color:SD.textMuted, padding:'2px 6px' }}>âœ•</button>
+                  fontFamily:SD.mono, fontSize:12, color:SD.textMuted, padding:'2px 6px' }}>✕</button>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
                 { n:1, done: libraryStats !== null, label:'Upload your library', sub:'Import your Serato DB, Rekordbox XML, or add tracks manually to your wishlist', page:'library', cta:'Upload Library' },
-                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd â€” it handles the rest', page:'builder', cta:'Build Set' },
+                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd — it handles the rest', page:'builder', cta:'Build Set' },
               ].map(step => (
                 <div key={step.n} style={{ display:'flex', alignItems:'center', gap:16,
                   padding:'14px 18px', background:SD.bg,
@@ -214,7 +201,7 @@ export function Dashboard() {
                     display:'flex', alignItems:'center', justifyContent:'center',
                     fontFamily:SD.mono, fontSize:13,
                     color: step.done ? SD.green : SD.textMuted }}>
-                    {step.done ? 'âœ“' : step.n}
+                    {step.done ? '✓' : step.n}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
@@ -250,7 +237,7 @@ export function Dashboard() {
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
                 color:SD.text, lineHeight:1 }}>
-                {libraryStats ? libraryStats.totalTracks.toLocaleString() : 'â€”'}
+                {libraryStats ? libraryStats.totalTracks.toLocaleString() : '—'}
               </div>
               <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks in library</div>
@@ -278,7 +265,7 @@ export function Dashboard() {
             }/>
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? 'â€”'}</div>
+                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? '—'}</div>
               <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks to download</div>
               <div style={{ marginTop:24 }}>
@@ -294,7 +281,7 @@ export function Dashboard() {
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
                 color:SD.text, lineHeight:1 }}>
-                {recentSets === null ? 'â€”' : recentSets.filter(s => {
+                {recentSets === null ? '—' : recentSets.filter(s => {
                   const d = new Date(s.createdAtRaw);
                   const now = new Date();
                   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -356,7 +343,7 @@ export function Dashboard() {
         {/* Bottom row */}
         <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <Card>
-            <CardHeader title="Wishlist â€” Download Queue" action={
+            <CardHeader title="Wishlist — Download Queue" action={
               <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'5px 12px' }}>
                 View All
               </SDButton>
@@ -378,7 +365,7 @@ export function Dashboard() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
                       color:SD.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {t.artist} â€” {t.title}
+                      {t.artist} — {t.title}
                     </div>
                     <div style={{ display:'flex', gap:10, marginTop:3 }}>
                       {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>{t.bpm} BPM</span>}
@@ -391,7 +378,7 @@ export function Dashboard() {
                         background:SD.accentDim, border:`1px solid ${SD.accent}33`,
                         borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap',
                         textDecoration:'none', flexShrink:0 }}>
-                      Beatport â†—
+                      Beatport ↗
                     </a>
                   )}
                 </div>
@@ -444,38 +431,6 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Account */}
-        <div style={{ marginTop:32, borderTop:`1px solid ${SD.border}`, paddingTop:32 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
-            color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>Account</div>
-          {!showDeleteConfirm ? (
-            <SDButton ghost onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize:12, padding:'7px 16px', color:'#E05555', borderColor:'rgba(220,50,50,0.3)' }}>
-              Delete Account
-            </SDButton>
-          ) : (
-            <div style={{ background:'rgba(220,50,50,0.06)', border:'1px solid rgba(220,50,50,0.25)',
-              borderRadius:4, padding:'20px 24px', maxWidth:480 }}>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:8 }}>
-                Delete your account?
-              </div>
-              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, marginBottom:20, lineHeight:1.7 }}>
-                This permanently deletes your library, setlists, wishlist, and gig history. This cannot be undone.
-              </div>
-              <div style={{ display:'flex', gap:10 }}>
-                <SDButton onClick={handleDeleteAccount}
-                  style={{ fontSize:13, background:'rgba(220,50,50,0.15)',
-                    borderColor:'rgba(220,50,50,0.4)', color:'#E05555',
-                    opacity: deleting ? 0.6 : 1 }}>
-                  {deleting ? 'Deleting...' : 'Yes, delete everything'}
-                </SDButton>
-                <SDButton ghost onClick={() => setShowDeleteConfirm(false)} style={{ fontSize:13 }}>
-                  Cancel
-                </SDButton>
-              </div>
-            </div>
-          )}
-        </div>
 
       </div>
     </div>
