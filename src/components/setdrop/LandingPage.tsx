@@ -1,19 +1,19 @@
-import React from 'react';
+﻿import React from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
 export function LandingPage() {
   const HOW_IT_WORKS = [
     { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
-    { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
+    { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags â€” no manual tagging." },
     { n:'03', label:'Bridge', desc:"SetDrop checks Beatport, Traxsource, and BPM Supreme to tell you where each track is purchasable." },
     { n:'04', label:'Sync', desc:"Download and import to Serato. SetDrop tracks what's in your library and what still needs to get there." },
-    { n:'05', label:'Build', desc:"Set the gig context — genre, crowd, energy arc, duration. AI architects the perfect set from your library." },
+    { n:'05', label:'Build', desc:"Set the gig context â€” genre, crowd, energy arc, duration. AI architects the perfect set from your library." },
     { n:'06', label:'Perform', desc:"Export your Serato crate file. Hit the decks. Do not repeat." },
   ];
 
   const FEATURES = [
-    { title:'Serato + Rekordbox Ready', desc:"Import from Serato DB or Rekordbox XML. Export your AI-built set back as a Serato crate or Rekordbox playlist — one click." },
+    { title:'Serato + Rekordbox Ready', desc:"Import from Serato DB or Rekordbox XML. Export your AI-built set back as a Serato crate or Rekordbox playlist â€” one click." },
     { title:'Do-Not-Repeat Logic', desc:"Tracks played in previous sets are flagged. AI never pulls from tracks you've already used this month." },
     { title:'Opener / Headliner Mode', desc:"Tell the AI your slot. Energy arc, track selection, and pacing adapt to your position on the lineup." },
     { title:'Genre-Specific Transition Rules', desc:"Afrobeats to House transitions follow different rules than Hip Hop to R&B. The AI knows." },
@@ -26,7 +26,7 @@ export function LandingPage() {
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', color:SD.text }}>
 
-      {/* ── Nav ──────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <nav className="sd-landing-nav" style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50,
         padding:'0 40px', height:56,
@@ -39,14 +39,14 @@ export function LandingPage() {
         </a>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <a href="/login" className="sd-landing-login" style={{
-            fontFamily:SD.mono, fontSize:11, letterSpacing:1, color:SD.textSec,
+            fontFamily:SD.mono, fontSize:13, letterSpacing:1, color:SD.textSec,
             background:'none', padding:'7px 16px',
             border:'1px solid transparent', borderRadius:3, display:'inline-block',
           }}>
             Log In
           </a>
           <a href="/login" className="sd-landing-signup" style={{
-            fontFamily:SD.mono, fontSize:11, letterSpacing:1, fontWeight:600,
+            fontFamily:SD.mono, fontSize:13, letterSpacing:1, fontWeight:600,
             color:'#000', background:SD.accent,
             padding:'8px 18px', borderRadius:3, whiteSpace:'nowrap',
             textDecoration:'none', display:'inline-block',
@@ -56,7 +56,7 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="sd-hero-pad" style={{
         minHeight:'100vh', display:'flex', flexDirection:'column',
         alignItems:'center', justifyContent:'center', position:'relative',
@@ -79,7 +79,7 @@ export function LandingPage() {
           background:'radial-gradient(ellipse at center, rgba(245,166,35,0.1) 0%, transparent 68%)',
         }}/>
 
-        {/* Speaker — left */}
+        {/* Speaker â€” left */}
         <svg className="sd-decorative" style={{ position:'absolute', left:'-20px', top:'50%', transform:'translateY(-50%)',
           opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
@@ -94,7 +94,7 @@ export function LandingPage() {
           <rect x="30" y="330" width="120" height="18" rx="9" fill="#F5A623" opacity=".6"/>
         </svg>
 
-        {/* Speaker — right */}
+        {/* Speaker â€” right */}
         <svg className="sd-decorative" style={{ position:'absolute', right:'-20px', top:'50%', transform:'translateY(-50%)',
           opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
@@ -167,7 +167,7 @@ export function LandingPage() {
         {/* Content */}
         <div style={{ position:'relative', zIndex:1, maxWidth:900 }}>
           <div style={{
-            fontFamily:SD.mono, fontSize:11, letterSpacing:3,
+            fontFamily:SD.mono, fontSize:13, letterSpacing:3,
             color:SD.accent, textTransform:'uppercase', marginBottom:24,
             display:'flex', alignItems:'center', justifyContent:'center', gap:12,
           }}>
@@ -185,7 +185,7 @@ export function LandingPage() {
             fontFamily:SD.mono, fontSize:16, color:SD.textSec,
             letterSpacing:1, lineHeight:1.7, margin:'32px auto 48px', maxWidth:560,
           }}>
-            SetDrop connects your entire DJ workflow — from building your library to walking into the booth ready to play.
+            SetDrop connects your entire DJ workflow â€” from building your library to walking into the booth ready to play.
           </p>
 
           <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
@@ -201,7 +201,7 @@ export function LandingPage() {
             {([['2,400+','Tracks analyzed'],['98%','Key accuracy'],['< 30s','Set generation']] as [string,string][]).map(([n, l]) => (
               <div key={l} style={{ textAlign:'center' }}>
                 <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:2, color:SD.accent }}>{n}</div>
-                <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, letterSpacing:1.5,
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, letterSpacing:1.5,
                   textTransform:'uppercase', marginTop:4 }}>{l}</div>
               </div>
             ))}
@@ -210,16 +210,16 @@ export function LandingPage() {
 
         <div style={{ position:'absolute', bottom:32, left:'50%', transform:'translateX(-50%)',
           display:'flex', flexDirection:'column', alignItems:'center', gap:6, zIndex:1 }}>
-          <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted, letterSpacing:2,
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, letterSpacing:2,
             textTransform:'uppercase' }}>Scroll</span>
           <div style={{ width:1, height:32, background:`linear-gradient(${SD.accent},transparent)` }}/>
         </div>
       </section>
 
-      {/* ── How It Works ──────────────────────────────────────────────────── */}
+      {/* â”€â”€ How It Works â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:72 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.accent,
+          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>The Workflow</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(48px,6vw,80px)', letterSpacing:4,
             margin:0, color:SD.text }}>HOW IT WORKS</h2>
@@ -244,7 +244,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Demo Setlist ──────────────────────────────────────────────────── */}
+      {/* â”€â”€ Demo Setlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section id="demo" className="sd-pad-x" style={{
         padding:'80px 40px 120px',
         background:SD.surface,
@@ -253,17 +253,17 @@ export function LandingPage() {
       }}>
         <div style={{ maxWidth:960, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:48 }}>
-            <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.accent,
+            <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
               textTransform:'uppercase', marginBottom:12 }}>Live Preview</div>
             <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,64px)', letterSpacing:3,
               margin:'0 0 16px', color:SD.text }}>AI-GENERATED SETLIST</h2>
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>
-              Context: Afrobeats / Hip Hop · Club · 90 min · Headliner · Peak Hour arc
+              Context: Afrobeats / Hip Hop Â· Club Â· 90 min Â· Headliner Â· Peak Hour arc
             </div>
           </div>
           <div style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:4,
             padding:'24px 24px 8px', marginBottom:16, overflow:'hidden' }}>
-            <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+            <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
               color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>Energy Arc</div>
             <div style={{ overflowX:'auto' }}>
               <EnergyArcChart tracks={DEMO_TRACKS} width={880} height={160} />
@@ -278,10 +278,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ──────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Features â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:72 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.accent,
+          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>Why SetDrop</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,72px)', letterSpacing:4,
             margin:0, color:SD.text }}>BUILT FOR REAL DJs</h2>
@@ -304,11 +304,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── Platforms ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Platforms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="sd-pad-x" style={{ padding:'60px 40px', borderTop:`1px solid ${SD.border}`,
         borderBottom:`1px solid ${SD.border}`, background:SD.surface }}>
         <div style={{ maxWidth:800, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:3, color:SD.textMuted,
+          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.textMuted,
             textTransform:'uppercase', marginBottom:32 }}>Works with your tools</div>
           <div style={{ display:'flex', justifyContent:'center', gap:64, flexWrap:'wrap', alignItems:'center' }}>
             {['Serato DJ Pro','Rekordbox','Beatport','Traxsource','BPM Supreme'].map(p => (
@@ -319,7 +319,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ───────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ CTA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="sd-pad-x" style={{ padding:'140px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
@@ -336,9 +336,9 @@ export function LandingPage() {
             Upload your library and start planning your next set. Free to start.
           </p>
           <SDButton href="/builder" style={{ fontSize:14, padding:'16px 48px' }}>
-            Get Started — It&apos;s Free
+            Get Started â€” It&apos;s Free
           </SDButton>
-          <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>setdrop.app</div>
+          <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>setdrop.app</div>
         </div>
       </section>
 
@@ -348,8 +348,8 @@ export function LandingPage() {
         <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:3, color:SD.textMuted }}>
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
-        <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
-          © 2026 SetDrop · setdrop.app ·{' '}
+        <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
+          Â© 2026 SetDrop Â· setdrop.app Â·{' '}
           <a href="/privacy" style={{ color:SD.textMuted, textDecoration:'none' }}>Privacy Policy</a>
         </span>
       </footer>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -128,7 +128,7 @@ export function SetlistBuilder() {
       });
     } catch {
       setGenerating(false);
-      setGenError('Network error — check your connection.');
+      setGenError('Network error â€” check your connection.');
       return;
     }
 
@@ -146,7 +146,7 @@ export function SetlistBuilder() {
       return;
     }
 
-    // Read SSE stream — progress events update the UI in real time
+    // Read SSE stream â€” progress events update the UI in real time
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -258,12 +258,12 @@ export function SetlistBuilder() {
                 transition:'all .2s',
               }}>
                 {step > n
-                  ? <span style={{ color:SD.accent, fontSize:13 }}>✓</span>
-                  : <span style={{ fontFamily:SD.mono, fontSize:11,
+                  ? <span style={{ color:SD.accent, fontSize:13 }}>âœ“</span>
+                  : <span style={{ fontFamily:SD.mono, fontSize:13,
                       color: step === n ? '#000' : SD.textMuted }}>{n}</span>
                 }
               </div>
-              <span style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:1.5,
+              <span style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:1.5,
                 textTransform:'uppercase', color: step === n ? SD.accent : SD.textMuted }}>
                 {['Gig Context','Energy Arc','Seeds'][i]}
               </span>
@@ -334,7 +334,7 @@ export function SetlistBuilder() {
   }
 
   const fieldStyle: React.CSSProperties = { display:'flex', flexDirection:'column', gap:6 };
-  const labelStyle: React.CSSProperties = { fontFamily:SD.mono, fontSize:9, color:SD.textSec,
+  const labelStyle: React.CSSProperties = { fontFamily:SD.mono, fontSize:12, color:SD.textSec,
     letterSpacing:2, textTransform:'uppercase' };
 
   if (rateLimited) {
@@ -354,8 +354,8 @@ export function SetlistBuilder() {
               Upgrade to Pro
             </SDButton>
             <SDButton ghost onClick={() => { setRateLimited(null); setGenerating(false); }}
-              style={{ fontSize:11, padding:'10px 24px' }}>
-              ← Back to Builder
+              style={{ fontSize:13, padding:'10px 24px' }}>
+              â† Back to Builder
             </SDButton>
           </div>
         </div>
@@ -373,7 +373,7 @@ export function SetlistBuilder() {
               color:SD.text, marginBottom:8 }}>BUILDING</div>
             <div style={{ fontFamily:SD.display, fontSize:56, letterSpacing:4, color:SD.accent }}>YOUR SET</div>
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, marginTop:16 }}>
-              {mixName || 'New Set'} · {primaryGenre || 'Mixed'} · {duration || '60 min'}
+              {mixName || 'New Set'} Â· {primaryGenre || 'Mixed'} Â· {duration || '60 min'}
             </div>
           </div>
           <AgentProgress steps={GEN_STEPS} currentStep={genStep} />
@@ -388,7 +388,7 @@ export function SetlistBuilder() {
             <div style={{ marginTop:32, background:SD.redDim, border:`1px solid ${SD.red}44`,
               borderRadius:3, padding:'16px 20px', fontFamily:SD.mono, fontSize:12, color:SD.red,
               lineHeight:1.6 }}>
-              ⚠ {genError}
+              âš  {genError}
             </div>
           )}
         </div>
@@ -400,7 +400,7 @@ export function SetlistBuilder() {
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px' }}>
         <div style={{ marginBottom:32 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
             letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Setlist Builder</div>
           <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
             margin:0, color:SD.text, lineHeight:1 }}>BUILD YOUR SET</h1>
@@ -415,17 +415,17 @@ export function SetlistBuilder() {
             <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
               background: libraryCount ? SD.green : SD.textMuted, display:'inline-block',
               boxShadow: libraryCount ? `0 0 6px ${SD.green}` : 'none' }}/>
-            <span style={{ fontFamily:SD.mono, fontSize:10, color: libraryCount ? SD.text : SD.textMuted }}>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color: libraryCount ? SD.text : SD.textMuted }}>
               {libraryCount
-                ? `Building from your library — ${libraryCount.toLocaleString()} tracks`
-                : 'No library uploaded — will use demo tracks'}
+                ? `Building from your library â€” ${libraryCount.toLocaleString()} tracks`
+                : 'No library uploaded â€” will use demo tracks'}
             </span>
           </div>
           <span onClick={() => router.push('/library')} style={{
-            fontFamily:SD.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase',
+            fontFamily:SD.mono, fontSize:12, letterSpacing:1.5, textTransform:'uppercase',
             color:SD.accent, cursor:'pointer', textDecoration:'underline',
           }}>
-            {libraryCount ? 'Manage Library' : 'Upload CSV →'}
+            {libraryCount ? 'Manage Library' : 'Upload CSV â†’'}
           </span>
         </div>
 
@@ -437,7 +437,7 @@ export function SetlistBuilder() {
             <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
               <SDInput label="Mix Name" value={mixName} onChange={setMixName}
                 placeholder="e.g. Friday Night Affair" />
-              <SDInput label="Venue Name (optional — Gig Intel)" value={venueName}
+              <SDInput label="Venue Name (optional â€” Gig Intel)" value={venueName}
                 onChange={setVenueName} placeholder="e.g. Fabric, London" />
             </div>
             <div style={fieldStyle}>
@@ -464,7 +464,7 @@ export function SetlistBuilder() {
                   border:`1px solid ${SD.border}` }}>
                   {DURATION_OPTS.map((d, i) => (
                     <button key={d} onClick={() => setDuration(d)} style={{
-                      flex:1, fontFamily:SD.mono, fontSize:11, letterSpacing:.5,
+                      flex:1, fontFamily:SD.mono, fontSize:13, letterSpacing:.5,
                       border:'none', borderLeft: i > 0 ? `1px solid ${SD.border}` : 'none',
                       background: duration === d ? SD.accent : SD.surface2,
                       color: duration === d ? '#000' : SD.textSec,
@@ -493,7 +493,7 @@ export function SetlistBuilder() {
               <div style={{ display:'flex', gap:10, marginBottom:28 }}>
                 {Object.entries(arcPresets).map(([label, vals]) => (
                   <button key={label} onClick={() => setArcPoints(vals)} style={{
-                    fontFamily:SD.mono, fontSize:10, letterSpacing:1, textTransform:'uppercase',
+                    fontFamily:SD.mono, fontSize:12, letterSpacing:1, textTransform:'uppercase',
                     padding:'6px 16px', borderRadius:100, border:`1px solid ${SD.border}`,
                     background:'transparent', color:SD.textSec, cursor:'pointer', transition:'all .12s',
                   }}
@@ -513,7 +513,7 @@ export function SetlistBuilder() {
                   borderRadius:3, padding:'16px 12px', textAlign:'center' }}>
                   <div style={{ fontFamily:SD.display, fontSize:36, letterSpacing:2,
                     color:SD.accent, lineHeight:1 }}>{arcPoints[i]}</div>
-                  <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
                     letterSpacing:1.5, textTransform:'uppercase', marginTop:4 }}>{label}</div>
                 </div>
               ))}
@@ -528,7 +528,7 @@ export function SetlistBuilder() {
               Optional seeds help the AI ground your set in specific directions.
             </div>
             <div style={fieldStyle}>
-              <label style={labelStyle}>Seed Track — Search your Serato library</label>
+              <label style={labelStyle}>Seed Track â€” Search your Serato library</label>
               <div style={{ position:'relative' }}>
                 <SDInput value={seedSearch} onChange={setSeedSearch}
                   placeholder="Search by artist or title..." />
@@ -540,16 +540,16 @@ export function SetlistBuilder() {
                       .filter(t => `${t.artist} ${t.title}`.toLowerCase().includes(seedSearch.toLowerCase()))
                       .slice(0, 20)
                       .map((t, i) => (
-                        <div key={i} onClick={() => setSeedSearch(`${t.artist} — ${t.title}`)}
+                        <div key={i} onClick={() => setSeedSearch(`${t.artist} â€” ${t.title}`)}
                           style={{ padding:'12px 16px', cursor:'pointer',
                             borderBottom:`1px solid ${SD.border}`, transition:'background .1s' }}
                           onMouseEnter={e => (e.currentTarget.style.background = SD.surface3)}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                           <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
-                            {t.artist} — {t.title}
+                            {t.artist} â€” {t.title}
                           </div>
-                          <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent, marginTop:2 }}>
-                            {t.bpm ? `${t.bpm} BPM` : ''}{t.key ? ` · ${t.key}` : ''}
+                          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, marginTop:2 }}>
+                            {t.bpm ? `${t.bpm} BPM` : ''}{t.key ? ` Â· ${t.key}` : ''}
                           </div>
                         </div>
                       ))}
@@ -563,7 +563,7 @@ export function SetlistBuilder() {
               placeholder={`e.g. "night", "love", "rise", "free"`} />
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:3, padding:'20px 24px' }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent,
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                 letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Set Summary</div>
               <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 {([
@@ -571,15 +571,15 @@ export function SetlistBuilder() {
                   ['Crowd', crowd],
                   ['Duration', duration],
                   ['Slot', slot],
-                  ['Vibe', vibe || '—'],
-                  ['Venue', venueName || '—'],
-                  ['Arc', arcPoints.join(' → ')],
-                  ['Seed', seedSearch || '—'],
+                  ['Vibe', vibe || 'â€”'],
+                  ['Venue', venueName || 'â€”'],
+                  ['Arc', arcPoints.join(' â†’ ')],
+                  ['Seed', seedSearch || 'â€”'],
                 ] as [string, string][]).map(([k, v]) => (
                   <div key={k} style={{ marginBottom:6 }}>
-                    <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
                       letterSpacing:1.5, textTransform:'uppercase' }}>{k}: </span>
-                    <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.text }}>{v || '—'}</span>
+                    <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.text }}>{v || 'â€”'}</span>
                   </div>
                 ))}
               </div>
@@ -591,7 +591,7 @@ export function SetlistBuilder() {
           <div style={{ marginTop:24, background:SD.redDim, border:`1px solid ${SD.red}44`,
             borderRadius:3, padding:'14px 20px', fontFamily:SD.mono, fontSize:12, color:SD.red,
             lineHeight:1.6 }}>
-            ⚠ {genError}
+            âš  {genError}
           </div>
         )}
 
@@ -599,11 +599,11 @@ export function SetlistBuilder() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
           marginTop:24, paddingTop:32, borderTop:`1px solid ${SD.border}` }}>
           {step > 1
-            ? <SDButton ghost onClick={() => setStep(s => s-1)}>← Back</SDButton>
+            ? <SDButton ghost onClick={() => setStep(s => s-1)}>â† Back</SDButton>
             : <span/>
           }
           {step < 3
-            ? <SDButton onClick={() => setStep(s => s+1)} disabled={!stepValid(step)}>Continue →</SDButton>
+            ? <SDButton onClick={() => setStep(s => s+1)} disabled={!stepValid(step)}>Continue â†’</SDButton>
             : <SDButton onClick={runGeneration} style={{ fontSize:14, padding:'14px 40px' }}>Drop the Set</SDButton>
           }
         </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -96,9 +96,9 @@ export function Dashboard() {
       if (setsRes.data) {
         setRecentSets(setsRes.data.map(s => {
           const trackCount = Array.isArray(s.tracks_json) ? (s.tracks_json as unknown[]).length : 0;
-          const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || '—';
+          const genre = [s.primary_genre, s.secondary_genre].filter(Boolean).join(' / ') || 'â€”';
           const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const duration = s.duration_minutes ? `${s.duration_minutes} min` : '—';
+          const duration = s.duration_minutes ? `${s.duration_minutes} min` : 'â€”';
           return { id: s.id, name: s.name, genre, date, createdAtRaw: s.created_at, duration, trackCount };
         }));
       }
@@ -158,7 +158,7 @@ export function Dashboard() {
     return (
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'18px 24px', borderBottom:`1px solid ${SD.border}` }}>
-        <span style={{ fontFamily:SD.mono, fontSize:10, letterSpacing:2,
+        <span style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
           textTransform:'uppercase', color:SD.textSec }}>{title}</span>
         {action}
       </div>
@@ -173,7 +173,7 @@ export function Dashboard() {
         <div style={{ marginBottom:40, display:'flex', alignItems:'flex-end',
           justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
           <div>
-            <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted,
+            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Dashboard</div>
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:0, color:SD.text, lineHeight:1 }}>{greeting()}, {djName}</h1>
@@ -183,13 +183,13 @@ export function Dashboard() {
           </SDButton>
         </div>
 
-        {/* Onboarding — shown until library uploaded + first set built */}
+        {/* Onboarding â€” shown until library uploaded + first set built */}
         {!onboardingDismissed && (libraryStats === null || (recentSets !== null && recentSets.length === 0)) && (
           <div style={{ background:SD.surface, border:`1px solid ${SD.borderMid}`,
             borderRadius:4, padding:'24px 28px', marginBottom:24 }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:20 }}>
               <div>
-                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                   color:SD.accent, textTransform:'uppercase', marginBottom:6 }}>Get Started</div>
                 <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.text }}>
                   Two steps to your first AI-generated set
@@ -197,12 +197,12 @@ export function Dashboard() {
               </div>
               <button onClick={() => { setOnboardingDismissed(true); localStorage.setItem('sd_onboarding_done','1'); }}
                 style={{ background:'none', border:'none', cursor:'pointer',
-                  fontFamily:SD.mono, fontSize:12, color:SD.textMuted, padding:'2px 6px' }}>✕</button>
+                  fontFamily:SD.mono, fontSize:12, color:SD.textMuted, padding:'2px 6px' }}>âœ•</button>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
                 { n:1, done: libraryStats !== null, label:'Upload your library', sub:'Import your Serato DB, Rekordbox XML, or add tracks manually to your wishlist', page:'library', cta:'Upload Library' },
-                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd — it handles the rest', page:'builder', cta:'Build Set' },
+                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd â€” it handles the rest', page:'builder', cta:'Build Set' },
               ].map(step => (
                 <div key={step.n} style={{ display:'flex', alignItems:'center', gap:16,
                   padding:'14px 18px', background:SD.bg,
@@ -212,19 +212,19 @@ export function Dashboard() {
                     background: step.done ? SD.greenDim : SD.surface2,
                     border:`1px solid ${step.done ? SD.green+'66' : SD.border}`,
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    fontFamily:SD.mono, fontSize:11,
+                    fontFamily:SD.mono, fontSize:13,
                     color: step.done ? SD.green : SD.textMuted }}>
-                    {step.done ? '✓' : step.n}
+                    {step.done ? 'âœ“' : step.n}
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
                       color: step.done ? SD.textSec : SD.text, marginBottom:2,
                       textDecoration: step.done ? 'line-through' : 'none' }}>{step.label}</div>
-                    <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>{step.sub}</div>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{step.sub}</div>
                   </div>
                   {!step.done && (
                     <SDButton ghost onClick={() => router.push('/' + step.page)}
-                      style={{ fontSize:10, padding:'6px 14px', flexShrink:0 }}>
+                      style={{ fontSize:12, padding:'6px 14px', flexShrink:0 }}>
                       {step.cta}
                     </SDButton>
                   )}
@@ -239,7 +239,7 @@ export function Dashboard() {
           <Card>
             <CardHeader title="Serato Library" action={
               libraryStats ? (
-                <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.green,
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.green,
                   display:'flex', alignItems:'center', gap:5 }}>
                   <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
                     display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
@@ -250,20 +250,20 @@ export function Dashboard() {
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
                 color:SD.text, lineHeight:1 }}>
-                {libraryStats ? libraryStats.totalTracks.toLocaleString() : '—'}
+                {libraryStats ? libraryStats.totalTracks.toLocaleString() : 'â€”'}
               </div>
-              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks in library</div>
               {libraryStats?.lastSynced && (
                 <div style={{ marginTop:20 }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
                     letterSpacing:1, textTransform:'uppercase' }}>
                     Last sync: {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
                   </div>
                 </div>
               )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'7px 16px' }}>
                   {libraryStats ? 'Manage Library' : 'Upload Library'}
                 </SDButton>
               </div>
@@ -272,17 +272,17 @@ export function Dashboard() {
 
           <Card>
             <CardHeader title="Wishlist" action={
-              <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent }}>
+              <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>
                 {wishlistItems !== null ? `${wishlistItems.length} tracks` : ''}
               </span>
             }/>
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? '—'}</div>
-              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
+                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? 'â€”'}</div>
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks to download</div>
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'7px 16px' }}>
                   {wishlistItems?.length ? 'View Wishlist' : 'Add to Wishlist'}
                 </SDButton>
               </div>
@@ -294,13 +294,13 @@ export function Dashboard() {
             <div style={{ padding:'28px 24px' }}>
               <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
                 color:SD.text, lineHeight:1 }}>
-                {recentSets === null ? '—' : recentSets.filter(s => {
+                {recentSets === null ? 'â€”' : recentSets.filter(s => {
                   const d = new Date(s.createdAtRaw);
                   const now = new Date();
                   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
                 }).length}
               </div>
-              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
                 textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Sets built</div>
               {recentSets && recentSets.length > 0 && (
                 <div style={{ marginTop:20, display:'flex', gap:24 }}>
@@ -308,13 +308,13 @@ export function Dashboard() {
                     <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>
                       {Math.round(recentSets.reduce((a, s) => a + s.trackCount, 0) / recentSets.length)}
                     </div>
-                    <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
                       letterSpacing:1, textTransform:'uppercase', marginTop:2, lineHeight:1.4 }}>Avg tracks/set</div>
                   </div>
                 </div>
               )}
               <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:10, padding:'7px 16px' }}>
+                <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'7px 16px' }}>
                   View History
                 </SDButton>
               </div>
@@ -341,10 +341,10 @@ export function Dashboard() {
                       {g.gigName}
                     </div>
                     {g.venue && (
-                      <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{g.venue}</div>
+                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{g.venue}</div>
                     )}
                   </div>
-                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, flexShrink:0 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>
                     {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
                   </div>
                 </div>
@@ -356,21 +356,21 @@ export function Dashboard() {
         {/* Bottom row */}
         <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <Card>
-            <CardHeader title="Wishlist — Download Queue" action={
-              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:9, padding:'5px 12px' }}>
+            <CardHeader title="Wishlist â€” Download Queue" action={
+              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'5px 12px' }}>
                 View All
               </SDButton>
             }/>
             <div style={{ padding:'16px' }}>
               {wishlistItems === null ? (
                 <div style={{ padding:'32px 16px', textAlign:'center',
-                  fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Loading...</div>
+                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
               ) : wishlistItems.length === 0 ? (
                 <div style={{ padding:'32px 16px', textAlign:'center' }}>
                   <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
                     No wishlist tracks yet
                   </div>
-                  <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:10 }}>Add Tracks</SDButton>
+                  <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>
                 </div>
               ) : wishlistItems.map((t, i) => (
                 <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
@@ -378,20 +378,20 @@ export function Dashboard() {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
                       color:SD.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {t.artist} — {t.title}
+                      {t.artist} â€” {t.title}
                     </div>
                     <div style={{ display:'flex', gap:10, marginTop:3 }}>
-                      {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent }}>{t.bpm} BPM</span>}
-                      {t.key && <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{t.key}</span>}
+                      {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>{t.bpm} BPM</span>}
+                      {t.key && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{t.key}</span>}
                     </div>
                   </div>
                   {t.beatportSearchUrl && (
                     <a href={t.beatportSearchUrl} target="_blank" rel="noreferrer"
-                      style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent,
+                      style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                         background:SD.accentDim, border:`1px solid ${SD.accent}33`,
                         borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap',
                         textDecoration:'none', flexShrink:0 }}>
-                      Beatport ↗
+                      Beatport â†—
                     </a>
                   )}
                 </div>
@@ -401,20 +401,20 @@ export function Dashboard() {
 
           <Card>
             <CardHeader title="Recent Setlists" action={
-              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:9, padding:'5px 12px' }}>
+              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>
                 View All
               </SDButton>
             }/>
             <div style={{ padding:'16px' }}>
               {recentSets === null ? (
                 <div style={{ padding:'32px 16px', textAlign:'center',
-                  fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Loading...</div>
+                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
               ) : recentSets.length === 0 ? (
                 <div style={{ padding:'32px 16px', textAlign:'center' }}>
                   <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
                     No sets yet
                   </div>
-                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:10 }}>Build Your First Set</SDButton>
+                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>
                 </div>
               ) : recentSets.map((s) => (
                 <div key={s.id} onClick={() => router.push('/history')}
@@ -428,15 +428,15 @@ export function Dashboard() {
                     <div>
                       <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600,
                         color:SD.text, marginBottom:6 }}>{s.name}</div>
-                      <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.genre}</div>
+                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.genre}</div>
                     </div>
-                    <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
                   </div>
                   <div style={{ display:'flex', gap:16, marginTop:14 }}>
                     {s.trackCount > 0 && (
-                      <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.trackCount} tracks</span>
+                      <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.trackCount} tracks</span>
                     )}
-                    <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{s.duration}</span>
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.duration}</span>
                   </div>
                 </div>
               ))}
@@ -446,11 +446,11 @@ export function Dashboard() {
 
         {/* Account */}
         <div style={{ marginTop:32, borderTop:`1px solid ${SD.border}`, paddingTop:32 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
             color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>Account</div>
           {!showDeleteConfirm ? (
             <SDButton ghost onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize:10, padding:'7px 16px', color:'#E05555', borderColor:'rgba(220,50,50,0.3)' }}>
+              style={{ fontSize:12, padding:'7px 16px', color:'#E05555', borderColor:'rgba(220,50,50,0.3)' }}>
               Delete Account
             </SDButton>
           ) : (
@@ -459,17 +459,17 @@ export function Dashboard() {
               <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.text, marginBottom:8 }}>
                 Delete your account?
               </div>
-              <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec, marginBottom:20, lineHeight:1.7 }}>
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, marginBottom:20, lineHeight:1.7 }}>
                 This permanently deletes your library, setlists, wishlist, and gig history. This cannot be undone.
               </div>
               <div style={{ display:'flex', gap:10 }}>
                 <SDButton onClick={handleDeleteAccount}
-                  style={{ fontSize:11, background:'rgba(220,50,50,0.15)',
+                  style={{ fontSize:13, background:'rgba(220,50,50,0.15)',
                     borderColor:'rgba(220,50,50,0.4)', color:'#E05555',
                     opacity: deleting ? 0.6 : 1 }}>
                   {deleting ? 'Deleting...' : 'Yes, delete everything'}
                 </SDButton>
-                <SDButton ghost onClick={() => setShowDeleteConfirm(false)} style={{ fontSize:11 }}>
+                <SDButton ghost onClick={() => setShowDeleteConfirm(false)} style={{ fontSize:13 }}>
                   Cancel
                 </SDButton>
               </div>

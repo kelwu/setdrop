@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores } from '@/lib/setdrop/constants';
 
-// ─── Nav ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -50,10 +50,10 @@ export function Nav() {
     { id:'library', label:'Library' },
   ];
   const mobileNavItems = [
-    { id:'dashboard', label:'Dash', icon:'⊞' },
+    { id:'dashboard', label:'Dash', icon:'âŠž' },
     { id:'builder',   label:'Build', icon:'+' },
-    { id:'history',   label:'History', icon:'↺' },
-    { id:'library',   label:'Library', icon:'♬' },
+    { id:'history',   label:'History', icon:'â†º' },
+    { id:'library',   label:'Library', icon:'â™¬' },
   ];
 
   return (
@@ -73,7 +73,7 @@ export function Nav() {
         <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
           {links.map(l => (
             <span key={l.id} onClick={() => router.push('/' + l.id)} style={{
-              fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
+              fontFamily:SD.mono, fontSize:13, letterSpacing:1.5,
               textTransform:'uppercase', cursor:'pointer',
               color: pathname === '/' + l.id ? SD.accent : SD.textSec,
               borderBottom: pathname === '/' + l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
@@ -88,7 +88,7 @@ export function Nav() {
                 width:30, height:30, borderRadius:'50%', cursor:'pointer',
                 background:`linear-gradient(135deg,#F5A623,#FF6B35)`,
                 display:'flex', alignItems:'center', justifyContent:'center',
-                fontFamily:SD.mono, fontSize:11, fontWeight:700, color:'#000',
+                fontFamily:SD.mono, fontSize:13, fontWeight:700, color:'#000',
               }}
             >{initials}</div>
             {menuOpen && (
@@ -101,7 +101,7 @@ export function Nav() {
                 {user && (
                   <div style={{
                     padding:'10px 14px', borderBottom:`1px solid ${SD.border}`,
-                    fontSize:11, color:SD.textSec, fontFamily:SD.mono,
+                    fontSize:13, color:SD.textSec, fontFamily:SD.mono,
                     letterSpacing:.3, wordBreak:'break-all',
                   }}>
                     {user.email}
@@ -109,7 +109,7 @@ export function Nav() {
                 )}
                 <a href="/account"
                   style={{
-                    display:'block', padding:'10px 14px', fontSize:11, color:SD.textSec,
+                    display:'block', padding:'10px 14px', fontSize:13, color:SD.textSec,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
                     cursor:'pointer', transition:'background .12s', textDecoration:'none',
                   }}
@@ -120,7 +120,7 @@ export function Nav() {
                 </a>
                 <a href="/invoice"
                   style={{
-                    display:'block', padding:'10px 14px', fontSize:11, color:SD.textSec,
+                    display:'block', padding:'10px 14px', fontSize:13, color:SD.textSec,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
                     cursor:'pointer', transition:'background .12s', textDecoration:'none',
                   }}
@@ -132,7 +132,7 @@ export function Nav() {
                 <div
                   onClick={handleSignOut}
                   style={{
-                    padding:'10px 14px', fontSize:11, color:SD.red,
+                    padding:'10px 14px', fontSize:13, color:SD.red,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
                     cursor:'pointer', transition:'background .12s',
                     borderTop:`1px solid ${SD.border}`,
@@ -174,7 +174,7 @@ export function Nav() {
   );
 }
 
-// ─── Button ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SDButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
@@ -194,7 +194,7 @@ export function SDButton({ children, onClick, href, small, ghost, disabled, full
     transition:'all .15s', display:'inline-flex', alignItems:'center', justifyContent:'center',
     gap:8, opacity: disabled ? 0.4 : 1, textDecoration:'none',
     ...(full ? { width:'100%' } : {}),
-    ...(small ? { fontSize:10, padding:'7px 16px' } : { fontSize:12, padding:'11px 24px' }),
+    ...(small ? { fontSize:12, padding:'7px 16px' } : { fontSize:12, padding:'11px 24px' }),
   };
   const hoverProps = { onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false) };
   const ghostStyle = { ...base,
@@ -222,7 +222,7 @@ export function SDButton({ children, onClick, href, small, ghost, disabled, full
   );
 }
 
-// ─── ConfidenceBadge ───────────────────────────────────────────────────────
+// â”€â”€â”€ ConfidenceBadge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function ConfidenceBadge({ status, label, href }: { status: ConfidenceStatus; label: string; href?: string }) {
   const c = { green:SD.green, yellow:SD.yellow, red:SD.red }[status];
   const inner = (
@@ -237,7 +237,7 @@ export function ConfidenceBadge({ status, label, href }: { status: ConfidenceSta
       <a href={href} target="_blank" rel="noreferrer"
         onClick={e => e.stopPropagation()}
         style={{ display:'inline-flex', alignItems:'center', gap:4,
-          fontFamily:SD.mono, fontSize:10, color:SD.textSec, letterSpacing:.3,
+          fontFamily:SD.mono, fontSize:12, color:SD.textSec, letterSpacing:.3,
           textDecoration:'none', cursor:'pointer' }}
         onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
         onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
@@ -247,20 +247,20 @@ export function ConfidenceBadge({ status, label, href }: { status: ConfidenceSta
   }
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:4,
-      fontFamily:SD.mono, fontSize:10, color:SD.textSec, letterSpacing:.3 }}>
+      fontFamily:SD.mono, fontSize:12, color:SD.textSec, letterSpacing:.3 }}>
       {inner}
     </span>
   );
 }
 
-// ─── Energy dot ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Energy dot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function EnergyDot({ energy, size = 8 }: { energy: number; size?: number }) {
   const c = energy<=3?'#22C55E':energy<=6?'#EAB308':energy<=8?'#F5A623':'#EF4444';
   return <span style={{ width:size, height:size, borderRadius:'50%', background:c,
     display:'inline-block', boxShadow:`0 0 6px ${c}88`, flexShrink:0 }} />;
 }
 
-// ─── TrackRow ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ TrackRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function TrackRow({ track }: { track: SampleTrack }) {
   const [exp, setExp] = useState(false);
   const [hov, setHov] = useState(false);
@@ -277,30 +277,30 @@ export function TrackRow({ track }: { track: SampleTrack }) {
         transition:'background .12s, border-color .12s', cursor:'pointer',
       }}>
       <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-        <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+        <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted,
           width:22, textAlign:'right', flexShrink:0 }}>
           {String(track.pos).padStart(2,'0')}
         </span>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:8, flexWrap:'wrap' }}>
             <span style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text }}>{track.artist}</span>
-            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>— {track.title}</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>â€” {track.title}</span>
           </div>
           <div style={{ display:'flex', gap:12, marginTop:3, alignItems:'center', flexWrap:'wrap' }}>
-            <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent, letterSpacing:.5 }}>{track.bpm} BPM</span>
-            <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec }}>{track.key}</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, letterSpacing:.5 }}>{track.bpm} BPM</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{track.key}</span>
             {track.wishlist && (
-              <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent,
+              <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                 background:SD.accentDim, border:`1px solid ${SD.accent}44`,
                 borderRadius:2, padding:'1px 6px', letterSpacing:.5, textTransform:'uppercase' }}>
-                ⚠ Download before gig
+                âš  Download before gig
               </span>
             )}
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           <EnergyDot energy={track.energy} />
-          <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>{track.energy}/10</span>
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{track.energy}/10</span>
           {hov && !exp && (
             <div style={{ display:'flex', gap:8 }}>
               {(Object.entries(track.stores) as [string, ConfidenceStatus][]).map(([s, v]) => (
@@ -310,23 +310,23 @@ export function TrackRow({ track }: { track: SampleTrack }) {
               ))}
             </div>
           )}
-          <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginLeft:4 }}>{exp ? '▲' : '▼'}</span>
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginLeft:4 }}>{exp ? 'â–²' : 'â–¼'}</span>
         </div>
       </div>
       {exp && (
         <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${SD.border}` }}>
           {track.why && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.accent, letterSpacing:1.5,
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, letterSpacing:1.5,
                 textTransform:'uppercase', marginBottom:4 }}>Why this track</div>
-              <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec, lineHeight:1.7 }}>{track.why}</div>
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, lineHeight:1.7 }}>{track.why}</div>
             </div>
           )}
           {track.transition && (
             <div style={{ marginBottom:10 }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted, letterSpacing:1.5,
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, letterSpacing:1.5,
                 textTransform:'uppercase', marginBottom:4 }}>Transition note</div>
-              <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, lineHeight:1.7 }}>{track.transition}</div>
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, lineHeight:1.7 }}>{track.transition}</div>
             </div>
           )}
           <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginTop:8 }}>
@@ -342,7 +342,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
   );
 }
 
-// ─── GenrePillSelector ─────────────────────────────────────────────────────
+// â”€â”€â”€ GenrePillSelector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface GenrePillSelectorProps {
   selected: string | string[];
   onChange: (g: string) => void;
@@ -355,7 +355,7 @@ export function GenrePillSelector({ selected, onChange, genres }: GenrePillSelec
         const on = Array.isArray(selected) ? selected.includes(g) : selected === g;
         return (
           <button key={g} onClick={() => onChange(g)} style={{
-            fontFamily:SD.mono, fontSize:11, letterSpacing:.5,
+            fontFamily:SD.mono, fontSize:13, letterSpacing:.5,
             textTransform:'uppercase', padding:'7px 16px', borderRadius:100,
             border:`1px solid ${on ? SD.accent : SD.border}`,
             background: on ? SD.accent : 'transparent',
@@ -369,7 +369,7 @@ export function GenrePillSelector({ selected, onChange, genres }: GenrePillSelec
   );
 }
 
-// ─── Energy Arc Chart (static, read-only) ────────────────────────────────
+// â”€â”€â”€ Energy Arc Chart (static, read-only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function EnergyArcChart({ tracks, width = 640, height = 200 }: {
   tracks: SampleTrack[]; width?: number; height?: number;
 }) {
@@ -418,7 +418,7 @@ export function EnergyArcChart({ tracks, width = 640, height = 200 }: {
   );
 }
 
-// ─── Agent Progress ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Agent Progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function AgentProgress({ steps, currentStep }: { steps: string[]; currentStep: number }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -434,7 +434,7 @@ export function AgentProgress({ steps, currentStep }: { steps: string[]; current
               transition:'all .3s',
             }}>
               {done
-                ? <span style={{ color:SD.accent, fontSize:12, fontWeight:700 }}>✓</span>
+                ? <span style={{ color:SD.accent, fontSize:12, fontWeight:700 }}>âœ“</span>
                 : active
                 ? <span style={{ width:8, height:8, borderRadius:'50%', background:SD.accent,
                     display:'block', animation:'sdPulse 1.2s ease-in-out infinite' }}/>
@@ -451,7 +451,7 @@ export function AgentProgress({ steps, currentStep }: { steps: string[]; current
   );
 }
 
-// ─── SDInput ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ SDInput â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface SDInputProps {
   value: string;
   onChange: (v: string) => void;
@@ -464,7 +464,7 @@ export function SDInput({ value, onChange, placeholder, label, type = 'text', st
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-      {label && <label style={{ fontFamily:SD.mono, fontSize:10, color:SD.textSec,
+      {label && <label style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
         letterSpacing:1.5, textTransform:'uppercase' }}>{label}</label>}
       <input
         type={type} value={value} onChange={e => onChange(e.target.value)}
@@ -482,10 +482,10 @@ export function SDInput({ value, onChange, placeholder, label, type = 'text', st
   );
 }
 
-// ─── Section label ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textSec,
+    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
       letterSpacing:2, textTransform:'uppercase', marginBottom:10,
       display:'flex', alignItems:'center', gap:10 }}>
       <span style={{ flex:1, height:1, background:SD.border, display:'block' }}/>

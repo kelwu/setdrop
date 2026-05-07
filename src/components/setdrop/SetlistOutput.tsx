@@ -306,7 +306,7 @@ export function SetlistOutput() {
         background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3 }}>
         <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:2,
           color:SD.accent, lineHeight:1 }}>{value}</div>
-        <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+        <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
           letterSpacing:1.5, textTransform:'uppercase', marginTop:6 }}>{label}</div>
       </div>
     );
@@ -320,13 +320,13 @@ export function SetlistOutput() {
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between',
           gap:24, flexWrap:'wrap', marginBottom:40 }}>
           <div>
-            <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Generated Set</div>
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:'0 0 8px', color:SD.text, lineHeight:1 }}>{setlistName.toUpperCase()}</h1>
             <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
               {[genreLabel, crowdLabel, durationLabel, slotLabel, dateLabel].map((v, i) => (
-                <span key={i} style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>
+                <span key={i} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>
                   {i > 0 && <span style={{ color:SD.textMuted, marginRight:16 }}>·</span>}
                   {v}
                 </span>
@@ -334,20 +334,20 @@ export function SetlistOutput() {
             </div>
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'flex-start' }}>
-            <SDButton ghost onClick={() => setShowRegen(!showRegen)} style={{ fontSize:10, padding:'8px 16px' }}>
+            <SDButton ghost onClick={() => setShowRegen(!showRegen)} style={{ fontSize:12, padding:'8px 16px' }}>
               Regenerate
             </SDButton>
             <SDButton ghost onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              style={{ fontSize:10, padding:'8px 16px' }}>
+              style={{ fontSize:12, padding:'8px 16px' }}>
               {copied ? '✓ Copied' : 'Copy List'}
             </SDButton>
-            <SDButton ghost onClick={() => setlist?.dbSlug && router.push('/set/' + setlist.dbSlug)} style={{ fontSize:10, padding:'8px 16px' }}>
+            <SDButton ghost onClick={() => setlist?.dbSlug && router.push('/set/' + setlist.dbSlug)} style={{ fontSize:12, padding:'8px 16px' }}>
               Share ↗
             </SDButton>
-            <SDButton style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportCrate}>
+            <SDButton style={{ fontSize:13, padding:'10px 24px' }} onClick={handleExportCrate}>
               Export Serato Crate
             </SDButton>
-            <SDButton ghost style={{ fontSize:11, padding:'10px 24px' }} onClick={handleExportRekordbox}>
+            <SDButton ghost style={{ fontSize:13, padding:'10px 24px' }} onClick={handleExportRekordbox}>
               Export Rekordbox XML
             </SDButton>
           </div>
@@ -370,10 +370,10 @@ export function SetlistOutput() {
                 transition:'transform .15s',
               }}/>
             </button>
-            <span style={{ fontFamily:SD.mono, fontSize:11, color: libraryOnly ? SD.text : SD.textSec }}>
+            <span style={{ fontFamily:SD.mono, fontSize:13, color: libraryOnly ? SD.text : SD.textSec }}>
               Export library tracks only
             </span>
-            <span style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
               ({setlist.tracks.filter(t => !t.isWishlistTrack).length} tracks — hides{' '}
               {setlist.tracks.filter(t => t.isWishlistTrack).length} wishlist tracks not yet purchased)
             </span>
@@ -414,7 +414,7 @@ export function SetlistOutput() {
 
           {/* Tracklist */}
           <div>
-            <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textSec,
+            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
               letterSpacing:2, textTransform:'uppercase', marginBottom:12,
               display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span>Tracklist — {displayTracks.length} tracks</span>
@@ -440,7 +440,7 @@ export function SetlistOutput() {
           <div style={{ display:'flex', flexDirection:'column', gap:12, position:'sticky', top:72 }}>
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'20px 16px 10px', overflow:'hidden' }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Energy Arc</div>
               <div style={{ overflowX:'auto' }}>
                 <EnergyArcChart tracks={displayTracks} width={348} height={170} />
@@ -456,11 +456,11 @@ export function SetlistOutput() {
 
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'18px 20px' }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Key Distribution</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {displayTracks.map(t => (
-                  <span key={t.pos} style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent,
+                  <span key={t.pos} style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                     background:SD.accentDim, border:`1px solid ${SD.accent}33`,
                     borderRadius:2, padding:'3px 8px' }}>{t.key}</span>
                 ))}
@@ -469,7 +469,7 @@ export function SetlistOutput() {
 
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'18px 20px' }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Set Info</div>
               {[
                 ['Genre', genreLabel],
@@ -480,20 +480,20 @@ export function SetlistOutput() {
               ].map(([label, value]) => (
                 <div key={label} style={{ display:'flex', justifyContent:'space-between',
                   marginBottom:10, alignItems:'baseline' }}>
-                  <span style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                  <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
                     letterSpacing:1, textTransform:'uppercase' }}>{label}</span>
-                  <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{value}</span>
+                  <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>{value}</span>
                 </div>
               ))}
             </div>
 
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'18px 20px' }}>
-              <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:12 }}>Share</div>
               {shareUrl ? (
                 <>
-                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent,
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
                     background:SD.accentDim, border:`1px solid ${SD.accent}33`,
                     borderRadius:3, padding:'10px 12px', wordBreak:'break-all' }}>
                     {shareUrl.replace(/^https?:\/\//, '')}
@@ -502,17 +502,17 @@ export function SetlistOutput() {
                     {isPublic ? (
                       <SDButton ghost full
                         onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                        style={{ fontSize:10 }}>
+                        style={{ fontSize:12 }}>
                         {copied ? '✓ Link Copied' : 'Copy Link'}
                       </SDButton>
                     ) : (
                       <SDButton ghost full onClick={handleMakePublic}
-                        style={{ fontSize:10, opacity: making ? 0.6 : 1 }}>
+                        style={{ fontSize:12, opacity: making ? 0.6 : 1 }}>
                         {making ? 'Publishing...' : 'Make Public + Copy Link'}
                       </SDButton>
                     )}
                     {setlist?.dbSlug && (
-                      <SDButton ghost full onClick={() => router.push('/set/' + setlist.dbSlug)} style={{ fontSize:10 }}>
+                      <SDButton ghost full onClick={() => router.push('/set/' + setlist.dbSlug)} style={{ fontSize:12 }}>
                         Preview ↗
                       </SDButton>
                     )}
@@ -520,15 +520,15 @@ export function SetlistOutput() {
                 </>
               ) : setlist ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, lineHeight:1.7 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, lineHeight:1.7 }}>
                     Sign in to save and share this set.
                   </div>
-                  <SDButton ghost full href="/login" style={{ fontSize:10 }}>
+                  <SDButton ghost full href="/login" style={{ fontSize:12 }}>
                     Sign In to Save
                   </SDButton>
                 </div>
               ) : (
-                <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted }}>
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
                   Generate a setlist to get a share link.
                 </div>
               )}
@@ -537,10 +537,10 @@ export function SetlistOutput() {
             {setlist?.dbId && (
               <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
                 borderRadius:4, padding:'18px 20px' }}>
-                <div style={{ fontFamily:SD.mono, fontSize:9, letterSpacing:2,
+                <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                   color:SD.textMuted, textTransform:'uppercase', marginBottom:12 }}>Gig Log</div>
                 {gigLogged ? (
-                  <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.green }}>✓ Gig logged</div>
+                  <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.green }}>✓ Gig logged</div>
                 ) : showGigForm ? (
                   <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                     <input
@@ -548,7 +548,7 @@ export function SetlistOutput() {
                       value={gigDate}
                       onChange={e => setGigDate(e.target.value)}
                       style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3,
-                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:11,
+                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:13,
                         outline:'none', width:'100%', boxSizing:'border-box' }}
                     />
                     <input
@@ -556,22 +556,22 @@ export function SetlistOutput() {
                       onChange={e => setGigVenue(e.target.value)}
                       placeholder="Venue (optional)"
                       style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3,
-                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:11,
+                        padding:'8px 12px', color:SD.text, fontFamily:SD.mono, fontSize:13,
                         outline:'none', width:'100%', boxSizing:'border-box' }}
                       onFocus={e => (e.target.style.borderColor = SD.accent)}
                       onBlur={e => (e.target.style.borderColor = SD.border)}
                     />
                     <div style={{ display:'flex', gap:8 }}>
-                      <SDButton onClick={handleLogGig} style={{ flex:1, fontSize:10, opacity: loggingGig ? 0.6 : 1 }}>
+                      <SDButton onClick={handleLogGig} style={{ flex:1, fontSize:12, opacity: loggingGig ? 0.6 : 1 }}>
                         {loggingGig ? 'Logging...' : 'Log Gig'}
                       </SDButton>
-                      <SDButton ghost onClick={() => setShowGigForm(false)} style={{ fontSize:10, padding:'8px 12px' }}>
+                      <SDButton ghost onClick={() => setShowGigForm(false)} style={{ fontSize:12, padding:'8px 12px' }}>
                         Cancel
                       </SDButton>
                     </div>
                   </div>
                 ) : (
-                  <SDButton ghost full onClick={() => setShowGigForm(true)} style={{ fontSize:10 }}>
+                  <SDButton ghost full onClick={() => setShowGigForm(true)} style={{ fontSize:12 }}>
                     Mark as Played
                   </SDButton>
                 )}

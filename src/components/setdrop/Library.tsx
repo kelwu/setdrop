@@ -70,7 +70,7 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
         {hov && tags && tags.length > 0 && (
           <div style={{ display:'flex', gap:4, marginTop:4, flexWrap:'wrap' }}>
             {tags.slice(0, 5).map(tag => (
-              <span key={tag} style={{ fontFamily:SD.mono, fontSize:10, letterSpacing:.5,
+              <span key={tag} style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:.5,
                 color:SD.textMuted, background:SD.surface2,
                 border:`1px solid ${SD.border}`, borderRadius:2,
                 padding:'1px 5px', textTransform:'lowercase' }}>{tag}</span>
@@ -97,7 +97,7 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
         </span>
       )}
       {tab === 'wishlist' ? (
-        <span style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:.5, textTransform:'uppercase',
+        <span style={{ fontFamily:SD.mono, fontSize:13, letterSpacing:.5, textTransform:'uppercase',
           padding:'3px 8px', borderRadius:2, background:statusColor.bg,
           border:`1px solid ${statusColor.border}`, color:statusColor.text, whiteSpace:'nowrap' }}>
           {statusColor.label}
@@ -184,7 +184,7 @@ function UploadZone({
             fontFamily:SD.display, fontSize:22, letterSpacing:3,
             color: SERATO_BLUE, marginBottom:6,
           }}>SERATO</div>
-          <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color: uploadMode === 'db' ? SERATO_BLUE : SD.textMuted }}>
+          <div style={{ fontFamily:SD.mono, fontSize:13, letterSpacing:2, color: uploadMode === 'db' ? SERATO_BLUE : SD.textMuted }}>
             DB V2
           </div>
         </button>
@@ -205,7 +205,7 @@ function UploadZone({
             fontFamily:SD.display, fontSize:22, letterSpacing:3,
             color: uploadMode === 'rekordbox' ? SD.text : SD.textSec, marginBottom:6,
           }}>REKORDBOX</div>
-          <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color: uploadMode === 'rekordbox' ? SD.textSec : SD.textMuted }}>
+          <div style={{ fontFamily:SD.mono, fontSize:13, letterSpacing:2, color: uploadMode === 'rekordbox' ? SD.textSec : SD.textMuted }}>
             XML
           </div>
         </button>
@@ -751,7 +751,7 @@ export function Library() {
         transition:'all .15s',
       }}>
         {label}
-        <span style={{ marginLeft:8, fontFamily:SD.mono, fontSize:11,
+        <span style={{ marginLeft:8, fontFamily:SD.mono, fontSize:13,
           color: tab === id ? SD.accent : SD.textMuted }}>({count})</span>
       </button>
     );
@@ -771,7 +771,7 @@ export function Library() {
         <div style={{ marginBottom:28, display:'flex', alignItems:'flex-end',
           justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
           <div>
-            <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+            <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted,
               letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Music Library</div>
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:0, color:SD.text, lineHeight:1 }}>YOUR LIBRARY</h1>
@@ -796,7 +796,7 @@ export function Library() {
                   );
                 })()}
                 <SDButton ghost onClick={triggerEnrichment} disabled={enriching || uploadStage !== 'idle'}
-                  style={{ fontSize:11, padding:'6px 12px', color:SD.textMuted }}>
+                  style={{ fontSize:13, padding:'6px 12px', color:SD.textMuted }}>
                   {enriching ? 'Enriching...' : 'Refresh Tags'}
                 </SDButton>
                 <SDButton ghost onClick={() => setShowUpload(!showUpload)}
@@ -944,7 +944,7 @@ export function Library() {
             ) : (
               <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
                 borderRadius:4, padding:'20px 24px' }}>
-                <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2,
+                <div style={{ fontFamily:SD.mono, fontSize:13, letterSpacing:2,
                   color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>
                   Add Track to Wishlist
                 </div>
@@ -992,7 +992,7 @@ export function Library() {
               <div style={{ display:'grid', gridTemplateColumns:cols, gap:12,
                 padding:'8px 16px', borderBottom:`1px solid ${SD.border}` }}>
                 {headers.map(h => (
-                  <span key={h} style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+                  <span key={h} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted,
                     letterSpacing:1.5, textTransform:'uppercase' }}>{h}</span>
                 ))}
               </div>
@@ -1024,7 +1024,7 @@ export function Library() {
                 <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, marginBottom:2 }}>
                   Library enrichment available
                 </div>
-                <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
                   {[
                     missingBpmKey.length ? `${missingBpmKey.length} tracks missing BPM/key` : '',
                     untagged.length ? `${untagged.length} tracks without mood tags` : '',
