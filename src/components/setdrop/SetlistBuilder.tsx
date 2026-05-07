@@ -55,6 +55,27 @@ export function SetlistBuilder() {
     } catch { /* ignore */ }
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('sd_builder_prefill');
+      if (!raw) return;
+      sessionStorage.removeItem('sd_builder_prefill');
+      const p = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof p.primaryGenre === 'string') setPrimaryGenre(p.primaryGenre);
+      if (typeof p.secondaryGenre === 'string') setSecondaryGenre(p.secondaryGenre);
+      if (typeof p.crowdContext === 'string') setCrowd(p.crowdContext);
+      if (typeof p.durationMinutes === 'number') setDuration(String(p.durationMinutes));
+      if (typeof p.lineupSlot === 'string') setSlot(p.lineupSlot);
+      if (typeof p.mixName === 'string') setMixName(p.mixName);
+      if (typeof p.vibe === 'string') setVibe(p.vibe);
+      if (typeof p.venueName === 'string') setVenueName(p.venueName);
+      if (Array.isArray(p.arcPoints) && p.arcPoints.length === 5) setArcPoints(p.arcPoints as number[]);
+      if (typeof p.seedSearch === 'string') setSeedSearch(p.seedSearch);
+      if (typeof p.soundcloudUrl === 'string') setSoundcloudUrl(p.soundcloudUrl);
+      if (typeof p.wordplay === 'string') setWordplay(p.wordplay);
+    } catch { /* ignore */ }
+  }, []);
+
   const GEN_STEPS = [
     'Analyzing your library...',
     'Gathering gig intel...',
@@ -233,7 +254,13 @@ export function SetlistBuilder() {
         generatedAt: new Date().toISOString(),
         excludedCount,
         libraryTracksUsed,
-        input: { primaryGenre, secondaryGenre: secondaryGenre || undefined, crowdContext: crowd, durationMinutes, lineupSlot: slot },
+        input: {
+          primaryGenre, secondaryGenre: secondaryGenre || undefined, crowdContext: crowd,
+          durationMinutes, lineupSlot: slot,
+          mixName: mixName || undefined, vibe: vibe || undefined, venueName: venueName || undefined,
+          arcPoints, seedSearch: seedSearch || undefined,
+          soundcloudUrl: soundcloudUrl || undefined, wordplay: wordplay || undefined,
+        },
       }));
       router.push('/output');
     }, 400);

@@ -130,5 +130,12 @@ export interface GeneratedSetlist {
     crowdContext: string;
     durationMinutes: number;
     lineupSlot: string;
+    mixName?: string;
+    vibe?: string;
+    venueName?: string;
+    arcPoints?: number[];
+    seedSearch?: string;
+    soundcloudUrl?: string;
+    wordplay?: string;
   };
 }

@@ -405,7 +405,13 @@ export function SetlistOutput() {
               onFocus={e => (e.target.style.borderColor = SD.accent)}
               onBlur={e => (e.target.style.borderColor = SD.border)}
             />
-            <SDButton onClick={() => { setShowRegen(false); router.push('/builder'); }}>Rebuild</SDButton>
+            <SDButton onClick={() => {
+              if (setlist?.input) {
+                sessionStorage.setItem('sd_builder_prefill', JSON.stringify(setlist.input));
+              }
+              setShowRegen(false);
+              router.push('/builder');
+            }}>Rebuild</SDButton>
           </div>
         )}
 
