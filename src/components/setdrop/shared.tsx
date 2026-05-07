@@ -70,17 +70,19 @@ export function Nav() {
         }}>
           SET<span style={{ color:SD.accent }}>DROP</span>
         </span>
-        <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36 }}>
-          {links.map(l => (
-            <span key={l.id} onClick={() => router.push('/' + l.id)} style={{
-              fontFamily:SD.mono, fontSize:13, letterSpacing:1.5,
-              textTransform:'uppercase', cursor:'pointer',
-              color: pathname === '/' + l.id ? SD.accent : SD.textSec,
-              borderBottom: pathname === '/' + l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
-              paddingBottom:2, transition:'color .15s',
-            }}>{l.label}</span>
-          ))}
-          <SDButton onClick={() => router.push('/builder')} small>Build Set</SDButton>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36, marginRight:12 }}>
+            {links.map(l => (
+              <span key={l.id} onClick={() => router.push('/' + l.id)} style={{
+                fontFamily:SD.mono, fontSize:13, letterSpacing:1.5,
+                textTransform:'uppercase', cursor:'pointer',
+                color: pathname === '/' + l.id ? SD.accent : SD.textSec,
+                borderBottom: pathname === '/' + l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
+                paddingBottom:2, transition:'color .15s',
+              }}>{l.label}</span>
+            ))}
+            <SDButton onClick={() => router.push('/builder')} small>Build Set</SDButton>
+          </div>
           <div ref={menuRef} style={{ position:'relative' }}>
             <div
               onClick={() => setMenuOpen(o => !o)}
@@ -165,7 +167,7 @@ export function Nav() {
             transition:'color .15s',
           }}>
             <span style={{ fontSize:15, lineHeight:1 }}>{item.icon}</span>
-            <span style={{ fontFamily:SD.mono, fontSize:8, letterSpacing:1,
+            <span style={{ fontFamily:SD.mono, fontSize:10, letterSpacing:1,
               textTransform:'uppercase' }}>{item.label}</span>
           </div>
         ))}

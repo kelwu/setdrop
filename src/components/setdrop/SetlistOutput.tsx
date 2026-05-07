@@ -486,7 +486,7 @@ export function SetlistOutput() {
               </div>
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               <StatBox value={avgBpm} label="Avg BPM" />
               <StatBox value={displayTracks.length} label="Tracks" />
               <StatBox value={keys.length} label="Keys used" />
