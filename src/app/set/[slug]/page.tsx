@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+﻿import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
@@ -25,9 +25,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const genre = [data.primary_genre, data.secondary_genre].filter(Boolean).join(' / ');
   const desc = genre ? `${genre} setlist, built with SetDrop` : 'Built with SetDrop';
   return {
-    title: `${data.name} — SetDrop`,
+    title: `${data.name} â€” SetDrop`,
     description: desc,
-    openGraph: { title: `${data.name} — SetDrop`, description: desc, siteName: 'SetDrop' },
+    openGraph: { title: `${data.name} â€” SetDrop`, description: desc, siteName: 'SetDrop' },
   };
 }
 
@@ -75,14 +75,14 @@ export default async function PublicSetPage({ params }: Props) {
           color: S.text, textDecoration: 'none' }}>
           SET<span style={{ color: S.accent }}>DROP</span>
         </a>
-        <span style={{ fontFamily: S.mono, fontSize: 10, color: S.textMuted, letterSpacing: 1.5 }}>
+        <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted, letterSpacing: 1.5 }}>
           Built with SetDrop
         </span>
       </div>
 
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '64px 40px' }}>
         <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, color: S.textMuted,
+          <div style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted,
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{date}</div>
           <h1 style={{ fontFamily: S.display, fontSize: 'clamp(48px,7vw,96px)',
             letterSpacing: 4, margin: '0 0 12px', lineHeight: .95, color: S.text }}>
@@ -90,8 +90,8 @@ export default async function PublicSetPage({ params }: Props) {
           </h1>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
             {[genre, crowd, dur, `${tracks.length} tracks`].filter(Boolean).map((v, i) => (
-              <span key={i} style={{ fontFamily: S.mono, fontSize: 11, color: S.textSec }}>
-                {i > 0 && <span style={{ color: S.textMuted, marginRight: 16 }}>·</span>}
+              <span key={i} style={{ fontFamily: S.mono, fontSize: 13, color: S.textSec }}>
+                {i > 0 && <span style={{ color: S.textMuted, marginRight: 16 }}>Â·</span>}
                 {v}
               </span>
             ))}
@@ -101,7 +101,7 @@ export default async function PublicSetPage({ params }: Props) {
         {arcD && (
           <div style={{ background: S.surface, border: `1px solid ${S.border}`,
             borderRadius: 4, padding: '20px 20px 10px', marginBottom: 24, overflow: 'hidden' }}>
-            <div style={{ fontFamily: S.mono, fontSize: 9, letterSpacing: 2,
+            <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2,
               color: S.textMuted, textTransform: 'uppercase', marginBottom: 14 }}>Energy Arc</div>
             <div style={{ overflowX: 'auto' }}>
               <svg width={arcW} height={arcH} style={{ overflow: 'visible', display: 'block' }}>
@@ -138,12 +138,12 @@ export default async function PublicSetPage({ params }: Props) {
         )}
 
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, letterSpacing: 2,
+          <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2,
             color: S.textSec, textTransform: 'uppercase', marginBottom: 12 }}>Tracklist</div>
           {tracks.map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16,
               padding: '14px 16px', borderBottom: `1px solid ${S.border}` }}>
-              <span style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+              <span style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
                 width: 22, textAlign: 'right', flexShrink: 0 }}>
                 {String(t.position || i + 1).padStart(2, '0')}
               </span>
@@ -151,18 +151,18 @@ export default async function PublicSetPage({ params }: Props) {
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 600,
                     color: S.text }}>{t.artist}</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>— {t.title}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>â€” {t.title}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.accent }}>{t.bpm} BPM</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.textSec }}>{t.key}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.accent }}>{t.bpm} BPM</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>{t.key}</span>
                   {t.harmonicMixingNotes && (
-                    <span style={{ fontFamily: S.mono, fontSize: 10, color: S.textMuted }}>{t.harmonicMixingNotes}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>{t.harmonicMixingNotes}</span>
                   )}
                 </div>
               </div>
               <div style={{ flexShrink: 0 }}>
-                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.accentDim,
+                <span style={{ fontFamily: S.mono, fontSize: 13, color: S.accentDim,
                   background: S.accentDim, border: `1px solid ${S.accent}22`,
                   borderRadius: 2, padding: '2px 6px' }}>
                   E{t.energyLevel}
@@ -190,7 +190,7 @@ export default async function PublicSetPage({ params }: Props) {
               letterSpacing: 1.5, textTransform: 'uppercase',
               padding: '13px 36px', borderRadius: 3, textDecoration: 'none',
             }}>Try SetDrop Free</a>
-            <div style={{ marginTop: 14, fontFamily: S.mono, fontSize: 10, color: S.textMuted }}>
+            <div style={{ marginTop: 14, fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
               {process.env.NEXT_PUBLIC_APP_URL ?? 'setdrop-phi.vercel.app'}
             </div>
           </div>

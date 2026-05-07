@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -141,7 +141,7 @@ export default function InvoicePage() {
     outline: 'none', width: '100%', boxSizing: 'border-box',
   };
   const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: 9, color: SD.textSec, letterSpacing: 1.5,
+    display: 'block', fontSize: 12, color: SD.textSec, letterSpacing: 1.5,
     marginBottom: 5, textTransform: 'uppercase', fontFamily: SD.mono,
   };
   const sectionStyle: React.CSSProperties = {
@@ -149,7 +149,7 @@ export default function InvoicePage() {
     padding: '24px', marginBottom: 16,
   };
   const sectionTitleStyle: React.CSSProperties = {
-    fontFamily: SD.mono, fontSize: 10, color: SD.accent, letterSpacing: 2,
+    fontFamily: SD.mono, fontSize: 12, color: SD.accent, letterSpacing: 2,
     marginBottom: 20, textTransform: 'uppercase',
   };
   const rowStyle: React.CSSProperties = { display: 'flex', gap: 16, marginBottom: 14 };
@@ -172,11 +172,11 @@ export default function InvoicePage() {
             <div style={{ fontFamily: SD.display, fontSize: 28, letterSpacing: 4, color: SD.text }}>
               SET<span style={{ color: SD.accent }}>DROP</span>
             </div>
-            <div style={{ fontSize: 11, color: SD.textSec, letterSpacing: 2, marginTop: 4 }}>INVOICE GENERATOR</div>
+            <div style={{ fontSize: 13, color: SD.textSec, letterSpacing: 2, marginTop: 4 }}>INVOICE GENERATOR</div>
           </div>
           <span
             onClick={() => router.back()}
-            style={{ fontSize: 11, color: SD.textSec, cursor: 'pointer', letterSpacing: 1 }}
+            style={{ fontSize: 13, color: SD.textSec, cursor: 'pointer', letterSpacing: 1 }}
           >
             ← BACK
           </span>
@@ -225,14 +225,14 @@ export default function InvoicePage() {
                 ) : (
                   <div style={{ textAlign: 'center', color: SD.textMuted }}>
                     <div style={{ fontSize: 22, marginBottom: 4 }}>+</div>
-                    <div style={{ fontSize: 9, letterSpacing: 1 }}>UPLOAD</div>
+                    <div style={{ fontSize: 12, letterSpacing: 1 }}>UPLOAD</div>
                   </div>
                 )}
               </div>
               {data.logo && (
                 <button
                   onClick={() => set('logo', '')}
-                  style={{ marginTop: 6, background: 'none', border: 'none', color: SD.textSec, fontSize: 10, cursor: 'pointer', padding: 0, fontFamily: SD.mono, letterSpacing: 1 }}
+                  style={{ marginTop: 6, background: 'none', border: 'none', color: SD.textSec, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: SD.mono, letterSpacing: 1 }}
                 >
                   REMOVE
                 </button>
@@ -305,10 +305,10 @@ export default function InvoicePage() {
           <div style={sectionTitleStyle}>Line Items</div>
           {/* Header row */}
           <div style={{ display: 'flex', gap: 8, paddingBottom: 8, borderBottom: `1px solid ${SD.border}`, marginBottom: 8 }}>
-            <div style={{ flex: 4, fontSize: 9, color: SD.textSec, letterSpacing: 1.5 }}>DESCRIPTION</div>
-            <div style={{ width: 64, fontSize: 9, color: SD.textSec, letterSpacing: 1.5, textAlign: 'center' }}>QTY</div>
-            <div style={{ width: 104, fontSize: 9, color: SD.textSec, letterSpacing: 1.5, textAlign: 'right' }}>RATE</div>
-            <div style={{ width: 104, fontSize: 9, color: SD.textSec, letterSpacing: 1.5, textAlign: 'right' }}>AMOUNT</div>
+            <div style={{ flex: 4, fontSize: 12, color: SD.textSec, letterSpacing: 1.5 }}>DESCRIPTION</div>
+            <div style={{ width: 64, fontSize: 12, color: SD.textSec, letterSpacing: 1.5, textAlign: 'center' }}>QTY</div>
+            <div style={{ width: 104, fontSize: 12, color: SD.textSec, letterSpacing: 1.5, textAlign: 'right' }}>RATE</div>
+            <div style={{ width: 104, fontSize: 12, color: SD.textSec, letterSpacing: 1.5, textAlign: 'right' }}>AMOUNT</div>
             <div style={{ width: 32 }} />
           </div>
           {data.lineItems.map(item => (
@@ -364,7 +364,7 @@ export default function InvoicePage() {
             onClick={addItem}
             style={{
               marginTop: 4, background: 'none', border: `1px dashed ${SD.borderMid}`, borderRadius: 3,
-              padding: '8px 16px', color: SD.textSec, fontFamily: SD.mono, fontSize: 11,
+              padding: '8px 16px', color: SD.textSec, fontFamily: SD.mono, fontSize: 13,
               letterSpacing: 1, cursor: 'pointer',
             }}
           >
@@ -372,7 +372,7 @@ export default function InvoicePage() {
           </button>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, paddingTop: 16, borderTop: `1px solid ${SD.border}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              <span style={{ fontSize: 10, color: SD.textSec, letterSpacing: 1.5 }}>TOTAL</span>
+              <span style={{ fontSize: 12, color: SD.textSec, letterSpacing: 1.5 }}>TOTAL</span>
               <span style={{ fontSize: 22, color: SD.accent, fontWeight: 700 }}>{formatMoney(total)}</span>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function InvoicePage() {
           </button>
 
           <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: 4, padding: '20px 24px' }}>
-            <div style={{ fontSize: 10, color: SD.accent, letterSpacing: 2, marginBottom: 14, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 12, color: SD.accent, letterSpacing: 2, marginBottom: 14, textTransform: 'uppercase' }}>
               Send to Client
             </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
@@ -426,7 +426,7 @@ export default function InvoicePage() {
                   padding: '10px 24px', background: SD.surface3,
                   border: `1px solid ${SD.borderMid}`, borderRadius: 3,
                   color: sending || !sendEmail || !canSubmit ? SD.textMuted : SD.text,
-                  fontFamily: SD.mono, fontSize: 11, letterSpacing: 1,
+                  fontFamily: SD.mono, fontSize: 13, letterSpacing: 1,
                   cursor: sending || !sendEmail || !canSubmit ? 'not-allowed' : 'pointer',
                   flexShrink: 0, whiteSpace: 'nowrap',
                 }}
@@ -435,12 +435,12 @@ export default function InvoicePage() {
               </button>
             </div>
             {sendSuccess && (
-              <div style={{ marginTop: 10, fontSize: 11, color: SD.green }}>✓ Invoice sent successfully</div>
+              <div style={{ marginTop: 10, fontSize: 13, color: SD.green }}>✓ Invoice sent successfully</div>
             )}
             {sendError && (
-              <div style={{ marginTop: 10, fontSize: 11, color: SD.red }}>{sendError}</div>
+              <div style={{ marginTop: 10, fontSize: 13, color: SD.red }}>{sendError}</div>
             )}
-            <div style={{ marginTop: 10, fontSize: 10, color: SD.textMuted }}>
+            <div style={{ marginTop: 10, fontSize: 12, color: SD.textMuted }}>
               Requires RESEND_API_KEY + RESEND_FROM_EMAIL in env vars
             </div>
           </div>

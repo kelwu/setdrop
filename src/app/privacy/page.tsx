@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — SetDrop',
@@ -42,7 +42,7 @@ function UL({ items }: { items: React.ReactNode[] }) {
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.accent,
+    <span style={{ fontFamily: S.mono, fontSize: 13, color: S.accent,
       background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)',
       borderRadius: 2, padding: '2px 8px', marginLeft: 8, verticalAlign: 'middle' }}>
       {children}
@@ -60,14 +60,14 @@ export default function PrivacyPage() {
           color: S.text, textDecoration: 'none' }}>
           SET<span style={{ color: S.accent }}>DROP</span>
         </a>
-        <a href="/" style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <a href="/" style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           textDecoration: 'none', letterSpacing: 1 }}>← Back to app</a>
       </div>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '64px 40px 120px' }}>
         {/* Header */}
         <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, color: S.textMuted,
+          <div style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted,
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
             Last updated: April 28, 2026
           </div>
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
         {/* 2 */}
         <H2>2. What Data We Collect</H2>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Account
         </p>
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
           'No passwords are stored by SetDrop — Supabase Auth handles credential storage using bcrypt hashing',
         ]} />
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Serato Library
         </p>
@@ -129,7 +129,7 @@ export default function PrivacyPage() {
         ]} />
         <P>Audio files are never uploaded. Only the text metadata above is stored.</P>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Generated Setlists
         </p>
@@ -145,7 +145,7 @@ export default function PrivacyPage() {
           see Section 5 for how that works.
         </P>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           What We Do NOT Collect
         </p>
@@ -171,7 +171,7 @@ export default function PrivacyPage() {
         {/* 4 */}
         <H2>4. Third-Party Services</H2>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Supabase
         </p>
@@ -184,7 +184,7 @@ export default function PrivacyPage() {
           </a>
         </P>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Vercel
         </p>
@@ -196,7 +196,7 @@ export default function PrivacyPage() {
           </a>
         </P>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Anthropic (Claude AI)
         </p>
@@ -209,7 +209,7 @@ export default function PrivacyPage() {
           </a>
         </P>
 
-        <p style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted,
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           Spotify <Tag>Coming Soon</Tag>
         </p>

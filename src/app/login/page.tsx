@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -87,7 +87,7 @@ export default function LoginPage() {
           }}>
             SET<span style={{ color: SD.accent }}>DROP</span>
           </div>
-          <div style={{ fontSize: 11, color: SD.textSec, letterSpacing: 1.5, marginTop: 6 }}>
+          <div style={{ fontSize: 13, color: SD.textSec, letterSpacing: 1.5, marginTop: 6 }}>
             {mode === 'signin' ? 'SIGN IN TO CONTINUE' : 'CREATE YOUR ACCOUNT'}
           </div>
         </div>
@@ -119,13 +119,13 @@ export default function LoginPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1, height: 1, background: SD.border }} />
-          <span style={{ fontFamily: SD.mono, fontSize: 10, color: SD.textMuted, letterSpacing: 1 }}>OR</span>
+          <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, letterSpacing: 1 }}>OR</span>
           <div style={{ flex: 1, height: 1, background: SD.border }} />
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 10, color: SD.textSec, letterSpacing: 1.5, marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, color: SD.textSec, letterSpacing: 1.5, marginBottom: 6 }}>
               EMAIL
             </label>
             <input
@@ -141,7 +141,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 10, color: SD.textSec, letterSpacing: 1.5, marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, color: SD.textSec, letterSpacing: 1.5, marginBottom: 6 }}>
               PASSWORD
             </label>
             <input
@@ -184,7 +184,7 @@ export default function LoginPage() {
               background: loading ? SD.surface3 : SD.accent,
               color: loading ? SD.textSec : '#000',
               border: 'none', borderRadius: 3, cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: SD.mono, fontSize: 11, fontWeight: 700,
+              fontFamily: SD.mono, fontSize: 13, fontWeight: 700,
               letterSpacing: 1.5, textTransform: 'uppercase',
               transition: 'background .15s',
             }}
@@ -195,7 +195,7 @@ export default function LoginPage() {
 
         <div style={{
           textAlign: 'center', marginTop: 24,
-          fontSize: 11, color: SD.textSec,
+          fontSize: 13, color: SD.textSec,
         }}>
           {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
           <span
@@ -208,7 +208,7 @@ export default function LoginPage() {
 
         <div style={{
           textAlign: 'center', marginTop: 20,
-          fontSize: 11, color: SD.textMuted,
+          fontSize: 13, color: SD.textMuted,
         }}>
           <span
             onClick={() => router.push('/')}
