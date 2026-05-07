@@ -39,9 +39,10 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
     setStripeError(null);
     try {
       const res = await fetch('/api/checkout', { method: 'POST' });
-      const data = await res.json() as { url?: string; error?: string };
+      const text = await res.text();
+      const data = text ? JSON.parse(text) as { url?: string; error?: string } : {};
       if (data.url) window.location.href = data.url;
-      else { setStripeError(data.error ?? 'No checkout URL returned'); setLoading(null); }
+      else { setStripeError(data.error ?? `Server error (${res.status})`); setLoading(null); }
     } catch (e) {
       setStripeError(e instanceof Error ? e.message : 'Request failed');
       setLoading(null);
