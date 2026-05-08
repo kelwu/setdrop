@@ -22,16 +22,19 @@ function findLibraryTrack(artist: string, title: string, library: LibraryTrack[]
 
 function toRekordboxLocation(filePath: string): string {
   let path = filePath.trim();
+  // Strip existing file:// prefix (with optional localhost) so we can re-encode cleanly
   if (path.startsWith('file://')) {
-    return path.replace(/ /g, '%20');
+    path = decodeURIComponent(path.replace(/^file:\/\/(localhost)?/, ''));
   }
-  // Windows absolute path: C:\... → /C:/...
+  // Windows absolute path: C:\... or C:/... → /C:/...
   if (/^[A-Za-z]:[/\\]/.test(path)) {
     path = '/' + path.replace(/\\/g, '/');
   }
-  // Bare relative path (e.g. pfil on macOS): Users/... → /Users/...
+  // Ensure leading slash
   if (!path.startsWith('/')) path = '/' + path;
-  return 'file://' + path.replace(/ /g, '%20');
+  // Encode every segment — handles #, %, &, spaces, parens, apostrophes, etc.
+  const encoded = path.split('/').map(seg => seg === '' ? '' : encodeURIComponent(seg)).join('/');
+  return 'file://localhost' + encoded;
 }
 
 function escapeXml(s: string): string {
@@ -87,6 +90,48 @@ ${playlistTracks}
 </DJ_PLAYLISTS>`;
 
   return { xml, matched: matched.length };
+}
+
+// --- M3U export (simpler Rekordbox import: File → Import → Import Playlist) ---
+
+function toM3uPath(filePath: string): string {
+  let path = filePath.trim();
+  if (path.startsWith('file://')) {
+    path = decodeURIComponent(path.replace(/^file:\/\/(localhost)?/, ''));
+  }
+  // Windows: /C:/... → C:/...
+  if (/^\/[A-Za-z]:\//.test(path)) path = path.slice(1);
+  return path;
+}
+
+export function buildM3u(
+  setlistName: string,
+  tracks: SetlistTrack[],
+  library: LibraryTrack[],
+): { m3u: string; matched: number } {
+  const lines = ['#EXTM3U', `#PLAYLIST:${setlistName}`];
+  let matched = 0;
+  for (const t of tracks) {
+    const found = findLibraryTrack(t.artist, t.title, library);
+    if (!found?.filePath) continue;
+    lines.push(`#EXTINF:-1,${t.artist} - ${t.title}`);
+    lines.push(toM3uPath(found.filePath));
+    matched++;
+  }
+  return { m3u: lines.join('\n'), matched };
+}
+
+export function downloadM3u(m3u: string, name: string): void {
+  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || 'SetDrop';
+  const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safe}.m3u`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function downloadRekordboxXml(xml: string, name: string): void {

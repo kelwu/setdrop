@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack, LibraryTrack } from '@/lib/agents/types';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
-import { buildRekordboxXml, downloadRekordboxXml } from '@/lib/setdrop/rekordbox-export';
+import { buildRekordboxXml, downloadRekordboxXml, buildM3u, downloadM3u } from '@/lib/setdrop/rekordbox-export';
 import { createClient } from '@/lib/supabase/client';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 
@@ -275,12 +275,60 @@ export function SetlistOutput() {
       } catch { /* fall through with what we have */ }
     }
 
-    if (!library.length) { setCrateStatus('Upload your Rekordbox library first so we can match file paths.'); return; }
+    if (!library.length) { setCrateStatus('Upload your library first so we can match file paths.'); return; }
     const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
     const { xml, matched } = buildRekordboxXml(setlist.name, tracks, library);
-    if (!matched) { setCrateStatus('No tracks matched. Re-upload your Rekordbox XML file in the Library tab.'); return; }
+    if (!matched) { setCrateStatus('No tracks matched. Re-upload your library file in the Library tab.'); return; }
     downloadRekordboxXml(xml, setlist.name);
-    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import Playlist and select the XML file.`);
+    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox, click "rekordbox xml" in the left panel, expand Playlists, then drag the playlist into your Playlists.`);
+    setTimeout(() => setCrateStatus(null), 12000);
+  };
+
+  const handleExportM3u = async () => {
+    if (!setlist) return;
+    let library = getLibrary();
+
+    if (!library.length || !library.some(t => t.filePath)) {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: lib } = await supabase.from('serato_libraries').select('id').eq('user_id', user.id).single();
+          if (lib) {
+            const PAGE = 1000;
+            let offset = 0;
+            const allRows: LibraryTrack[] = [];
+            while (true) {
+              const { data: page } = await supabase
+                .from('serato_tracks')
+                .select('id, artist, title, bpm, key, genre, file_path')
+                .eq('library_id', lib.id)
+                .order('artist')
+                .range(offset, offset + PAGE - 1);
+              if (!page?.length) break;
+              allRows.push(...page.map(t => ({
+                id: t.id, artist: t.artist ?? '', title: t.title ?? '',
+                bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                filePath: t.file_path ?? undefined, isWishlist: false,
+              })));
+              if (page.length < PAGE) break;
+              offset += PAGE;
+            }
+            if (allRows.length) {
+              library = allRows;
+              localStorage.setItem('sd_library', JSON.stringify(library));
+            }
+          }
+        }
+      } catch { /* fall through */ }
+    }
+
+    if (!library.length) { setCrateStatus('Upload your library first so we can match file paths.'); return; }
+    const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
+    const { m3u, matched } = buildM3u(setlist.name, tracks, library);
+    if (!matched) { setCrateStatus('No tracks matched. Re-upload your library file in the Library tab.'); return; }
+    downloadM3u(m3u, setlist.name);
+    setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import → Import Playlist and select the .m3u file.`);
     setTimeout(() => setCrateStatus(null), 10000);
   };
 
@@ -381,8 +429,11 @@ export function SetlistOutput() {
             <SDButton style={{ fontSize:13, padding:'10px 24px' }} onClick={handleExportCrate}>
               Export Serato Crate
             </SDButton>
-            <SDButton ghost style={{ fontSize:13, padding:'10px 24px' }} onClick={handleExportRekordbox}>
-              Export Rekordbox XML
+            <SDButton style={{ fontSize:13, padding:'10px 24px' }} onClick={handleExportM3u}>
+              Export Rekordbox M3U
+            </SDButton>
+            <SDButton ghost style={{ fontSize:12, padding:'10px 16px' }} onClick={handleExportRekordbox}>
+              XML
             </SDButton>
           </div>
         </div>
