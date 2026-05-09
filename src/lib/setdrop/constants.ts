@@ -10,7 +10,7 @@ export const SD = {
   accentHover: '#FFBA45',
   text: '#F0F0F0',
   textSec: '#8A8A8A',
-  textMuted: '#4A4A4A',
+  textMuted: '#6B6B6B',
   green: '#22C55E',
   greenDim: 'rgba(34,197,94,0.13)',
   yellow: '#EAB308',

@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
@@ -39,7 +39,7 @@ function buildStoreUrls(artist: string, title: string) {
 
 // ─── Library Row ─────────────────────────────────────────────────────────────
 
-function LibraryRow({ track, tab, idx, onDelete, tags }: {
+const LibraryRow = React.memo(function LibraryRow({ track, tab, idx, onDelete, tags }: {
   track: SampleTrack; tab: string; idx: number; onDelete?: () => void; tags?: string[];
 }) {
   const [hov, setHov] = useState(false);
@@ -122,7 +122,7 @@ function LibraryRow({ track, tab, idx, onDelete, tags }: {
       )}
     </div>
   );
-}
+});
 
 // ─── Upload Zone ─────────────────────────────────────────────────────────────
 
@@ -787,29 +787,33 @@ export function Library() {
     }
   };
 
-  const allTracks: SampleTrack[] = uploadedTracks
-    ? uploadedTracks.map(toDisplayTrack)
-    : LIBRARY_TRACKS;
+  const allTracks: SampleTrack[] = useMemo(
+    () => uploadedTracks ? uploadedTracks.map(toDisplayTrack) : LIBRARY_TRACKS,
+    [uploadedTracks]
+  );
 
-  const wishlistTracks = allTracks.filter(t => t.wishlist);
+  const wishlistTracks = useMemo(() => allTracks.filter(t => t.wishlist), [allTracks]);
 
-  const matchFn = (t: SampleTrack) => {
+  const filteredRaw: LibraryTrack[] = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
-    const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
-    if (tab === 'wishlist') return t.wishlist && matchSearch && matchBpm;
-    return matchSearch && matchBpm;
-  };
+    return (uploadedTracks ?? []).filter(t => {
+      const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
+      const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
+      if (tab === 'wishlist') return t.isWishlist && matchSearch && matchBpm;
+      return matchSearch && matchBpm;
+    });
+  }, [uploadedTracks, search, bpmMin, bpmMax, tab]);
 
-  const filteredRaw: LibraryTrack[] = (uploadedTracks ?? []).filter(t => {
+  const filtered: SampleTrack[] = useMemo(() => {
+    if (uploadedTracks) return filteredRaw.map(toDisplayTrack);
     const q = search.toLowerCase();
-    const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
-    const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
-    if (tab === 'wishlist') return t.isWishlist && matchSearch && matchBpm;
-    return matchSearch && matchBpm;
-  });
-
-  const filtered = uploadedTracks ? filteredRaw.map(toDisplayTrack) : allTracks.filter(matchFn);
+    return allTracks.filter(t => {
+      const matchSearch = !q || `${t.artist} ${t.title}`.toLowerCase().includes(q);
+      const matchBpm = (!bpmMin || t.bpm >= parseInt(bpmMin)) && (!bpmMax || t.bpm <= parseInt(bpmMax));
+      if (tab === 'wishlist') return t.wishlist && matchSearch && matchBpm;
+      return matchSearch && matchBpm;
+    });
+  }, [uploadedTracks, filteredRaw, allTracks, search, bpmMin, bpmMax, tab]);
 
   function TabBtn({ id, label, count }: { id: string; label: string; count: number }) {
     return (
