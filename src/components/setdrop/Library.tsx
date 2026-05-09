@@ -507,6 +507,13 @@ export function Library() {
   const [syncStats, setSyncStats] = useState<{ added: number; removed: number; unchanged: number } | null>(null);
   const [enriching, setEnriching] = useState(false);
   const [enrichingBpmKey, setEnrichingBpmKey] = useState(false);
+  const [wordplayWord, setWordplayWord] = useState('');
+  const [wordplayLoading, setWordplayLoading] = useState(false);
+  const [wordplayResults, setWordplayResults] = useState<{
+    matches: Array<{ trackId: string; artist: string; title: string; lyricContext: string; position: string }>;
+    pairs: Array<{ fromId: string; fromArtist: string; fromTitle: string; fromBpm: number; toId: string; toArtist: string; toTitle: string; toBpm: number; bridge: string; bpmDiff: number; keysCompatible: boolean }>;
+  } | null>(null);
+  const [wordplayError, setWordplayError] = useState<string | null>(null);
   const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<{ id: string; name: string; trackCount: number }[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState('');
@@ -743,6 +750,29 @@ export function Library() {
     }
   };
 
+  const handleWordplaySearch = async () => {
+    if (!wordplayWord.trim()) return;
+    setWordplayLoading(true);
+    setWordplayError(null);
+    setWordplayResults(null);
+    try {
+      const library = (uploadedTracks ?? []).filter(t => !t.isWishlist);
+      const tracks = library.map(t => ({ id: t.id, artist: t.artist, title: t.title, bpm: t.bpm, key: t.key ?? '' }));
+      const res = await fetch('/api/wordplay/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: wordplayWord.trim(), tracks }),
+      });
+      const data = await res.json() as typeof wordplayResults & { error?: string };
+      if (data.error) throw new Error(data.error);
+      setWordplayResults(data);
+    } catch (err) {
+      setWordplayError(err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setWordplayLoading(false);
+    }
+  };
+
   const handleDeleteWishlist = async (id: string) => {
     const supabase = createClient();
     await supabase.from('wishlist_tracks').delete().eq('id', id);
@@ -880,6 +910,14 @@ export function Library() {
         <div style={{ borderBottom:`1px solid ${SD.border}`, marginBottom:28 }}>
           <TabBtn id="library" label="In Library" count={allTracks.length} />
           <TabBtn id="wishlist" label="Wishlist" count={wishlistTracks.length} />
+          <button onClick={() => setTab('wordplay')} style={{
+            fontFamily:SD.mono, fontSize:13, letterSpacing:1.5, textTransform:'uppercase',
+            padding:'10px 24px', border:'none', cursor:'pointer',
+            background: tab === 'wordplay' ? SD.surface2 : 'transparent',
+            color: tab === 'wordplay' ? SD.text : SD.textMuted,
+            borderBottom: tab === 'wordplay' ? `2px solid ${SD.accent}` : '2px solid transparent',
+            transition:'all .15s',
+          }}>Wordplay</button>
         </div>
 
         {/* Filters */}
@@ -1031,8 +1069,130 @@ export function Library() {
           </div>
         )}
 
+        {/* Wordplay Studio */}
+        {tab === 'wordplay' && (
+          <div>
+            <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, lineHeight:1.8, marginBottom:24 }}>
+              Enter a word or phrase. SetDrop will scan your library for tracks that feature it prominently in their lyrics
+              and suggest DJ transition pairs — the hip hop technique of bridging songs through matching vocals.
+            </div>
+            <div style={{ display:'flex', gap:10, marginBottom:32 }}>
+              <div style={{ flex:1 }}>
+                <input
+                  value={wordplayWord}
+                  onChange={e => setWordplayWord(e.target.value)}
+                  placeholder={`e.g. "tonight", "money", "fly", "all eyes on me"`}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleWordplaySearch(); }}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: SD.surface2, border: `1px solid ${SD.border}`,
+                    borderRadius: 3, padding: '10px 14px', color: SD.text,
+                    fontFamily: SD.mono, fontSize: 14,
+                  }}
+                />
+              </div>
+              <SDButton onClick={handleWordplaySearch}
+                style={{ fontSize:13, padding:'10px 28px', opacity: wordplayLoading ? 0.6 : 1,
+                  pointerEvents: wordplayLoading ? 'none' : 'auto' }}>
+                {wordplayLoading ? 'Searching...' : 'Find Connections'}
+              </SDButton>
+            </div>
+
+            {wordplayError && (
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:'#E05555', marginBottom:24 }}>{wordplayError}</div>
+            )}
+
+            {wordplayResults && (
+              <div>
+                {/* Matched tracks */}
+                <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2, color:SD.textMuted,
+                  textTransform:'uppercase', marginBottom:12 }}>
+                  Tracks matching &ldquo;{wordplayWord}&rdquo; — {wordplayResults.matches.length} found
+                </div>
+
+                {wordplayResults.matches.length === 0 ? (
+                  <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, marginBottom:32,
+                    padding:'20px 24px', background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4 }}>
+                    No confident lyrical matches found. Try a different word, or check that your library includes hip hop tracks.
+                  </div>
+                ) : (
+                  <div style={{ marginBottom:32 }}>
+                    {wordplayResults.matches.map((m, i) => (
+                      <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr auto',
+                        gap:16, padding:'14px 16px', borderBottom:`1px solid ${SD.border}`,
+                        alignItems:'start' }}>
+                        <div>
+                          <div style={{ fontFamily:SD.mono, fontSize:14, fontWeight:600, color:SD.text, marginBottom:4 }}>
+                            {m.artist} — <span style={{ color:SD.textSec }}>{m.title}</span>
+                          </div>
+                          <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>{m.lyricContext}</div>
+                        </div>
+                        <span style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:1, textTransform:'uppercase',
+                          color:SD.accent, background:SD.accentDim, border:`1px solid ${SD.accent}33`,
+                          borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap', marginTop:2 }}>
+                          {m.position}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Suggested pairs */}
+                {wordplayResults.pairs.length > 0 && (
+                  <>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2, color:SD.textMuted,
+                      textTransform:'uppercase', marginBottom:12 }}>
+                      Suggested Transition Pairs — {wordplayResults.pairs.length}
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                      {wordplayResults.pairs.map((p, i) => (
+                        <div key={i} style={{ background:SD.surface, border:`1px solid ${SD.border}`,
+                          borderRadius:4, padding:'20px 24px' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12, flexWrap:'wrap' }}>
+                            <span style={{ fontFamily:SD.mono, fontSize:14, fontWeight:600, color:SD.text }}>
+                              {p.fromArtist} — {p.fromTitle}
+                            </span>
+                            <span style={{ fontFamily:SD.mono, fontSize:16, color:SD.accent }}>→</span>
+                            <span style={{ fontFamily:SD.mono, fontSize:14, fontWeight:600, color:SD.text }}>
+                              {p.toArtist} — {p.toTitle}
+                            </span>
+                          </div>
+                          <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec,
+                            fontStyle:'italic', marginBottom:12, lineHeight:1.6 }}>
+                            &ldquo;{p.bridge}&rdquo;
+                          </div>
+                          <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+                            <span style={{ fontFamily:SD.mono, fontSize:12, color: p.bpmDiff <= 5 ? SD.green : p.bpmDiff <= 10 ? SD.accent : '#E05555' }}>
+                              {p.fromBpm} → {p.toBpm} BPM ({p.bpmDiff > 0 ? `${p.bpmDiff} diff` : 'same'})
+                            </span>
+                            <span style={{ fontFamily:SD.mono, fontSize:12,
+                              color: p.keysCompatible ? SD.green : SD.textMuted }}>
+                              {p.keysCompatible ? '✓ Keys compatible' : '⚠ Key clash — use acapella or loop to mask'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!wordplayResults && !wordplayLoading && (
+              <div style={{ textAlign:'center', padding:'80px 40px' }}>
+                <div style={{ fontFamily:SD.display, fontSize:48, letterSpacing:3, color:SD.textMuted, marginBottom:12 }}>
+                  WORDPLAY
+                </div>
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
+                  {uploadedTracks ? 'Enter a word above to find lyrical connections in your library.' : 'Upload your library first to use Wordplay Studio.'}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Rows */}
-        {filtered.length === 0 ? (
+        {tab !== 'wordplay' && (filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 40px' }}>
             <div style={{ fontFamily:SD.display, fontSize:48, letterSpacing:3,
               color:SD.textMuted, marginBottom:12 }}>NOTHING HERE</div>
@@ -1065,7 +1225,7 @@ export function Library() {
               ))}
             </div>
           </div>
-        )}
+        ))}
 
         {/* Library tab enrichment actions */}
         {tab === 'library' && uploadedTracks && (() => {

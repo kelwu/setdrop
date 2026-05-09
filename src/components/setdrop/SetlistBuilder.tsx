@@ -586,8 +586,8 @@ export function SetlistBuilder() {
             </div>
             <SDInput label="SoundCloud URL (optional)" value={soundcloudUrl} onChange={setSoundcloudUrl}
               placeholder="https://soundcloud.com/artist/track" />
-            <SDInput label="Wordplay Theme (optional)" value={wordplay} onChange={setWordplay}
-              placeholder={`e.g. "night", "love", "rise", "free"`} />
+            <SDInput label="Wordplay Word (optional — hip hop)" value={wordplay} onChange={setWordplay}
+              placeholder={`e.g. "tonight", "money", "fly" — AI will find lyrical transitions`} />
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:3, padding:'20px 24px' }}>
               <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,

@@ -39,6 +39,7 @@ Selection rules:
 - whyThisTrack: 1-2 sentences on why this track AND why at this point in the set
 - transitionNotes: specific, actionable instructions for mixing INTO the next track
 - Flag weak transitions honestly; flag wishlist tracks as needing download
+- Wordplay (hip hop DJ technique): if a wordplay word/phrase is provided, identify tracks where that exact word or phrase appears prominently in the lyrics at a usable position — hook, chorus, drop, outro, or intro. Sequence these tracks consecutively where possible so the word creates a lyrical bridge between songs. In wordplayConnection, describe the specific handoff: e.g. "Jay-Z 'Empire State' ends its hook on '...tonight...' → flows into Drake 'God's Plan' which opens 'Tonight we go hard'". Only include wordplayConnection where there is a genuine lyrical connection — set to null for all other tracks.
 
 Output ONLY valid JSON:
 {
