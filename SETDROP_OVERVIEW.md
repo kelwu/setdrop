@@ -519,8 +519,7 @@ Server-rendered (SSR). Reads from `setlists` where `is_public = true` and `share
 ## Known Limitations / Pending Work
 
 - **Stripe Customer Portal must be activated** in Stripe Dashboard → Settings → Billing → Customer Portal before the billing portal button will work.
-- **Arc points not persisted to DB** — `arcPoints` in `GeneratedSetlist.input` lives only in sessionStorage / in-session state; the `setlists` table doesn't store the full input context, only the high-level fields (`primary_genre`, `crowd_context`, etc.). Rebuild restores from the in-session object, not from history rows.
-- **Setlist share page** — the public `/set/[slug]` page shows the stored tracklist but not the energy arc (arc SVG requires the `arcPoints` array, which isn't stored in the DB `tracks_json`).
+- **Share page energy arc** — the public `/set/[slug]` page renders a full arc SVG computed from per-track `energyLevel` values stored in `tracks_json`. This is a track-by-track visualization (not the 5-point control arc from the builder), but it accurately reflects how energy flows through the actual set.
 
 ---
 

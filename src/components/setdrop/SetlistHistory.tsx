@@ -19,6 +19,7 @@ interface DbSetlist {
   share_url: string | null;
   created_at: string;
   tracks_json: unknown;
+  energy_arc?: Record<string, number> | null;
 }
 
 function trackCount(row: DbSetlist): number {
@@ -30,6 +31,10 @@ function genre(row: DbSetlist): string {
 }
 
 function dbToSetlist(row: DbSetlist): GeneratedSetlist {
+  const ea = row.energy_arc;
+  const arcPoints: number[] | undefined = ea
+    ? [ea.intro ?? 5, ea.buildup ?? 7, ea.peak ?? 9, ea.sustain ?? 8, ea.cooldown ?? 4]
+    : undefined;
   return {
     name: row.name,
     tracks: Array.isArray(row.tracks_json) ? (row.tracks_json as SetlistTrack[]) : [],
@@ -37,6 +42,14 @@ function dbToSetlist(row: DbSetlist): GeneratedSetlist {
     shareSlug: row.share_url || '',
     dbId: row.id,
     dbSlug: row.share_url || undefined,
+    input: {
+      primaryGenre: row.primary_genre ?? '',
+      secondaryGenre: row.secondary_genre ?? undefined,
+      crowdContext: row.crowd_context ?? '',
+      durationMinutes: (row.duration_minutes ?? 60) as 30 | 60 | 90 | 120,
+      lineupSlot: row.lineup_slot ?? '',
+      arcPoints,
+    },
   };
 }
 
@@ -65,7 +78,7 @@ export function SetlistHistory() {
       if (!user) return;
       const { data } = await supabase
         .from('setlists')
-        .select('id, name, primary_genre, secondary_genre, duration_minutes, crowd_context, lineup_slot, is_public, share_url, created_at, tracks_json')
+        .select('id, name, primary_genre, secondary_genre, duration_minutes, crowd_context, lineup_slot, is_public, share_url, created_at, tracks_json, energy_arc')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       setSets(data as DbSetlist[] ?? []);
