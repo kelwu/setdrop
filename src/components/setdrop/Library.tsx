@@ -264,10 +264,11 @@ function StageSpinner() {
   );
 }
 
-function StageTracker({ stage, parsedCount, uploadMode }: {
+function StageTracker({ stage, parsedCount, uploadMode, syncStats }: {
   stage: Exclude<UploadStage, 'idle'>;
   parsedCount: number | null;
   uploadMode: UploadMode;
+  syncStats: { added: number; removed: number; unchanged: number } | null;
 }) {
   const stageOrder: UploadStage[] = ['parse', 'save', 'enrich', 'done'];
   const currentIdx = stageOrder.indexOf(stage);
@@ -297,7 +298,14 @@ function StageTracker({ stage, parsedCount, uploadMode }: {
       detail: () => {
         const s = status('save');
         if (s === 'pending') return 'Pending';
-        if (s === 'active') return 'Uploading to cloud...';
+        if (s === 'active') return 'Syncing library...';
+        if (s === 'done' && syncStats) {
+          const parts = [];
+          if (syncStats.added) parts.push(`${syncStats.added} new`);
+          if (syncStats.removed) parts.push(`${syncStats.removed} removed`);
+          if (syncStats.unchanged) parts.push(`${syncStats.unchanged} unchanged`);
+          return parts.length ? parts.join(', ') : 'Saved to cloud';
+        }
         return 'Saved to cloud';
       },
     },
@@ -390,7 +398,7 @@ function StageTracker({ stage, parsedCount, uploadMode }: {
 
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
-async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
+async function saveLibraryToSupabase(tracks: LibraryTrack[]): Promise<{ added: number; removed: number; unchanged: number }> {
   const res = await fetch('/api/library/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -400,6 +408,8 @@ async function saveLibraryToSupabase(tracks: LibraryTrack[]) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? `Library save failed (${res.status})`);
   }
+  const data = await res.json() as { added?: number; removed?: number; unchanged?: number };
+  return { added: data.added ?? 0, removed: data.removed ?? 0, unchanged: data.unchanged ?? 0 };
 }
 
 async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
@@ -489,8 +499,12 @@ export function Library() {
   const [addBpm, setAddBpm] = useState('');
   const [addKey, setAddKey] = useState('');
   const [addGenre, setAddGenre] = useState('');
+  const [addUrl, setAddUrl] = useState('');
+  const [urlLookupLoading, setUrlLookupLoading] = useState(false);
+  const [urlSource, setUrlSource] = useState<'beatport' | null>(null);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [syncStats, setSyncStats] = useState<{ added: number; removed: number; unchanged: number } | null>(null);
   const [enriching, setEnriching] = useState(false);
   const [enrichingBpmKey, setEnrichingBpmKey] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
@@ -612,7 +626,8 @@ export function Library() {
           setUploadedTracks(tracks);
           setUploadStage('save');
           try {
-            await saveLibraryToSupabase(tracks);
+            const stats = await saveLibraryToSupabase(tracks);
+            setSyncStats(stats);
           } catch (saveErr) {
             throw new Error(`Save error: ${saveErr instanceof Error ? saveErr.message : 'unknown'}`);
           }
@@ -633,7 +648,8 @@ export function Library() {
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setUploadStage('save');
-          await saveLibraryToSupabase(tracks);
+          const stats = await saveLibraryToSupabase(tracks);
+          setSyncStats(stats);
           finishUpload();
         } catch (err) {
           setUploadStage('idle');
@@ -663,6 +679,29 @@ export function Library() {
     }
   };
 
+  const handleUrlLookup = async (url: string) => {
+    if (!url.includes('beatport.com/track/')) return;
+    setUrlLookupLoading(true);
+    setUrlSource(null);
+    try {
+      const res = await fetch('/api/wishlist/lookup-beatport', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json() as { artist?: string; title?: string; bpm?: number; key?: string; genre?: string; error?: string };
+      if (data.error || !data.artist) return;
+      if (data.artist) setAddArtist(data.artist);
+      if (data.title) setAddTitle(data.title);
+      if (data.bpm) setAddBpm(String(data.bpm));
+      if (data.key) setAddKey(data.key);
+      if (data.genre) setAddGenre(data.genre);
+      setUrlSource('beatport');
+    } catch { /* ignore */ } finally {
+      setUrlLookupLoading(false);
+    }
+  };
+
   const handleAddWishlist = async () => {
     if (!addArtist.trim() || !addTitle.trim()) {
       setAddError('Artist and title are required.');
@@ -688,6 +727,7 @@ export function Library() {
       });
       if (error) throw error;
       setAddArtist(''); setAddTitle(''); setAddBpm(''); setAddKey(''); setAddGenre('');
+      setAddUrl(''); setUrlSource(null);
       setShowAddForm(false);
       const tracks = await loadLibraryFromSupabase();
       if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
@@ -820,6 +860,7 @@ export function Library() {
             stage={uploadStage}
             parsedCount={parsedCount}
             uploadMode={uploadMode}
+            syncStats={syncStats}
           />
         )}
 
@@ -949,6 +990,21 @@ export function Library() {
                   color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>
                   Add Track to Wishlist
                 </div>
+                <div style={{ marginBottom:10, position:'relative' }}>
+                  <SDInput
+                    value={addUrl}
+                    onChange={v => { setAddUrl(v); handleUrlLookup(v); }}
+                    placeholder="Paste Beatport URL to auto-fill, or type manually below..."
+                  />
+                  {urlLookupLoading && (
+                    <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+                      fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>Looking up...</span>
+                  )}
+                  {urlSource === 'beatport' && !urlLookupLoading && (
+                    <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+                      fontFamily:SD.mono, fontSize:12, color:SD.green }}>✓ from Beatport</span>
+                  )}
+                </div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                   <SDInput value={addArtist} onChange={setAddArtist} placeholder="Artist *" />
                   <SDInput value={addTitle} onChange={setAddTitle} placeholder="Title *" />
@@ -967,7 +1023,7 @@ export function Library() {
                   <SDButton onClick={handleAddWishlist} style={{ fontSize:13 }}>
                     {adding ? 'Adding...' : 'Add Track'}
                   </SDButton>
-                  <SDButton ghost onClick={() => { setShowAddForm(false); setAddError(null); }}
+                  <SDButton ghost onClick={() => { setShowAddForm(false); setAddError(null); setAddUrl(''); setUrlSource(null); }}
                     style={{ fontSize:13 }}>Cancel</SDButton>
                 </div>
               </div>

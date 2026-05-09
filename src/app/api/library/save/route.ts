@@ -32,14 +32,15 @@ export async function POST(req: NextRequest) {
       .single();
 
     let libraryId: string;
+    let isFirstSync = false;
 
     if (existing) {
       await admin.from('serato_libraries')
         .update({ total_tracks: dedupedTracks.length, last_synced: now })
         .eq('id', existing.id);
-      await admin.from('serato_tracks').delete().eq('library_id', existing.id);
       libraryId = existing.id;
     } else {
+      isFirstSync = true;
       const { data, error } = await admin.from('serato_libraries')
         .insert({ user_id: user.id, total_tracks: dedupedTracks.length, last_synced: now, is_public: false })
         .select('id').single();
@@ -50,26 +51,70 @@ export async function POST(req: NextRequest) {
     }
 
     const BATCH = 500;
-    for (let i = 0; i < dedupedTracks.length; i += BATCH) {
-      const rows = dedupedTracks.slice(i, i + BATCH).map(t => ({
-        library_id: libraryId,
-        artist: t.artist || null,
-        title: t.title || null,
-        bpm: t.bpm || null,
-        key: t.key || null,
-        genre: t.genre || null,
-        file_path: t.filePath || null,
-        play_count: 0,
-        in_library: true,
-      }));
-      const { error: insertError } = await admin.from('serato_tracks').insert(rows);
-      if (insertError) {
-        console.error('[save-library] Track insert error:', insertError.message);
-        return NextResponse.json({ error: insertError.message }, { status: 500 });
+    let added = 0;
+    let removed = 0;
+    let unchanged = 0;
+
+    if (isFirstSync) {
+      // First upload — insert everything
+      for (let i = 0; i < dedupedTracks.length; i += BATCH) {
+        const rows = dedupedTracks.slice(i, i + BATCH).map(t => ({
+          library_id: libraryId,
+          artist: t.artist || null, title: t.title || null,
+          bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
+          file_path: t.filePath || null, play_count: 0, in_library: true,
+        }));
+        const { error: insertError } = await admin.from('serato_tracks').insert(rows);
+        if (insertError) {
+          console.error('[save-library] Track insert error:', insertError.message);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
       }
+      added = dedupedTracks.length;
+    } else {
+      // Re-sync — diff by file_path to preserve lastfm_tags and other enrichment
+      const { data: existingTracks } = await admin
+        .from('serato_tracks')
+        .select('id, file_path')
+        .eq('library_id', libraryId);
+
+      const existingByPath = new Map(
+        (existingTracks ?? []).filter(t => t.file_path).map(t => [t.file_path as string, t.id as string])
+      );
+      const newPaths = new Set(dedupedTracks.filter(t => t.filePath).map(t => t.filePath!));
+
+      // Delete tracks no longer in the library
+      const toDeleteIds = (existingTracks ?? [])
+        .filter(t => t.file_path && !newPaths.has(t.file_path as string))
+        .map(t => t.id as string);
+
+      for (let i = 0; i < toDeleteIds.length; i += BATCH) {
+        await admin.from('serato_tracks').delete().in('id', toDeleteIds.slice(i, i + BATCH));
+      }
+      removed = toDeleteIds.length;
+
+      // Insert tracks not yet in the library
+      const toInsert = dedupedTracks
+        .filter(t => !t.filePath || !existingByPath.has(t.filePath))
+        .map(t => ({
+          library_id: libraryId,
+          artist: t.artist || null, title: t.title || null,
+          bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
+          file_path: t.filePath || null, play_count: 0, in_library: true,
+        }));
+
+      for (let i = 0; i < toInsert.length; i += BATCH) {
+        const { error: insertError } = await admin.from('serato_tracks').insert(toInsert.slice(i, i + BATCH));
+        if (insertError) {
+          console.error('[save-library] Track insert error:', insertError.message);
+          return NextResponse.json({ error: insertError.message }, { status: 500 });
+        }
+      }
+      added = toInsert.length;
+      unchanged = dedupedTracks.length - toInsert.length;
     }
 
-    return NextResponse.json({ ok: true, libraryId, trackCount: dedupedTracks.length });
+    return NextResponse.json({ ok: true, libraryId, trackCount: dedupedTracks.length, added, removed, unchanged });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[save-library] Error:', message);
