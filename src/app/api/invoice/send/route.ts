@@ -15,13 +15,18 @@ export async function POST(req: NextRequest) {
     const buffer = await generateInvoicePDF(invoiceData);
 
     const resend = new Resend(apiKey);
-    // Set RESEND_FROM_EMAIL to a verified domain address for production.
-    // For testing, use onboarding@resend.dev (only sends to your Resend account email).
-    const from = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+    // Sending domain must be verified in Resend. Display name shows the DJ's name.
+    // replyTo ensures client replies go directly to the DJ's inbox.
+    const fromDomain = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+    const senderLabel = invoiceData.company
+      ? `${invoiceData.djName} / ${invoiceData.company}`
+      : invoiceData.djName;
+    const from = `${senderLabel} <${fromDomain}>`;
 
     const { error } = await resend.emails.send({
       from,
       to: recipientEmail,
+      replyTo: invoiceData.djEmail || undefined,
       subject: `Invoice ${invoiceData.invoiceNumber} from ${invoiceData.djName}`,
       html: `
         <p>Hi ${invoiceData.clientName},</p>
