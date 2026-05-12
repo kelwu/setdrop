@@ -35,6 +35,7 @@ export async function GET() {
     return NextResponse.json({ playlists });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[spotify/playlists]', message);
     const status = message.includes('Not connected') ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
   }

@@ -520,6 +520,7 @@ export function Library() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [showSpotifyPanel, setShowSpotifyPanel] = useState(false);
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -544,15 +545,25 @@ export function Library() {
   }, []);
 
   const loadSpotifyPlaylists = () => {
+    setSpotifyError(null);
     fetch('/api/spotify/playlists')
-      .then(r => r.json())
-      .then((d: { playlists?: { id: string; name: string; trackCount: number }[] }) => {
+      .then(async r => {
+        const d = await r.json() as { playlists?: { id: string; name: string; trackCount: number }[]; error?: string };
+        if (!r.ok || d.error) {
+          if (r.status === 401) {
+            setSpotifyConnected(false);
+            setShowSpotifyPanel(false);
+          } else {
+            setSpotifyError(d.error ?? 'Failed to load playlists');
+          }
+          return;
+        }
         if (d.playlists) {
           setSpotifyPlaylists(d.playlists);
           if (d.playlists[0]) setSelectedPlaylist(d.playlists[0].id);
         }
       })
-      .catch(() => {});
+      .catch(e => setSpotifyError(e instanceof Error ? e.message : 'Failed to load playlists'));
   };
 
   const handleSpotifyImport = async () => {
@@ -977,7 +988,11 @@ export function Library() {
                       color: SD.textMuted, textTransform: 'uppercase', marginBottom: 16 }}>
                       Import from Spotify
                     </div>
-                    {spotifyPlaylists.length === 0 ? (
+                    {spotifyError ? (
+                      <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.red }}>
+                        {spotifyError} — try disconnecting and reconnecting Spotify.
+                      </div>
+                    ) : spotifyPlaylists.length === 0 ? (
                       <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
                         Loading playlists...
                       </div>
