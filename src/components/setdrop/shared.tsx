@@ -47,11 +47,13 @@ export function Nav() {
     { id:'dashboard', label:'Dashboard' },
     { id:'builder', label:'Build Set' },
     { id:'history', label:'History' },
+    { id:'explore', label:'Explore' },
     { id:'library', label:'Library' },
   ];
   const mobileNavItems = [
-    { id:'dashboard', label:'Dash', icon:'⊞' },
-    { id:'builder',   label:'Build', icon:'+' },
+    { id:'dashboard', label:'Dash',    icon:'⊞' },
+    { id:'builder',   label:'Build',   icon:'+' },
+    { id:'explore',   label:'Explore', icon:'◉' },
     { id:'history',   label:'History', icon:'↺' },
     { id:'library',   label:'Library', icon:'♬' },
   ];
