@@ -21,7 +21,7 @@ export const SD = {
   display: "var(--font-display), sans-serif",
 } as const;
 
-export const GENRES = ['Hip Hop','R&B','House','Afrobeats','Techno','Dancehall','Latin','Pop','Other'] as const;
+export const GENRES = ['Hip Hop','R&B','House','Tech House','Disco House','Afrobeats','Techno','Drum & Bass','Dancehall','Latin','Amapiano','Pop','Other'] as const;
 export const CROWD_TYPES = ['Club','Lounge','Wedding','Festival','House Party','Radio','Corporate'] as const;
 export const LINEUP_SLOTS = ['Opener','Middle','Headliner','Closing'] as const;
 export const DURATION_OPTS = ['30 min','60 min','90 min','120 min'] as const;
@@ -52,8 +52,8 @@ export interface SampleTrack {
   genre?: string;
 }
 
-const ELECTRONIC_GENRES = new Set(['house', 'techno', 'drum & bass', 'dnb', 'trance', 'edm', 'electronic', 'dance', 'garage', 'uk garage', 'dubstep', 'ambient']);
-const URBAN_GENRES = new Set(['hip hop', 'r&b', 'afrobeats', 'afrobeat', 'dancehall', 'latin', 'reggaeton', 'trap', 'grime']);
+const ELECTRONIC_GENRES = new Set(['house', 'tech house', 'disco house', 'techno', 'drum & bass', 'dnb', 'trance', 'edm', 'electronic', 'dance', 'garage', 'uk garage', 'dubstep', 'ambient']);
+const URBAN_GENRES = new Set(['hip hop', 'r&b', 'afrobeats', 'afrobeat', 'dancehall', 'latin', 'reggaeton', 'trap', 'grime', 'amapiano']);
 
 export function orderedStores(genre?: string): (keyof TrackStores)[] {
   const g = (genre ?? '').toLowerCase();
