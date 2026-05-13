@@ -21,11 +21,12 @@ export async function GET() {
     while (url) {
       const data: SpotifyPlaylistsResponse = await spotifyGet<SpotifyPlaylistsResponse>(url);
       for (const p of data.items) {
+        if (!p?.id) continue; // skip malformed items (podcasts, etc.)
         playlists.push({
           id: p.id,
           name: p.name,
-          trackCount: p.tracks.total,
-          imageUrl: p.images[0]?.url,
+          trackCount: p.tracks?.total ?? 0,
+          imageUrl: p.images?.[0]?.url,
         });
       }
       // next is an absolute URL from Spotify — strip the base for spotifyGet
