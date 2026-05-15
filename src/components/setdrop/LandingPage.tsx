@@ -361,15 +361,33 @@ export function LandingPage() {
       </section>
 
       {/* ── Platforms ─────────────────────────────────────────────────────── */}
-      <section className="sd-pad-x" style={{ padding:'60px 40px', borderTop:`1px solid ${SD.border}`,
-        borderBottom:`1px solid ${SD.border}`, background:SD.surface }}>
-        <ScrollFade style={{ maxWidth:800, margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.textMuted,
-            textTransform:'uppercase', marginBottom:32 }}>Works with your tools</div>
-          <div style={{ display:'flex', justifyContent:'center', gap:64, flexWrap:'wrap', alignItems:'center' }}>
-            {['Serato DJ Pro','Rekordbox','Beatport','Traxsource','BPM Supreme'].map(p => (
-              <div key={p} style={{ fontFamily:SD.display, fontSize:18, letterSpacing:2,
-                color:SD.textMuted }}>{p.toUpperCase()}</div>
+      <section style={{ borderTop:`1px solid ${SD.border}`, borderBottom:`1px solid ${SD.border}` }}>
+        <ScrollFade>
+          <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:3, color:SD.textMuted,
+            textTransform:'uppercase', textAlign:'center', padding:'40px 40px 0' }}>
+            Works with your tools
+          </div>
+          <div className="sd-platform-grid" style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)' }}>
+            {([
+              { name:'Serato DJ Pro',  type:'DJ Software'    },
+              { name:'Rekordbox',      type:'DJ Software'    },
+              { name:'Beatport',       type:'Download Store' },
+              { name:'Traxsource',     type:'Download Store' },
+              { name:'BPM Supreme',    type:'Record Pool'    },
+              { name:'DJcity',         type:'Record Pool'    },
+            ] as { name: string; type: string }[]).map((p, i) => (
+              <div key={p.name} className="sd-platform-tile" style={{
+                padding:'32px 16px 36px',
+                display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+                borderLeft: i > 0 ? `1px solid ${SD.border}` : 'none',
+              }}>
+                <div style={{ fontFamily:SD.display, fontSize:20, letterSpacing:2,
+                  color:SD.textSec, lineHeight:1, textAlign:'center' }}>
+                  {p.name.toUpperCase()}
+                </div>
+                <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2,
+                  color:SD.textMuted, textTransform:'uppercase' }}>{p.type}</div>
+              </div>
             ))}
           </div>
         </ScrollFade>

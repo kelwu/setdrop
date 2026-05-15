@@ -173,6 +173,8 @@ body::after {
   .sd-grid-2 { grid-template-columns: 1fr !important; }
   .sd-how-step { grid-template-columns: 1fr !important; }
   .sd-how-step-num { display: none !important; }
+  .sd-platform-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .sd-platform-grid .sd-platform-tile:nth-child(n+4) { border-top: 1px solid rgba(255,255,255,0.07) !important; }
   .sd-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
   .sd-nav-links { display: none !important; }
   .sd-landing-login { display: none !important; }
@@ -183,6 +185,17 @@ body::after {
   .sd-inner-pad { padding: 32px 20px 80px !important; }
   .sd-arc-wrap { overflow-x: auto; }
   .sd-bottom-nav { display: flex !important; }
+}
+
+/* Platform tiles */
+.sd-platform-tile {
+  border-top: 2px solid transparent;
+  transition: background .2s, border-top-color .2s;
+  cursor: default;
+}
+.sd-platform-tile:hover {
+  background: rgba(245,166,35,0.04);
+  border-top-color: #F5A623;
 }
 
 /* Landing page nav link hover effects */
