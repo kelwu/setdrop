@@ -378,7 +378,7 @@ export function SetlistOutput() {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
 
         {/* Header */}
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between',
@@ -611,7 +611,7 @@ export function SetlistOutput() {
                 </>
               ) : setlist ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, lineHeight:1.7 }}>
+                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, lineHeight:1.7 }}>
                     Sign in to save and share this set.
                   </div>
                   <SDButton ghost full href="/login" style={{ fontSize:12 }}>
@@ -619,7 +619,7 @@ export function SetlistOutput() {
                   </SDButton>
                 </div>
               ) : (
-                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
+                <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
                   Generate a setlist to get a share link.
                 </div>
               )}

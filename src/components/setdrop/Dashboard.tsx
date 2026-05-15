@@ -154,7 +154,7 @@ export function Dashboard() {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
 
         {/* Header */}
         <div style={{ marginBottom:40, display:'flex', alignItems:'flex-end',
@@ -178,7 +178,7 @@ export function Dashboard() {
               <div>
                 <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                   color:SD.accent, textTransform:'uppercase', marginBottom:6 }}>Get Started</div>
-                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.text }}>
+                <div style={{ fontFamily:SD.body, fontSize:15, color:SD.text }}>
                   Two steps to your first AI-generated set
                 </div>
               </div>
@@ -207,7 +207,7 @@ export function Dashboard() {
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
                       color: step.done ? SD.textSec : SD.text, marginBottom:2,
                       textDecoration: step.done ? 'line-through' : 'none' }}>{step.label}</div>
-                    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{step.sub}</div>
+                    <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>{step.sub}</div>
                   </div>
                   {!step.done && (
                     <SDButton ghost onClick={() => router.push('/' + step.page)}
@@ -354,7 +354,7 @@ export function Dashboard() {
                   fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
               ) : wishlistItems.length === 0 ? (
                 <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
+                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>
                     No wishlist tracks yet
                   </div>
                   <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>
@@ -398,7 +398,7 @@ export function Dashboard() {
                   fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
               ) : recentSets.length === 0 ? (
                 <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
+                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>
                     No sets yet
                   </div>
                   <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>

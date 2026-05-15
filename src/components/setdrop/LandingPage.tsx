@@ -7,10 +7,10 @@ export function LandingPage() {
   const HOW_IT_WORKS = [
     { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
     { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
-    { n:'03', label:'Bridge', desc:"SetDrop checks Beatport, Traxsource, and BPM Supreme to tell you where each track is purchasable." },
-    { n:'04', label:'Sync', desc:"Download and import to Serato. SetDrop tracks what's in your library and what still needs to get there." },
+    { n:'03', label:'Bridge', desc:"SetDrop checks Beatport, Traxsource, BPM Supreme, and DJcity to tell you where each track can be purchased." },
+    { n:'04', label:'Sync', desc:"Download and import to Serato or Rekordbox. SetDrop tracks what's in your library and what still needs to get there." },
     { n:'05', label:'Build', desc:"Set the gig context — genre, crowd, energy arc, duration. AI architects the perfect set from your library." },
-    { n:'06', label:'Perform', desc:"Export your Serato crate file. Hit the decks. Do not repeat." },
+    { n:'06', label:'Perform', desc:"Export your Serato crate or Rekordbox playlist. Hit the decks. Do not repeat." },
   ];
 
   const FEATURES = [

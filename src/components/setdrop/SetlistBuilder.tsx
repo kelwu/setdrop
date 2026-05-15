@@ -368,11 +368,11 @@ export function SetlistBuilder() {
     return (
       <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56,
         display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px', textAlign:'center' }}>
+        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px', textAlign:'center', animation:'sdFadeUp 0.5s ease both' }}>
           <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:4, color:SD.accent, marginBottom:8 }}>
             LIMIT REACHED
           </div>
-          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, lineHeight:1.8, marginBottom:32 }}>
+          <div style={{ fontFamily:SD.body, fontSize:15, color:SD.textSec, lineHeight:1.8, marginBottom:32 }}>
             Free plan includes {rateLimited.limit} sets per month.{' '}
             Upgrade to Pro for unlimited generation, priority processing, and more.
           </div>
@@ -394,7 +394,7 @@ export function SetlistBuilder() {
     return (
       <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56,
         display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px' }}>
+        <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px', animation:'sdFadeUp 0.5s ease both' }}>
           <div style={{ textAlign:'center', marginBottom:56 }}>
             <div style={{ fontFamily:SD.display, fontSize:56, letterSpacing:4,
               color:SD.text, marginBottom:8 }}>BUILDING</div>
@@ -425,7 +425,7 @@ export function SetlistBuilder() {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
-      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px' }}>
+      <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
         <div style={{ marginBottom:32 }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
             letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Setlist Builder</div>
@@ -513,7 +513,7 @@ export function SetlistBuilder() {
         {step === 2 && (
           <div style={{ display:'flex', flexDirection:'column', gap:32 }}>
             <div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
+              <div style={{ fontFamily:SD.body, fontSize:14, color:SD.textSec,
                 lineHeight:1.8, marginBottom:24 }}>
                 Drag the control points to shape your energy arc. Each point represents a phase of your set.
               </div>
@@ -551,7 +551,7 @@ export function SetlistBuilder() {
         {/* Step 3 */}
         {step === 3 && (
           <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
-            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, lineHeight:1.8 }}>
+            <div style={{ fontFamily:SD.body, fontSize:14, color:SD.textSec, lineHeight:1.8 }}>
               Optional seeds help the AI ground your set in specific directions.
             </div>
             <div style={fieldStyle}>
