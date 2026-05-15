@@ -193,24 +193,28 @@ interface SDButtonProps {
 export function SDButton({ children, onClick, href, small, ghost, disabled, full, style: extraStyle = {} }: SDButtonProps) {
   const [hov, setHov] = useState(false);
   const base: React.CSSProperties = {
-    fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
-    border:'none', borderRadius:2, cursor: disabled ? 'not-allowed' : 'pointer',
-    transition:'all .15s', display:'inline-flex', alignItems:'center', justifyContent:'center',
+    fontFamily:SD.mono, letterSpacing:1.5, textTransform:'uppercase',
+    border:'none', borderRadius:3, cursor: disabled ? 'not-allowed' : 'pointer',
+    transition:'all .2s', display:'inline-flex', alignItems:'center', justifyContent:'center',
     gap:8, opacity: disabled ? 0.4 : 1, textDecoration:'none',
     ...(full ? { width:'100%' } : {}),
-    ...(small ? { fontSize:12, padding:'7px 16px' } : { fontSize:12, padding:'11px 24px' }),
+    ...(small ? { fontSize:12, padding:'7px 16px' } : { fontSize:13, padding:'12px 28px' }),
   };
   const hoverProps = { onMouseEnter: () => setHov(true), onMouseLeave: () => setHov(false) };
   const ghostStyle = { ...base,
     background: hov ? SD.accentDim : 'transparent',
-    border:`1px solid ${hov ? SD.accent : SD.borderMid}`,
+    border:`1px solid ${hov ? SD.accent : 'rgba(255,255,255,0.18)'}`,
     color: hov ? SD.accent : SD.textSec,
+    boxShadow: hov ? `0 0 16px rgba(245,166,35,0.12)` : 'none',
     ...extraStyle,
   };
   const solidStyle = { ...base,
     background: hov ? SD.accentHover : SD.accent,
     color:'#000', fontWeight:700,
     transform: hov ? 'scale(1.02)' : 'scale(1)',
+    boxShadow: hov
+      ? `0 0 28px rgba(245,166,35,0.4), 0 2px 8px rgba(0,0,0,0.3)`
+      : `0 2px 6px rgba(0,0,0,0.25)`,
     ...extraStyle,
   };
   if (href) {
