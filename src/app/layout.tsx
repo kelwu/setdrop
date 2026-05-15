@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, DM_Mono } from "next/font/google";
+import { Bebas_Neue, DM_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { NavWrapper } from "@/components/setdrop/NavWrapper";
 
@@ -13,6 +13,12 @@ const dmMono = DM_Mono({
   weight: ["300", "400", "500"],
   style: ["normal", "italic"],
   variable: "--font-mono",
+  subsets: ["latin"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
@@ -37,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bebasNeue.variable} ${dmMono.variable}`}>
+    <html lang="en" className={`${bebasNeue.variable} ${dmMono.variable} ${spaceGrotesk.variable}`}>
       <body style={{ background: "#0A0A0A", margin: 0, padding: 0 }}>
         <NavWrapper />
         {children}

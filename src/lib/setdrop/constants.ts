@@ -19,6 +19,7 @@ export const SD = {
   redDim: 'rgba(239,68,68,0.13)',
   mono: "var(--font-mono), monospace",
   display: "var(--font-display), sans-serif",
+  body: "var(--font-body), sans-serif",
 } as const;
 
 export const GENRES = ['Hip Hop','R&B','House','Tech House','Disco House','Afrobeats','Techno','Drum & Bass','Dancehall','Latin','Pop','Other'] as const;

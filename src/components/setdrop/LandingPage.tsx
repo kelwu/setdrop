@@ -1,6 +1,7 @@
 import React from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
+import { ScrollFade } from './ScrollFade';
 
 export function LandingPage() {
   const HOW_IT_WORKS = [
@@ -75,13 +76,13 @@ export function LandingPage() {
         {/* Amber glow */}
         <div style={{
           position:'absolute', bottom:'-10%', left:'50%', transform:'translateX(-50%)',
-          width:900, height:420, borderRadius:'50%', zIndex:0,
-          background:'radial-gradient(ellipse at center, rgba(245,166,35,0.1) 0%, transparent 68%)',
+          width:1100, height:520, borderRadius:'50%', zIndex:0,
+          background:'radial-gradient(ellipse at center, rgba(245,166,35,0.18) 0%, transparent 65%)',
         }}/>
 
         {/* Speaker — left */}
         <svg className="sd-decorative" style={{ position:'absolute', left:'-20px', top:'50%', transform:'translateY(-50%)',
-          opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
+          opacity:.14, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
           <circle cx="90" cy="70" r="28" fill="#0A0A0A" stroke="#F5A623" strokeWidth="3"/>
           <circle cx="90" cy="70" r="14" fill="#0A0A0A" stroke="#F5A623" strokeWidth="2"/>
@@ -96,7 +97,7 @@ export function LandingPage() {
 
         {/* Speaker — right */}
         <svg className="sd-decorative" style={{ position:'absolute', right:'-20px', top:'50%', transform:'translateY(-50%)',
-          opacity:.07, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
+          opacity:.14, zIndex:0 }} width="180" height="380" viewBox="0 0 180 380" fill="none">
           <rect x="10" y="10" width="160" height="360" rx="8" fill="#F5A623"/>
           <circle cx="90" cy="70" r="28" fill="#0A0A0A" stroke="#F5A623" strokeWidth="3"/>
           <circle cx="90" cy="70" r="14" fill="#0A0A0A" stroke="#F5A623" strokeWidth="2"/>
@@ -111,7 +112,7 @@ export function LandingPage() {
 
         {/* DJ Controller */}
         <svg className="sd-decorative" style={{ position:'absolute', top:'50%', left:'50%',
-          transform:'translate(-50%,-50%)', opacity:.04, zIndex:0, pointerEvents:'none' }}
+          transform:'translate(-50%,-50%)', opacity:.09, zIndex:0, pointerEvents:'none' }}
           width="900" height="360" viewBox="0 0 900 360" fill="none">
           <rect x="20" y="60" width="860" height="240" rx="24" fill="#F5A623"/>
           <circle cx="200" cy="180" r="110" fill="#0A0A0A" stroke="#F5A623" strokeWidth="4"/>
@@ -170,6 +171,7 @@ export function LandingPage() {
             fontFamily:SD.mono, fontSize:13, letterSpacing:3,
             color:SD.accent, textTransform:'uppercase', marginBottom:24,
             display:'flex', alignItems:'center', justifyContent:'center', gap:12,
+            animation:'sdFadeUp 0.6s 0.1s ease both',
           }}>
             <span style={{ width:32, height:1, background:SD.accent, display:'inline-block' }}/>
             Your Library. Your Set.
@@ -179,16 +181,19 @@ export function LandingPage() {
           <h1 style={{
             fontFamily:SD.display, fontSize:'clamp(80px,14vw,160px)',
             letterSpacing:8, lineHeight:.9, margin:'0 0 8px', color:SD.text,
+            animation:'sdFadeUp 0.7s 0.25s ease both',
           }}>SET<span style={{ color:SD.accent }}>DROP</span></h1>
 
           <p style={{
-            fontFamily:SD.mono, fontSize:16, color:SD.textSec,
-            letterSpacing:1, lineHeight:1.7, margin:'32px auto 48px', maxWidth:560,
+            fontFamily:SD.body, fontSize:17, color:SD.textSec,
+            lineHeight:1.75, margin:'32px auto 48px', maxWidth:540,
+            animation:'sdFadeUp 0.7s 0.45s ease both',
           }}>
             SetDrop connects your entire DJ workflow — from building your library to walking into the booth ready to play.
           </p>
 
-          <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap',
+            animation:'sdFadeUp 0.6s 0.6s ease both' }}>
             <SDButton href="/builder" style={{ fontSize:13, padding:'14px 36px' }}>
               Start Building Your Set
             </SDButton>
@@ -197,12 +202,13 @@ export function LandingPage() {
             </SDButton>
           </div>
 
-          <div style={{ marginTop:64, display:'flex', gap:48, justifyContent:'center', flexWrap:'wrap' }}>
+          <div style={{ marginTop:64, display:'flex', gap:48, justifyContent:'center', flexWrap:'wrap',
+            animation:'sdFadeUp 0.6s 0.75s ease both' }}>
             {([['2,400+','Tracks analyzed'],['98%','Key accuracy'],['< 30s','Set generation']] as [string,string][]).map(([n, l]) => (
               <div key={l} style={{ textAlign:'center' }}>
                 <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:2, color:SD.accent }}>{n}</div>
-                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, letterSpacing:1.5,
-                  textTransform:'uppercase', marginTop:4 }}>{l}</div>
+                <div style={{ fontFamily:SD.body, fontSize:12, color:SD.textMuted,
+                  letterSpacing:0.5, marginTop:4 }}>{l}</div>
               </div>
             ))}
           </div>
@@ -217,30 +223,80 @@ export function LandingPage() {
       </section>
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:72 }}>
+      <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1100, margin:'0 auto' }}>
+        <ScrollFade style={{ textAlign:'center', marginBottom:80 }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>The Workflow</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(48px,6vw,80px)', letterSpacing:4,
             margin:0, color:SD.text }}>HOW IT WORKS</h2>
-        </div>
-        <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
-          border:`1px solid ${SD.border}` }}>
-          {HOW_IT_WORKS.map((s, i) => (
-            <div key={i} style={{
-              padding:'40px 36px',
-              background: i%2===0 ? SD.surface : SD.bg,
-              borderRight: i%3!==2 ? `1px solid ${SD.border}` : 'none',
-              borderBottom: i<3 ? `1px solid ${SD.border}` : 'none',
-            }}>
-              <div style={{ fontFamily:SD.display, fontSize:56, letterSpacing:2,
-                color:'rgba(245,166,35,0.3)', lineHeight:1, marginBottom:12 }}>{s.n}</div>
-              <div style={{ fontFamily:SD.display, fontSize:28, letterSpacing:2,
-                color:SD.text, marginBottom:14 }}>{s.label.toUpperCase()}</div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
-                lineHeight:1.8 }}>{s.desc}</div>
-            </div>
-          ))}
+        </ScrollFade>
+
+        <div style={{ display:'flex', flexDirection:'column' }}>
+          {HOW_IT_WORKS.map((s, i) => {
+            const flip = i % 2 === 1;
+            return (
+              <ScrollFade key={i} delay={i * 60} className="sd-how-step" style={{
+                display:'grid',
+                gridTemplateColumns: flip ? '1fr 3fr' : '3fr 1fr',
+                gap:0,
+                borderTop:`1px solid ${SD.border}`,
+                ...(i === HOW_IT_WORKS.length - 1 ? { borderBottom:`1px solid ${SD.border}` } : {}),
+              }}>
+                {/* Number column */}
+                {flip && (
+                  <div className="sd-how-step-num" style={{
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    padding:'48px 32px',
+                    borderRight:`1px solid ${SD.border}`,
+                    background: SD.surface,
+                    position:'relative', overflow:'hidden',
+                  }}>
+                    <span style={{
+                      fontFamily:SD.display, fontSize:120, letterSpacing:4,
+                      color:SD.accent, opacity:0.12, lineHeight:1, userSelect:'none',
+                      position:'absolute',
+                    }}>{s.n}</span>
+                    <span style={{
+                      fontFamily:SD.mono, fontSize:13, color:SD.accent,
+                      letterSpacing:3, position:'relative', zIndex:1,
+                    }}>{s.n}</span>
+                  </div>
+                )}
+
+                {/* Content column */}
+                <div style={{
+                  padding:'48px 56px',
+                  background: flip ? SD.bg : SD.surface,
+                  ...(flip ? {} : { borderRight:`1px solid ${SD.border}` }),
+                }}>
+                  <div style={{ fontFamily:SD.display, fontSize:36, letterSpacing:3,
+                    color:SD.text, marginBottom:16, lineHeight:1 }}>{s.label.toUpperCase()}</div>
+                  <div style={{ fontFamily:SD.body, fontSize:15, color:SD.textSec,
+                    lineHeight:1.8, maxWidth:480 }}>{s.desc}</div>
+                </div>
+
+                {/* Number column (right side for odd steps) */}
+                {!flip && (
+                  <div className="sd-how-step-num" style={{
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    padding:'48px 32px',
+                    background: SD.bg,
+                    position:'relative', overflow:'hidden',
+                  }}>
+                    <span style={{
+                      fontFamily:SD.display, fontSize:120, letterSpacing:4,
+                      color:SD.accent, opacity:0.12, lineHeight:1, userSelect:'none',
+                      position:'absolute',
+                    }}>{s.n}</span>
+                    <span style={{
+                      fontFamily:SD.mono, fontSize:13, color:SD.accent,
+                      letterSpacing:3, position:'relative', zIndex:1,
+                    }}>{s.n}</span>
+                  </div>
+                )}
+              </ScrollFade>
+            );
+          })}
         </div>
       </section>
 
@@ -252,7 +308,7 @@ export function LandingPage() {
         borderBottom:`1px solid ${SD.border}`,
       }}>
         <div style={{ maxWidth:960, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:48 }}>
+          <ScrollFade style={{ textAlign:'center', marginBottom:48 }}>
             <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
               textTransform:'uppercase', marginBottom:12 }}>Live Preview</div>
             <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,64px)', letterSpacing:3,
@@ -260,7 +316,7 @@ export function LandingPage() {
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>
               Context: Afrobeats / Hip Hop · Club · 90 min · Headliner · Peak Hour arc
             </div>
-          </div>
+          </ScrollFade>
           <div style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:4,
             padding:'24px 24px 8px', marginBottom:16, overflow:'hidden' }}>
             <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
@@ -280,16 +336,16 @@ export function LandingPage() {
 
       {/* ── Features ──────────────────────────────────────────────────────── */}
       <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:72 }}>
+        <ScrollFade style={{ textAlign:'center', marginBottom:72 }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>Why SetDrop</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,72px)', letterSpacing:4,
             margin:0, color:SD.text }}>BUILT FOR REAL DJs</h2>
-        </div>
+        </ScrollFade>
         <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1,
           border:`1px solid ${SD.border}` }}>
           {FEATURES.map((f, i) => (
-            <div key={i} style={{
+            <ScrollFade key={i} delay={i * 70} style={{
               padding:'36px 32px', background:SD.bg,
               borderRight: i%3!==2 ? `1px solid ${SD.border}` : 'none',
               borderBottom: i<3 ? `1px solid ${SD.border}` : 'none',
@@ -297,9 +353,9 @@ export function LandingPage() {
               <div style={{ width:32, height:2, background:SD.accent, marginBottom:20 }}/>
               <div style={{ fontFamily:SD.display, fontSize:22, letterSpacing:2,
                 color:SD.text, marginBottom:12 }}>{f.title.toUpperCase()}</div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
-                lineHeight:1.8 }}>{f.desc}</div>
-            </div>
+              <div style={{ fontFamily:SD.body, fontSize:14, color:SD.textSec,
+                lineHeight:1.75 }}>{f.desc}</div>
+            </ScrollFade>
           ))}
         </div>
       </section>
@@ -307,7 +363,7 @@ export function LandingPage() {
       {/* ── Platforms ─────────────────────────────────────────────────────── */}
       <section className="sd-pad-x" style={{ padding:'60px 40px', borderTop:`1px solid ${SD.border}`,
         borderBottom:`1px solid ${SD.border}`, background:SD.surface }}>
-        <div style={{ maxWidth:800, margin:'0 auto', textAlign:'center' }}>
+        <ScrollFade style={{ maxWidth:800, margin:'0 auto', textAlign:'center' }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.textMuted,
             textTransform:'uppercase', marginBottom:32 }}>Works with your tools</div>
           <div style={{ display:'flex', justifyContent:'center', gap:64, flexWrap:'wrap', alignItems:'center' }}>
@@ -316,22 +372,22 @@ export function LandingPage() {
                 color:SD.textMuted }}>{p.toUpperCase()}</div>
             ))}
           </div>
-        </div>
+        </ScrollFade>
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
       <section className="sd-pad-x" style={{ padding:'140px 40px', textAlign:'center', position:'relative', overflow:'hidden' }}>
         <div style={{
           position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-          width:600, height:300, borderRadius:'50%',
-          background:'radial-gradient(ellipse,rgba(245,166,35,0.06) 0%,transparent 70%)', zIndex:0,
+          width:800, height:400, borderRadius:'50%',
+          background:'radial-gradient(ellipse,rgba(245,166,35,0.13) 0%,transparent 68%)', zIndex:0,
         }}/>
-        <div style={{ position:'relative', zIndex:1 }}>
+        <ScrollFade style={{ position:'relative', zIndex:1 }}>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(48px,7vw,96px)',
             letterSpacing:4, margin:'0 0 24px', lineHeight:.95, color:SD.text }}>
             YOUR NEXT SET<br/><span style={{ color:SD.accent }}>STARTS HERE</span>
           </h2>
-          <p style={{ fontFamily:SD.mono, fontSize:14, color:SD.textSec,
+          <p style={{ fontFamily:SD.body, fontSize:16, color:SD.textSec,
             margin:'0 auto 48px', maxWidth:480, lineHeight:1.8 }}>
             Upload your library and start planning your next set. Free to start.
           </p>
@@ -339,7 +395,7 @@ export function LandingPage() {
             Get Started — It&apos;s Free
           </SDButton>
           <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>setdrop.app</div>
-        </div>
+        </ScrollFade>
       </section>
 
       {/* Footer */}
