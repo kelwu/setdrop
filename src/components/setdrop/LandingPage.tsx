@@ -302,33 +302,89 @@ export function LandingPage() {
 
       {/* ── Demo Setlist ──────────────────────────────────────────────────── */}
       <section id="demo" className="sd-pad-x" style={{
-        padding:'80px 40px 120px',
-        background:SD.surface,
+        padding:'100px 40px 120px',
+        background:SD.bg,
         borderTop:`1px solid ${SD.border}`,
         borderBottom:`1px solid ${SD.border}`,
+        position:'relative', overflow:'hidden',
       }}>
-        <div style={{ maxWidth:960, margin:'0 auto' }}>
-          <ScrollFade style={{ textAlign:'center', marginBottom:48 }}>
+        {/* Spotlight glow */}
+        <div style={{
+          position:'absolute', top:'-15%', left:'50%', transform:'translateX(-50%)',
+          width:900, height:420, borderRadius:'50%', zIndex:0, pointerEvents:'none',
+          background:'radial-gradient(ellipse at center, rgba(245,166,35,0.08) 0%, transparent 65%)',
+        }}/>
+
+        <div style={{ maxWidth:980, margin:'0 auto', position:'relative', zIndex:1 }}>
+          <ScrollFade style={{ textAlign:'center', marginBottom:52 }}>
             <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
-              textTransform:'uppercase', marginBottom:12 }}>Live Preview</div>
+              textTransform:'uppercase', marginBottom:16 }}>Live Preview</div>
             <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,64px)', letterSpacing:3,
-              margin:'0 0 16px', color:SD.text }}>AI-GENERATED SETLIST</h2>
-            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>
-              Context: Afrobeats / Hip Hop · Club · 90 min · Headliner · Peak Hour arc
+              margin:'0 0 28px', color:SD.text }}>AI-GENERATED SETLIST</h2>
+            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+              {([
+                ['Genre',    'Afrobeats / Hip Hop'],
+                ['Venue',    'Club'],
+                ['Duration', '90 min'],
+                ['Slot',     'Headliner'],
+                ['Arc',      'Peak Hour'],
+              ] as [string,string][]).map(([label, value]) => (
+                <div key={label} style={{
+                  display:'inline-flex', alignItems:'center', gap:6,
+                  background:SD.surface, border:`1px solid ${SD.border}`,
+                  borderRadius:2, padding:'5px 12px',
+                }}>
+                  <span style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:1.5,
+                    color:SD.textMuted, textTransform:'uppercase' }}>{label}</span>
+                  <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec }}>{value}</span>
+                </div>
+              ))}
             </div>
           </ScrollFade>
-          <div style={{ background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:4,
-            padding:'24px 24px 8px', marginBottom:16, overflow:'hidden' }}>
-            <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
-              color:SD.textMuted, textTransform:'uppercase', marginBottom:16 }}>Energy Arc</div>
-            <div style={{ overflowX:'auto' }}>
-              <EnergyArcChart tracks={DEMO_TRACKS} width={880} height={160} />
+
+          {/* App chrome frame */}
+          <ScrollFade>
+            <div style={{
+              border:`1px solid ${SD.borderMid}`,
+              borderTop:`2px solid ${SD.accent}`,
+              borderRadius:'4px 4px 0 0',
+              overflow:'hidden',
+            }}>
+              {/* Title bar */}
+              <div style={{
+                background:SD.surface2, padding:'10px 16px',
+                display:'flex', alignItems:'center', gap:10,
+                borderBottom:`1px solid ${SD.border}`,
+              }}>
+                <div style={{ display:'flex', gap:6 }}>
+                  {['rgba(239,68,68,0.55)','rgba(234,179,8,0.55)','rgba(34,197,94,0.55)'].map((c,i) => (
+                    <div key={i} style={{ width:10, height:10, borderRadius:'50%', background:c }}/>
+                  ))}
+                </div>
+                <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+                  letterSpacing:1.5, textTransform:'uppercase', marginLeft:8 }}>
+                  SetDrop — Friday Night Affair
+                </span>
+              </div>
+
+              {/* Energy arc panel */}
+              <div style={{ background:SD.surface, padding:'20px 24px 12px',
+                borderBottom:`1px solid ${SD.border}` }}>
+                <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2,
+                  color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Energy Arc</div>
+                <div style={{ overflowX:'auto' }}>
+                  <EnergyArcChart tracks={DEMO_TRACKS} width={900} height={160} />
+                </div>
+              </div>
+
+              {/* Tracklist panel */}
+              <div style={{ background:SD.bg, padding:'12px 16px' }}>
+                {DEMO_TRACKS.map(t => <TrackRow key={t.pos} track={t} />)}
+              </div>
             </div>
-          </div>
-          <div>
-            {DEMO_TRACKS.map(t => <TrackRow key={t.pos} track={t} />)}
-          </div>
-          <div style={{ textAlign:'center', marginTop:32 }}>
+          </ScrollFade>
+
+          <div style={{ textAlign:'center', marginTop:40 }}>
             <SDButton href="/builder">Build Your Own Set</SDButton>
           </div>
         </div>
