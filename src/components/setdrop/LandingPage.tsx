@@ -223,7 +223,7 @@ export function LandingPage() {
       </section>
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1100, margin:'0 auto' }}>
+      <section id="how-it-works" className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1100, margin:'0 auto' }}>
         <ScrollFade style={{ textAlign:'center', marginBottom:80 }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
             textTransform:'uppercase', marginBottom:12 }}>The Workflow</div>
@@ -416,6 +416,105 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── Pricing ───────────────────────────────────────────────────────── */}
+      <section id="pricing" className="sd-pad-x" style={{
+        padding:'120px 40px',
+        background: SD.surface,
+        borderTop:`1px solid ${SD.border}`,
+        borderBottom:`1px solid ${SD.border}`,
+      }}>
+        <div style={{ maxWidth:860, margin:'0 auto' }}>
+          <ScrollFade style={{ textAlign:'center', marginBottom:72 }}>
+            <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
+              textTransform:'uppercase', marginBottom:12 }}>Pricing</div>
+            <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,72px)', letterSpacing:4,
+              margin:0, color:SD.text }}>SIMPLE PRICING</h2>
+          </ScrollFade>
+
+          <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', border:`1px solid ${SD.border}` }}>
+
+            {/* Free */}
+            <ScrollFade style={{ padding:'40px 36px', background:SD.bg }}>
+              <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:3,
+                color:SD.textMuted, textTransform:'uppercase', marginBottom:20 }}>Free</div>
+              <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
+                <span style={{ fontFamily:SD.display, fontSize:60, letterSpacing:2,
+                  color:SD.text, lineHeight:1 }}>$0</span>
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>/mo</span>
+              </div>
+              <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted,
+                marginBottom:36 }}>No credit card required.</div>
+
+              <ul style={{ listStyle:'none', padding:0, margin:'0 0 40px', display:'flex', flexDirection:'column', gap:14 }}>
+                {[
+                  '5 AI-generated sets / month',
+                  'Full library upload (Serato DB / CSV)',
+                  'BPM & key enrichment',
+                  'Serato crate export',
+                ].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:12,
+                    fontFamily:SD.body, fontSize:14, color:SD.textSec, lineHeight:1.5 }}>
+                    <span style={{ color:SD.accent, fontFamily:SD.mono, fontSize:13, flexShrink:0, marginTop:1 }}>✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <SDButton ghost href="/login" full style={{ fontSize:12 }}>
+                Get Started Free
+              </SDButton>
+            </ScrollFade>
+
+            {/* Pro */}
+            <ScrollFade delay={80} style={{
+              padding:'40px 36px',
+              background:SD.surface,
+              borderLeft:`1px solid ${SD.border}`,
+              borderTop:`2px solid ${SD.accent}`,
+              position:'relative',
+            }}>
+              <div style={{
+                position:'absolute', top:16, right:16,
+                fontFamily:SD.mono, fontSize:10, letterSpacing:2, textTransform:'uppercase',
+                background:SD.accentDim, border:`1px solid ${SD.accent}44`,
+                color:SD.accent, padding:'3px 10px', borderRadius:2,
+              }}>Most Popular</div>
+
+              <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:3,
+                color:SD.accent, textTransform:'uppercase', marginBottom:20 }}>Pro</div>
+              <div style={{ display:'flex', alignItems:'baseline', gap:6, marginBottom:6 }}>
+                <span style={{ fontFamily:SD.display, fontSize:60, letterSpacing:2,
+                  color:SD.text, lineHeight:1 }}>$12</span>
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>/mo</span>
+              </div>
+              <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted,
+                marginBottom:36 }}>Cancel anytime.</div>
+
+              <ul style={{ listStyle:'none', padding:0, margin:'0 0 40px', display:'flex', flexDirection:'column', gap:14 }}>
+                {[
+                  '50 AI-generated sets / month',
+                  'Priority AI processing',
+                  'Unlimited crate exports',
+                  'Full library upload (Serato DB / CSV)',
+                  'BPM & key enrichment',
+                ].map(f => (
+                  <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:12,
+                    fontFamily:SD.body, fontSize:14, color:SD.textSec, lineHeight:1.5 }}>
+                    <span style={{ color:SD.accent, fontFamily:SD.mono, fontSize:13, flexShrink:0, marginTop:1 }}>✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <SDButton href="/login" full style={{ fontSize:12 }}>
+                Get Started — $12/mo
+              </SDButton>
+            </ScrollFade>
+
+          </div>
+        </div>
+      </section>
+
       {/* ── Platforms ─────────────────────────────────────────────────────── */}
       <section style={{ borderTop:`1px solid ${SD.border}`, borderBottom:`1px solid ${SD.border}` }}>
         <ScrollFade>
@@ -473,15 +572,51 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="sd-pad-x" style={{ borderTop:`1px solid ${SD.border}`, padding:'32px 40px',
-        display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-        <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:3, color:SD.textMuted }}>
-          SET<span style={{ color:SD.accent }}>DROP</span>
-        </span>
-        <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
-          © 2026 SetDrop · setdrop.app ·{' '}
-          <a href="/privacy" style={{ color:SD.textMuted, textDecoration:'none' }}>Privacy Policy</a>
-        </span>
+      <footer className="sd-pad-x" style={{ borderTop:`1px solid ${SD.border}`, padding:'40px 40px 32px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:32, marginBottom:32 }}>
+          <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:3, color:SD.textMuted }}>
+            SET<span style={{ color:SD.accent }}>DROP</span>
+          </span>
+          <div style={{ display:'flex', gap:48, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              <span style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color:SD.textMuted, textTransform:'uppercase' }}>Product</span>
+              {([
+                ['How It Works', '#how-it-works'],
+                ['Demo',         '#demo'],
+                ['Pricing',      '#pricing'],
+              ] as [string, string][]).map(([label, href]) => (
+                <a key={label} href={href} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, textDecoration:'none', transition:'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
+                  onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+                  {label}
+                </a>
+              ))}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              <span style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color:SD.textMuted, textTransform:'uppercase' }}>App</span>
+              {([
+                ['Sign Up Free', '/login'],
+                ['Log In',       '/login'],
+                ['Build a Set',  '/builder'],
+                ['Explore',      '/explore'],
+              ] as [string, string][]).map(([label, href]) => (
+                <a key={label} href={href} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, textDecoration:'none', transition:'color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
+                  onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+                  {label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ borderTop:`1px solid ${SD.border}`, paddingTop:24,
+          display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>© 2026 SetDrop</span>
+          <div style={{ display:'flex', gap:24 }}>
+            <a href="/privacy" style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, textDecoration:'none' }}>Privacy Policy</a>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>setdrop.app</span>
+          </div>
+        </div>
       </footer>
     </div>
   );

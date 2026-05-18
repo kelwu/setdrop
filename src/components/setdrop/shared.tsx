@@ -279,8 +279,10 @@ export function TrackRow({ track }: { track: SampleTrack }) {
       onClick={() => setExp(!exp)}
       style={{
         background: hov ? SD.surface2 : SD.surface,
-        border:`1px solid ${hov ? SD.borderMid : SD.border}`,
-        borderLeft: track.wishlist ? `3px solid ${SD.accent}` : `1px solid ${SD.border}`,
+        borderTop: `1px solid ${hov ? SD.borderMid : SD.border}`,
+        borderRight: `1px solid ${hov ? SD.borderMid : SD.border}`,
+        borderBottom: `1px solid ${hov ? SD.borderMid : SD.border}`,
+        borderLeft: track.wishlist ? `3px solid ${SD.accent}` : `1px solid ${hov ? SD.borderMid : SD.border}`,
         borderRadius:3, padding:'13px 16px', marginBottom:2,
         transition:'background .12s, border-color .12s', cursor:'pointer',
       }}>

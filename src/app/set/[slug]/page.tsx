@@ -157,7 +157,7 @@ export default async function PublicSetPage({ params }: Props) {
                   <span style={{ fontFamily: S.mono, fontSize: 12, color: S.accent }}>{t.bpm} BPM</span>
                   <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>{t.key}</span>
                   {t.harmonicMixingNotes && (
-                    <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>{t.harmonicMixingNotes}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>{t.harmonicMixingNotes}</span>
                   )}
                 </div>
               </div>
