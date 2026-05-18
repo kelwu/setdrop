@@ -187,6 +187,14 @@ body::after {
   .sd-bottom-nav { display: flex !important; }
 }
 
+/* Footer nav links */
+a.sd-footer-link {
+  color: #8A8A8A;
+  text-decoration: none;
+  transition: color .15s;
+}
+a.sd-footer-link:hover { color: #F0F0F0; }
+
 /* Platform tiles */
 .sd-platform-tile {
   border-top: 2px solid transparent;

@@ -585,9 +585,8 @@ export function LandingPage() {
                 ['Demo',         '#demo'],
                 ['Pricing',      '#pricing'],
               ] as [string, string][]).map(([label, href]) => (
-                <a key={label} href={href} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, textDecoration:'none', transition:'color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
-                  onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+                <a key={label} href={href} className="sd-footer-link"
+                  style={{ fontFamily:SD.mono, fontSize:13 }}>
                   {label}
                 </a>
               ))}
@@ -600,9 +599,8 @@ export function LandingPage() {
                 ['Build a Set',  '/builder'],
                 ['Explore',      '/explore'],
               ] as [string, string][]).map(([label, href]) => (
-                <a key={label} href={href} style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec, textDecoration:'none', transition:'color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = SD.text)}
-                  onMouseLeave={e => (e.currentTarget.style.color = SD.textSec)}>
+                <a key={label} href={href} className="sd-footer-link"
+                  style={{ fontFamily:SD.mono, fontSize:13 }}>
                   {label}
                 </a>
               ))}
