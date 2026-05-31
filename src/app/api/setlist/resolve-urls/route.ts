@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 interface TrackInput {
   position: number;
   artist: string;
   title: string;
+  isWishlist?: boolean;
 }
 
 interface ResolvedTrack {
   position: number;
   beatportUrl?: string;
+  bpmSupremeUrl?: string;
+  bpmSupremeFound?: boolean;
+  traxsourceUrl?: string;
+  traxsourceFound?: boolean;
+  djcityUrl?: string;
+  djcityFound?: boolean;
+}
+
+function anthropic() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
 // Beatport's own frontend search API — returns real track page URLs
@@ -56,12 +68,45 @@ async function resolveBeatport(artist: string, title: string): Promise<string | 
 
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
-    // Require at least artist match to trust the result
     if (best.score < 2 || !best.h.url) return undefined;
 
     return `https://www.beatport.com${best.h.url}`;
   } catch {
     return undefined;
+  }
+}
+
+// Web search verification for pools without public APIs
+async function searchPool(
+  artist: string,
+  title: string,
+  domain: string,
+): Promise<{ url?: string; found: boolean }> {
+  try {
+    const msg = await anthropic().messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 64,
+      messages: [{ role: 'user', content: `"${artist}" "${title}"` }],
+      tools: [{
+        type: 'web_search_20260209',
+        name: 'web_search',
+        max_uses: 1,
+        allowed_domains: [domain],
+      } as Anthropic.Messages.WebSearchTool20260209],
+      tool_choice: { type: 'any' },
+    });
+
+    for (const block of msg.content) {
+      if (block.type === 'web_search_tool_result') {
+        const content = (block as Anthropic.Messages.WebSearchToolResultBlock).content;
+        if (Array.isArray(content) && content.length > 0) {
+          return { url: content[0].url, found: true };
+        }
+      }
+    }
+    return { found: false };
+  } catch {
+    return { found: false };
   }
 }
 
@@ -72,16 +117,32 @@ export async function POST(req: NextRequest) {
   }
 
   const results = await Promise.allSettled(
-    tracks.map(async (t): Promise<ResolvedTrack> => ({
-      position: t.position,
-      beatportUrl: await resolveBeatport(t.artist, t.title),
-    }))
+    tracks.map(async (t): Promise<ResolvedTrack> => {
+      const resolved: ResolvedTrack = { position: t.position };
+
+      resolved.beatportUrl = await resolveBeatport(t.artist, t.title);
+
+      if (t.isWishlist) {
+        const [bpm, trax, djc] = await Promise.all([
+          searchPool(t.artist, t.title, 'www.bpmsupreme.com'),
+          searchPool(t.artist, t.title, 'www.traxsource.com'),
+          searchPool(t.artist, t.title, 'www.djcity.com'),
+        ]);
+        resolved.bpmSupremeUrl = bpm.url;
+        resolved.bpmSupremeFound = bpm.found;
+        resolved.traxsourceUrl = trax.url;
+        resolved.traxsourceFound = trax.found;
+        resolved.djcityUrl = djc.url;
+        resolved.djcityFound = djc.found;
+      }
+
+      return resolved;
+    })
   );
 
   const resolved: ResolvedTrack[] = results
     .filter((r): r is PromiseFulfilledResult<ResolvedTrack> => r.status === 'fulfilled')
-    .map(r => r.value)
-    .filter(r => r.beatportUrl); // only return entries where we found something
+    .map(r => r.value);
 
   return NextResponse.json({ resolved });
 }

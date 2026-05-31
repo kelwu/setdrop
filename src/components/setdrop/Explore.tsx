@@ -207,9 +207,19 @@ export function Explore() {
 
   const [genreFilter, setGenreFilter] = useState('');
   const [slotFilter, setSlotFilter] = useState('');
+  const [crowdFilter, setCrowdFilter] = useState('');
   const [sort, setSort] = useState<'recent' | 'popular'>('recent');
 
   const SLOTS = ['Opener', 'Middle', 'Headliner', 'Closing'];
+  const CROWDS: { label: string; value: string }[] = [
+    { label: 'Club',        value: 'club' },
+    { label: 'Festival',    value: 'festival' },
+    { label: 'Lounge',      value: 'lounge' },
+    { label: 'Wedding',     value: 'wedding' },
+    { label: 'House Party', value: 'house-party' },
+    { label: 'Radio',       value: 'radio' },
+    { label: 'Corporate',   value: 'corporate' },
+  ];
 
   const loadSets = useCallback(async (newPage: number, append: boolean) => {
     setSetsLoading(true);
@@ -219,6 +229,7 @@ export function Explore() {
         sort,
         ...(genreFilter ? { genre: genreFilter } : {}),
         ...(slotFilter ? { slot: slotFilter } : {}),
+        ...(crowdFilter ? { crowd: crowdFilter } : {}),
       });
       const res = await fetch(`/api/explore/sets?${params}`);
       const data = await res.json() as { sets?: ExploreSet[]; hasMore?: boolean; error?: string };
@@ -228,7 +239,7 @@ export function Explore() {
     } catch { /* silent */ } finally {
       setSetsLoading(false);
     }
-  }, [genreFilter, slotFilter, sort]);
+  }, [genreFilter, slotFilter, crowdFilter, sort]);
 
   const loadTrending = useCallback(async () => {
     setTrendingLoading(true);
@@ -353,6 +364,20 @@ export function Explore() {
             >
               <option value="">All Slots</option>
               {SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            {/* Crowd filter */}
+            <select
+              value={crowdFilter}
+              onChange={e => setCrowdFilter(e.target.value)}
+              style={{
+                fontFamily: SD.mono, fontSize: 12, color: SD.text,
+                background: SD.surface, border: `1px solid ${SD.border}`,
+                borderRadius: 3, padding: '5px 10px', cursor: 'pointer',
+              }}
+            >
+              <option value="">All Crowds</option>
+              {CROWDS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
 
             {/* Sort */}

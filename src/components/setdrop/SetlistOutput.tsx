@@ -36,7 +36,15 @@ function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { path
   return { paths, matched: paths.length };
 }
 
-interface ResolvedUrls { beatportUrl?: string }
+interface ResolvedUrls {
+  beatportUrl?: string;
+  bpmSupremeUrl?: string;
+  bpmSupremeFound?: boolean;
+  traxsourceUrl?: string;
+  traxsourceFound?: boolean;
+  djcityUrl?: string;
+  djcityFound?: boolean;
+}
 
 function storeSearchUrls(artist: string, title: string, t: SetlistTrack) {
   const q = encodeURIComponent(`${artist} ${title}`);
@@ -48,9 +56,13 @@ function storeSearchUrls(artist: string, title: string, t: SetlistTrack) {
   };
 }
 
+function poolConfidence(found?: boolean): 'green' | 'yellow' | 'red' {
+  if (found === undefined) return 'yellow'; // unverified
+  return found ? 'yellow' : 'red';          // likely match : not found
+}
+
 function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls, genre?: string) {
   const base = storeSearchUrls(t.artist, t.title, t);
-  const hasBeatport = !!resolved?.beatportUrl;
   return {
     pos: t.position || idx + 1,
     artist: t.artist,
@@ -63,15 +75,18 @@ function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls, g
     why: t.whyThisTrack,
     transition: t.transitionNotes,
     stores: {
-      beatport: hasBeatport ? 'green' as const : 'yellow' as const,
-      bpmSupreme: 'yellow' as const,
-      traxsource: 'yellow' as const,
-      djcity: 'yellow' as const,
+      beatport: resolved?.beatportUrl ? 'green' as const : 'yellow' as const,
+      bpmSupreme: poolConfidence(resolved?.bpmSupremeFound),
+      traxsource: poolConfidence(resolved?.traxsourceFound),
+      djcity: poolConfidence(resolved?.djcityFound),
       spotify: 'green' as const,
     },
     storeUrls: {
       ...base,
       beatport: resolved?.beatportUrl ?? base.beatport,
+      bpmSupreme: resolved?.bpmSupremeUrl ?? base.bpmSupreme,
+      traxsource: resolved?.traxsourceUrl ?? base.traxsource,
+      djcity: resolved?.djcityUrl ?? base.djcity,
     },
     genre,
   };
@@ -81,6 +96,7 @@ export function SetlistOutput() {
   const router = useRouter();
   const [setlist, setSetlist] = useState<GeneratedSetlist | null>(null);
   const [copied, setCopied] = useState(false);
+  const [badgeCopied, setBadgeCopied] = useState<'html' | 'md' | null>(null);
   const [resolvedUrls, setResolvedUrls] = useState<Record<number, ResolvedUrls>>({});
   const [resolving, setResolving] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -102,14 +118,16 @@ export function SetlistOutput() {
               position: t.position || i + 1,
               artist: t.artist,
               title: t.title,
+              isWishlist: t.isWishlistTrack,
             })),
           }),
         })
           .then(r => r.json())
-          .then((data: { resolved?: Array<{ position: number; beatportUrl?: string }> }) => {
+          .then((data: { resolved?: Array<ResolvedUrls & { position: number }> }) => {
             const map: Record<number, ResolvedUrls> = {};
             for (const r of data.resolved ?? []) {
-              if (r.beatportUrl) map[r.position] = { beatportUrl: r.beatportUrl };
+              const { position, ...urls } = r;
+              map[position] = urls;
             }
             setResolvedUrls(map);
           })
@@ -626,6 +644,39 @@ export function SetlistOutput() {
                         Preview ↗
                       </SDButton>
                     )}
+                  </div>
+                  <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${SD.border}` }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+                      letterSpacing:1.5, textTransform:'uppercase', marginBottom:10 }}>Badge</div>
+                    <img src="/badge.svg" alt="Built with SetDrop" height={24}
+                      style={{ display:'block', marginBottom:10 }} />
+                    <div style={{ display:'flex', gap:6 }}>
+                      {(['html', 'md'] as const).map(fmt => {
+                        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://setdrop.app';
+                        const link = setlist?.dbSlug ? `${origin}/set/${setlist.dbSlug}` : origin;
+                        const badgeUrl = `${origin}/badge.svg`;
+                        const snippet = fmt === 'html'
+                          ? `<a href="${link}"><img src="${badgeUrl}" alt="Built with SetDrop" height="24"></a>`
+                          : `[![Built with SetDrop](${badgeUrl})](${link})`;
+                        return (
+                          <button key={fmt} onClick={() => {
+                            navigator.clipboard.writeText(snippet);
+                            setBadgeCopied(fmt);
+                            setTimeout(() => setBadgeCopied(null), 2000);
+                          }} style={{
+                            flex:1, fontFamily:SD.mono, fontSize:11, letterSpacing:1,
+                            textTransform:'uppercase', padding:'6px 0',
+                            background: badgeCopied === fmt ? SD.accentDim : 'transparent',
+                            border:`1px solid ${badgeCopied === fmt ? SD.accent : SD.border}`,
+                            borderRadius:2, cursor:'pointer',
+                            color: badgeCopied === fmt ? SD.accent : SD.textMuted,
+                            transition:'all .15s',
+                          }}>
+                            {badgeCopied === fmt ? '✓' : fmt.toUpperCase()}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               ) : setlist ? (

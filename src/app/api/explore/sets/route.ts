@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const genre = searchParams.get('genre') ?? '';
     const slot = searchParams.get('slot') ?? '';
+    const crowd = searchParams.get('crowd') ?? '';
     const sort = searchParams.get('sort') ?? 'recent'; // 'recent' | 'popular'
     const page = parseInt(searchParams.get('page') ?? '0');
     const PAGE_SIZE = 12;
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
 
     if (genre) query = query.eq('primary_genre', genre);
     if (slot) query = query.eq('lineup_slot', slot);
+    if (crowd) query = query.eq('crowd_context', crowd);
 
     if (sort === 'popular') {
       // Sort by like count — join via subquery
