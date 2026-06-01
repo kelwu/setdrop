@@ -400,7 +400,7 @@ export function SetlistBuilder() {
               color:SD.text, marginBottom:8 }}>BUILDING</div>
             <div style={{ fontFamily:SD.display, fontSize:56, letterSpacing:4, color:SD.accent }}>YOUR SET</div>
             <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, marginTop:16 }}>
-              {mixName || 'New Set'} Â· {primaryGenre || 'Mixed'} Â· {duration || '60 min'}
+              {mixName || 'New Set'} · {primaryGenre || 'Mixed'} · {duration || '60 min'}
             </div>
           </div>
           <AgentProgress steps={GEN_STEPS} currentStep={genStep} />
@@ -576,7 +576,7 @@ export function SetlistBuilder() {
                             {t.artist} — {t.title}
                           </div>
                           <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, marginTop:2 }}>
-                            {t.bpm ? `${t.bpm} BPM` : ''}{t.key ? ` Â· ${t.key}` : ''}
+                            {t.bpm ? `${t.bpm} BPM` : ''}{t.key ? ` · ${t.key}` : ''}
                           </div>
                         </div>
                       ))}
