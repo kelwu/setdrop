@@ -38,6 +38,22 @@ interface GigEntry {
   playedAt: string;
 }
 
+interface GapRecommendation {
+  artist: string;
+  title: string;
+  bpm: number;
+  reason: string;
+  beatportSearchUrl: string;
+}
+
+interface LibraryGap {
+  genre: string;
+  bpmRange: string;
+  currentCount: number;
+  severity: 'high' | 'medium' | 'low';
+  recommendations: GapRecommendation[];
+}
+
 export function Dashboard() {
   const router = useRouter();
   const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
@@ -49,6 +65,9 @@ export function Dashboard() {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sd_onboarding_done') === '1';
   });
+  const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
+  const [gapLoading, setGapLoading] = useState(false);
+  const [addedToWishlist, setAddedToWishlist] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const supabase = createClient();
@@ -123,6 +142,43 @@ export function Dashboard() {
       }
     });
   }, []);
+
+  async function analyzeLibrary() {
+    setGapLoading(true);
+    try {
+      const res = await fetch('/api/library/analyze-gaps');
+      const data = await res.json() as { gaps?: LibraryGap[]; error?: string };
+      if (data.error) throw new Error(data.error);
+      setGapReport(data.gaps ?? []);
+    } catch (err) {
+      console.error('[analyzeLibrary]', err);
+      setGapReport([]);
+    } finally {
+      setGapLoading(false);
+    }
+  }
+
+  async function addToWishlist(rec: GapRecommendation) {
+    const key = `${rec.artist}|${rec.title}`;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase.from('wishlist_tracks').insert({
+      user_id: user.id,
+      artist: rec.artist,
+      title: rec.title,
+      bpm: rec.bpm,
+      beatport_search_url: rec.beatportSearchUrl,
+      status: 'wishlist',
+      enrichment_source: 'manual',
+    });
+    if (!error) {
+      setAddedToWishlist(prev => new Set([...prev, key]));
+      setWishlistItems(prev =>
+        prev ? [...prev, { id: key, artist: rec.artist, title: rec.title, bpm: rec.bpm, key: null, beatportSearchUrl: rec.beatportSearchUrl }] : prev
+      );
+    }
+  }
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -308,6 +364,98 @@ export function Dashboard() {
             </div>
           </Card>
         </div>
+
+        {/* Library Intelligence */}
+        <Card style={{ marginBottom: 16 }}>
+          <CardHeader title="Library Intelligence" action={
+            <SDButton
+              ghost
+              onClick={analyzeLibrary}
+              disabled={gapLoading || !libraryStats}
+              style={{ fontSize: 12, padding: '5px 12px' }}
+            >
+              {gapLoading ? 'Analyzing...' : 'Analyze Library'}
+            </SDButton>
+          }/>
+          <div style={{ padding: '20px 24px' }}>
+            {gapLoading ? (
+              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
+                Scanning your library and searching for trending tracks...
+              </div>
+            ) : gapReport === null ? (
+              <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
+                {libraryStats
+                  ? 'Find BPM and genre gaps in your library — get specific track recommendations to fill them.'
+                  : 'Upload your library to unlock Library Intelligence.'}
+              </div>
+            ) : gapReport.length === 0 ? (
+              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
+                No significant gaps detected. Your library looks well-rounded.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {gapReport.map((gap, gi) => {
+                  const sevColor = gap.severity === 'high' ? '#ef4444' : gap.severity === 'medium' ? SD.accent : SD.textSec;
+                  const sevBg = gap.severity === 'high' ? '#ef444418' : gap.severity === 'medium' ? SD.accentDim : SD.surface2;
+                  return (
+                    <div key={gi}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <span style={{ fontFamily: SD.mono, fontSize: 10, fontWeight: 700,
+                          textTransform: 'uppercase', letterSpacing: 1.5, color: sevColor,
+                          background: sevBg, border: `1px solid ${sevColor}44`,
+                          borderRadius: 2, padding: '2px 7px' }}>
+                          {gap.severity}
+                        </span>
+                        <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>
+                          {gap.genre}
+                        </span>
+                        <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>
+                          {gap.bpmRange} BPM
+                        </span>
+                        <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
+                          ({gap.currentCount} {gap.currentCount === 1 ? 'track' : 'tracks'})
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {gap.recommendations.map((rec, ri) => {
+                          const wKey = `${rec.artist}|${rec.title}`;
+                          const added = addedToWishlist.has(wKey);
+                          return (
+                            <div key={ri} style={{ display: 'flex', alignItems: 'center',
+                              justifyContent: 'space-between', gap: 12,
+                              padding: '10px 14px', background: SD.bg,
+                              border: `1px solid ${SD.border}`, borderRadius: 3 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontFamily: SD.mono, fontSize: 12, fontWeight: 600,
+                                  color: SD.text, whiteSpace: 'nowrap', overflow: 'hidden',
+                                  textOverflow: 'ellipsis' }}>
+                                  {rec.artist} — {rec.title}
+                                </div>
+                                <div style={{ fontFamily: SD.mono, fontSize: 11,
+                                  color: SD.textMuted, marginTop: 2 }}>
+                                  {rec.bpm} BPM · {rec.reason}
+                                </div>
+                              </div>
+                              <SDButton
+                                ghost
+                                onClick={() => addToWishlist(rec)}
+                                disabled={added}
+                                style={{ fontSize: 11, padding: '4px 10px',
+                                  flexShrink: 0, opacity: added ? 0.5 : 1 }}
+                              >
+                                {added ? '✓ Added' : '+ Wishlist'}
+                              </SDButton>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Gig History */}
         {gigHistory !== null && gigHistory.length > 0 && (
