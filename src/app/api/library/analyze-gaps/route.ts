@@ -167,7 +167,10 @@ export async function GET() {
     if (!tracks?.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
 
     const rawGaps = detectGaps(tracks);
-    if (!rawGaps.length) return NextResponse.json({ gaps: [] });
+    const genresAnalyzed = new Set(tracks.filter(t => t.genre).map(t => t.genre)).size;
+    const meta = { tracksAnalyzed: tracks.length, genresAnalyzed };
+
+    if (!rawGaps.length) return NextResponse.json({ gaps: [], meta });
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const userMsg = `Library gaps detected:\n${JSON.stringify(rawGaps, null, 2)}\n\nSearch for 3 trending tracks per gap and call report_library_gaps.`;
@@ -187,7 +190,7 @@ export async function GET() {
     );
 
     if (toolBlock) {
-      return NextResponse.json({ gaps: (toolBlock.input as { gaps: LibraryGap[] }).gaps });
+      return NextResponse.json({ gaps: (toolBlock.input as { gaps: LibraryGap[] }).gaps, meta });
     }
 
     // Model did web searches but didn't call the tool yet — force it
@@ -209,7 +212,7 @@ export async function GET() {
     );
     if (!block) throw new Error('No tool_use block from forced call');
 
-    return NextResponse.json({ gaps: (block.input as { gaps: LibraryGap[] }).gaps });
+    return NextResponse.json({ gaps: (block.input as { gaps: LibraryGap[] }).gaps, meta });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[analyze-gaps]', message);

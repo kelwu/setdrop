@@ -66,6 +66,8 @@ export function Dashboard() {
     return localStorage.getItem('sd_onboarding_done') === '1';
   });
   const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
+  const [gapMeta, setGapMeta] = useState<{ tracksAnalyzed: number; genresAnalyzed: number } | null>(null);
+  const [gapError, setGapError] = useState<string | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState<Set<string>>(new Set());
 
@@ -145,14 +147,16 @@ export function Dashboard() {
 
   async function analyzeLibrary() {
     setGapLoading(true);
+    setGapError(null);
     try {
       const res = await fetch('/api/library/analyze-gaps');
-      const data = await res.json() as { gaps?: LibraryGap[]; error?: string };
+      const data = await res.json() as { gaps?: LibraryGap[]; meta?: { tracksAnalyzed: number; genresAnalyzed: number }; error?: string };
       if (data.error) throw new Error(data.error);
       setGapReport(data.gaps ?? []);
+      setGapMeta(data.meta ?? null);
     } catch (err) {
       console.error('[analyzeLibrary]', err);
-      setGapReport([]);
+      setGapError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setGapLoading(false);
     }
@@ -382,6 +386,10 @@ export function Dashboard() {
               <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
                 Scanning your library and searching for trending tracks...
               </div>
+            ) : gapError ? (
+              <div style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444' }}>
+                Error: {gapError}
+              </div>
             ) : gapReport === null ? (
               <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
                 {libraryStats
@@ -389,11 +397,23 @@ export function Dashboard() {
                   : 'Upload your library to unlock Library Intelligence.'}
               </div>
             ) : gapReport.length === 0 ? (
-              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
-                No significant gaps detected. Your library looks well-rounded.
+              <div>
+                <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
+                  No significant gaps detected. Your library looks well-rounded.
+                </div>
+                {gapMeta && (
+                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 6 }}>
+                    Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres.
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {gapMeta && (
+                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+                    Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres
+                  </div>
+                )}
                 {gapReport.map((gap, gi) => {
                   const sevColor = gap.severity === 'high' ? '#ef4444' : gap.severity === 'medium' ? SD.accent : SD.textSec;
                   const sevBg = gap.severity === 'high' ? '#ef444418' : gap.severity === 'medium' ? SD.accentDim : SD.surface2;
