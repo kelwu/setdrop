@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const maxDuration = 60;
 
-const HAIKU = 'claude-haiku-4-5-20251001';
+const MODEL = 'claude-sonnet-4-6';
 
 const BPM_BUCKETS = [
   { label: '60–79', min: 60, max: 79 },
@@ -176,7 +176,7 @@ export async function GET() {
     const userMsg = `Library gaps detected:\n${JSON.stringify(rawGaps, null, 2)}\n\nSearch for 3 trending tracks per gap and call report_library_gaps.`;
 
     const msg = await anthropic.messages.create({
-      model: HAIKU,
+      model: MODEL,
       max_tokens: 2048,
       system: SYSTEM,
       messages: [{ role: 'user', content: userMsg }],
@@ -195,7 +195,7 @@ export async function GET() {
 
     // Model did web searches but didn't call the tool yet — force it
     const forced = await anthropic.messages.create({
-      model: HAIKU,
+      model: MODEL,
       max_tokens: 1024,
       system: SYSTEM,
       messages: [
