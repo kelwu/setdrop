@@ -92,7 +92,7 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string | null }>)
 
 const GAP_TOOL: Anthropic.Tool = {
   name: 'report_library_gaps',
-  description: 'Report DJ library gaps with specific track recommendations from web research.',
+  description: 'Report DJ library gaps with specific track recommendations.',
   input_schema: {
     type: 'object',
     required: ['gaps'],
@@ -128,32 +128,22 @@ const GAP_TOOL: Anthropic.Tool = {
   },
 };
 
-const WEB_SEARCH: Anthropic.Messages.WebSearchTool20260209 = {
-  type: 'web_search_20260209',
-  name: 'web_search',
-  max_uses: 3,
-  allowed_domains: [
-    'www.beatport.com', 'www.djcity.com', 'www.bpmsupreme.com',
-    'www.billboard.com', 'www.audiomack.com', 'ra.co', 'djmag.com',
-  ],
-};
-
 const SYSTEM = `You are a DJ library gap analyst. You receive a list of BPM/genre gaps in a DJ's library.
 
-For each gap, use web search to find 3 specific trending tracks in that genre and BPM range. Use the most relevant source per genre:
+For each gap, recommend 3 specific real tracks that would fill it — tracks a professional DJ would know and that are available on Beatport or DJcity. Use your knowledge of well-regarded tracks in the genre and BPM range. Prioritise tracks released in the last 3 years but include classics if they best fit the range.
 
-- House / Tech House / Afro House / Deep House → Beatport Top 100 (genre chart)
-- Techno / Minimal / Industrial → Beatport Top 100 Techno
-- Drum & Bass → Beatport Top 100 Drum & Bass
-- Hip Hop / Trap / Drill → DJcity charts or Billboard Hot Rap Songs
-- R&B / Soul → Billboard Hot R&B/Hip-Hop or DJcity R&B
-- Pop / Dance Pop / Top 40 → Billboard Hot 100
-- Latin / Reggaeton → Billboard Latin Charts
-- Afrobeats / Dancehall → Audiomack Trending or Apple Music Afrobeats
-- EDM / Big Room / Mainstage → Beatport Top 100 Big Room or Billboard Dance/Electronic
+Genre guidance:
+- House / Tech House / Afro House → well-known house records in the BPM range
+- Techno / Minimal → techno tracks at the correct BPM
+- Hip Hop / Trap / Drill → DJ-friendly hip hop edits or originals
+- R&B / Soul → R&B tracks that work in a DJ set
+- Latin / Reggaeton → Latin tracks at the correct tempo
+- Pop / Top 40 → DJ-friendly pop edits
+- Afrobeats → Afrobeats records in the range
+- EDM / Big Room → festival-ready tracks at the BPM
 
-Find real, specific artist and title pairs in the correct BPM range. Then call report_library_gaps with all gaps filled in.
-For beatportSearchUrl use: https://www.beatport.com/search?q=ARTIST+TITLE (URL-encode artist and title, replace spaces with +).`;
+Call report_library_gaps with all gaps filled in. Include 3 recommendations per gap.
+For beatportSearchUrl use: https://www.beatport.com/search?q=ARTIST+TITLE (URL-encode, replace spaces with +).`;
 
 export async function GET() {
   try {
@@ -186,44 +176,21 @@ export async function GET() {
     if (!rawGaps.length) return NextResponse.json({ gaps: [], meta });
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const userMsg = `Library gaps detected:\n${JSON.stringify(rawGaps, null, 2)}\n\nSearch for 3 trending tracks per gap and call report_library_gaps.`;
+    const userMsg = `Library gaps:\n${JSON.stringify(rawGaps, null, 2)}\n\nRecommend 3 tracks per gap and call report_library_gaps.`;
 
     const msg = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 2048,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: userMsg }],
-      tools: [WEB_SEARCH, GAP_TOOL],
-      tool_choice: { type: 'auto' },
-    });
-
-    const toolBlock = msg.content.find(
-      (b): b is Anthropic.Messages.ToolUseBlock =>
-        b.type === 'tool_use' && b.name === 'report_library_gaps',
-    );
-
-    if (toolBlock) {
-      return NextResponse.json({ gaps: (toolBlock.input as { gaps: LibraryGap[] }).gaps, meta });
-    }
-
-    // Model did web searches but didn't call the tool yet — force it
-    const forced = await anthropic.messages.create({
-      model: MODEL,
       max_tokens: 1024,
       system: SYSTEM,
-      messages: [
-        { role: 'user', content: userMsg },
-        { role: 'assistant', content: msg.content as unknown as Anthropic.Messages.ContentBlockParam[] },
-        { role: 'user', content: 'Now call report_library_gaps with your recommendations.' },
-      ],
+      messages: [{ role: 'user', content: userMsg }],
       tools: [GAP_TOOL],
       tool_choice: { type: 'tool', name: 'report_library_gaps' },
     });
 
-    const block = forced.content.find(
+    const block = msg.content.find(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
     );
-    if (!block) throw new Error('No tool_use block from forced call');
+    if (!block) throw new Error('No tool_use block from report_library_gaps');
 
     return NextResponse.json({ gaps: (block.input as { gaps: LibraryGap[] }).gaps, meta });
   } catch (err) {
