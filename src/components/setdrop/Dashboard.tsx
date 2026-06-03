@@ -172,7 +172,10 @@ export function Dashboard() {
     setTrendingError(null);
     try {
       const res = await fetch('/api/dashboard/trending-charts');
-      if (!res.ok) throw new Error(`Server error ${res.status} — try again`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
       const data = await res.json() as { results?: TrendingGenreResult[]; error?: string };
       if (data.error) throw new Error(data.error);
       setTrendingData(data.results ?? []);
