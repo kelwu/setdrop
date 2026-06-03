@@ -132,15 +132,28 @@ const WEB_SEARCH: Anthropic.Messages.WebSearchTool20260209 = {
   type: 'web_search_20260209',
   name: 'web_search',
   max_uses: 3,
-  allowed_domains: ['www.beatport.com', 'ra.co', 'djmag.com', 'www.billboard.com'],
+  allowed_domains: [
+    'www.beatport.com', 'www.djcity.com', 'www.bpmsupreme.com',
+    'www.billboard.com', 'www.audiomack.com', 'ra.co', 'djmag.com',
+  ],
 };
 
 const SYSTEM = `You are a DJ library gap analyst. You receive a list of BPM/genre gaps in a DJ's library.
 
-For each gap, use web search to find 3 specific trending tracks in that genre and BPM range (e.g. search "trending [genre] [BPM range] BPM 2026 Beatport"). Find real, specific artist and title pairs.
+For each gap, use web search to find 3 specific trending tracks in that genre and BPM range. Use the most relevant source per genre:
 
-Then call report_library_gaps with all gaps and their recommendations filled in.
-For beatportSearchUrl use: https://www.beatport.com/search?q=ARTIST+TITLE (URL-encode the artist and title).`;
+- House / Tech House / Afro House / Deep House → Beatport Top 100 (genre chart)
+- Techno / Minimal / Industrial → Beatport Top 100 Techno
+- Drum & Bass → Beatport Top 100 Drum & Bass
+- Hip Hop / Trap / Drill → DJcity charts or Billboard Hot Rap Songs
+- R&B / Soul → Billboard Hot R&B/Hip-Hop or DJcity R&B
+- Pop / Dance Pop / Top 40 → Billboard Hot 100
+- Latin / Reggaeton → Billboard Latin Charts
+- Afrobeats / Dancehall → Audiomack Trending or Apple Music Afrobeats
+- EDM / Big Room / Mainstage → Beatport Top 100 Big Room or Billboard Dance/Electronic
+
+Find real, specific artist and title pairs in the correct BPM range. Then call report_library_gaps with all gaps filled in.
+For beatportSearchUrl use: https://www.beatport.com/search?q=ARTIST+TITLE (URL-encode artist and title, replace spaces with +).`;
 
 export async function GET() {
   try {

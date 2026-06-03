@@ -38,12 +38,31 @@ interface GigEntry {
   playedAt: string;
 }
 
-interface GapRecommendation {
+interface WishlistCandidate {
   artist: string;
   title: string;
+  bpm: number | null;
+  beatportSearchUrl: string;
+}
+
+interface GapRecommendation extends WishlistCandidate {
   bpm: number;
   reason: string;
+}
+
+interface TrendingTrack {
+  artist: string;
+  title: string;
+  bpm?: number;
+  chartSource: string;
+  chartUrl: string;
   beatportSearchUrl: string;
+}
+
+interface TrendingGenreResult {
+  genre: string;
+  tracks: TrendingTrack[];
+  fetchedAt: string;
 }
 
 interface LibraryGap {
@@ -65,6 +84,8 @@ export function Dashboard() {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sd_onboarding_done') === '1';
   });
+  const [trendingData, setTrendingData] = useState<TrendingGenreResult[] | null>(null);
+  const [trendingLoading, setTrendingLoading] = useState(false);
   const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
   const [gapMeta, setGapMeta] = useState<{ tracksAnalyzed: number; genresAnalyzed: number } | null>(null);
   const [gapError, setGapError] = useState<string | null>(null);
@@ -145,6 +166,17 @@ export function Dashboard() {
     });
   }, []);
 
+  useEffect(() => {
+    setTrendingLoading(true);
+    fetch('/api/dashboard/trending-charts')
+      .then(r => r.json())
+      .then((data: { results?: TrendingGenreResult[]; error?: string }) => {
+        if (!data.error) setTrendingData(data.results ?? []);
+      })
+      .catch(() => setTrendingData([]))
+      .finally(() => setTrendingLoading(false));
+  }, []);
+
   async function analyzeLibrary() {
     setGapLoading(true);
     setGapError(null);
@@ -162,24 +194,24 @@ export function Dashboard() {
     }
   }
 
-  async function addToWishlist(rec: GapRecommendation) {
-    const key = `${rec.artist}|${rec.title}`;
+  async function addToWishlist(candidate: WishlistCandidate) {
+    const key = `${candidate.artist}|${candidate.title}`;
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error } = await supabase.from('wishlist_tracks').insert({
       user_id: user.id,
-      artist: rec.artist,
-      title: rec.title,
-      bpm: rec.bpm,
-      beatport_search_url: rec.beatportSearchUrl,
+      artist: candidate.artist,
+      title: candidate.title,
+      bpm: candidate.bpm,
+      beatport_search_url: candidate.beatportSearchUrl,
       status: 'wishlist',
       enrichment_source: 'manual',
     });
     if (!error) {
       setAddedToWishlist(prev => new Set([...prev, key]));
       setWishlistItems(prev =>
-        prev ? [...prev, { id: key, artist: rec.artist, title: rec.title, bpm: rec.bpm, key: null, beatportSearchUrl: rec.beatportSearchUrl }] : prev
+        prev ? [...prev, { id: key, artist: candidate.artist, title: candidate.title, bpm: candidate.bpm, key: null, beatportSearchUrl: candidate.beatportSearchUrl }] : prev
       );
     }
   }
@@ -368,6 +400,98 @@ export function Dashboard() {
             </div>
           </Card>
         </div>
+
+        {/* Trending by Genre */}
+        <Card style={{ marginBottom: 16 }}>
+          <CardHeader title="Trending by Genre" action={
+            trendingData && trendingData.length > 0 && (() => {
+              const oldest = trendingData.reduce((a, b) =>
+                a.fetchedAt < b.fetchedAt ? a : b
+              ).fetchedAt;
+              const diffH = Math.round((Date.now() - new Date(oldest).getTime()) / 3600000);
+              return (
+                <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+                  {diffH < 1 ? 'Just updated' : `Updated ${diffH}h ago`}
+                </span>
+              );
+            })()
+          }/>
+          <div style={{ padding: '20px 24px' }}>
+            {trendingLoading ? (
+              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
+                Finding what&apos;s trending in your genres...
+              </div>
+            ) : !trendingData || trendingData.length === 0 ? (
+              <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
+                {libraryStats
+                  ? 'Fetching chart data for your top genres...'
+                  : 'Upload your library to see trending tracks in your genres.'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+                {trendingData.map((genreResult, gi) => (
+                  <div key={gi}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>
+                        {genreResult.genre}
+                      </span>
+                      {genreResult.tracks[0]?.chartSource && (
+                        <a
+                          href={genreResult.tracks[0].chartUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted,
+                            textDecoration: 'none', borderBottom: `1px solid ${SD.border}` }}
+                        >
+                          {genreResult.tracks[0].chartSource} ↗
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {genreResult.tracks.slice(0, 5).map((track, ti) => {
+                        const wKey = `${track.artist}|${track.title}`;
+                        const added = addedToWishlist.has(wKey);
+                        return (
+                          <div key={ti} style={{ display: 'flex', alignItems: 'center',
+                            justifyContent: 'space-between', gap: 12,
+                            padding: '10px 14px', background: SD.bg,
+                            border: `1px solid ${SD.border}`, borderRadius: 3 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontFamily: SD.mono, fontSize: 12, fontWeight: 600,
+                                color: SD.text, whiteSpace: 'nowrap', overflow: 'hidden',
+                                textOverflow: 'ellipsis' }}>
+                                {track.artist} — {track.title}
+                              </div>
+                              {track.bpm && (
+                                <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 2 }}>
+                                  ~{track.bpm} BPM
+                                </div>
+                              )}
+                            </div>
+                            <SDButton
+                              ghost
+                              onClick={() => addToWishlist({
+                                artist: track.artist,
+                                title: track.title,
+                                bpm: track.bpm ?? null,
+                                beatportSearchUrl: track.beatportSearchUrl,
+                              })}
+                              disabled={added}
+                              style={{ fontSize: 11, padding: '4px 10px',
+                                flexShrink: 0, opacity: added ? 0.5 : 1 }}
+                            >
+                              {added ? '✓ Added' : '+ Wishlist'}
+                            </SDButton>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
 
         {/* Library Intelligence */}
         <Card style={{ marginBottom: 16 }}>
