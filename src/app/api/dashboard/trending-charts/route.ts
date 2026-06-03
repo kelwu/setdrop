@@ -142,24 +142,11 @@ export async function GET() {
 
     if (!library) return NextResponse.json({ error: 'No library' }, { status: 404 });
 
-    // Get user's top 3 genres by track count
+    // Get user's top 3 genres via SQL aggregate — avoids fetching all rows
     const { data: genreRows } = await admin
-      .from('serato_tracks')
-      .select('genre')
-      .eq('library_id', library.id)
-      .eq('in_library', true)
-      .not('genre', 'is', null);
+      .rpc('get_top_genres', { p_library_id: library.id, p_limit: 3 });
 
-    const genreCounts = new Map<string, number>();
-    for (const row of genreRows ?? []) {
-      const g = (row.genre ?? '').trim();
-      if (g) genreCounts.set(g, (genreCounts.get(g) ?? 0) + 1);
-    }
-
-    const topGenres = [...genreCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([g]) => g);
+    const topGenres = (genreRows ?? []).map((r: { genre: string }) => r.genre);
 
     if (!topGenres.length) return NextResponse.json({ results: [] });
 
@@ -171,8 +158,9 @@ export async function GET() {
       .in('genre', topGenres)
       .gte('fetched_at', cutoff);
 
-    const cachedMap = new Map((cached ?? []).map(c => [c.genre, c]));
-    const staleGenres = topGenres.filter(g => !cachedMap.has(g));
+    type CacheRow = { genre: string; tracks: TrendingTrack[]; fetched_at: string };
+    const cachedMap = new Map((cached ?? []).map((c: CacheRow) => [c.genre, c]));
+    const staleGenres = topGenres.filter((g: string) => !cachedMap.has(g));
 
     // Fetch fresh data for any stale/missing genres
     if (staleGenres.length > 0) {
@@ -190,13 +178,13 @@ export async function GET() {
     }
 
     const results: TrendingGenreResult[] = topGenres
-      .map(g => {
+      .map((g: string) => {
         const row = cachedMap.get(g);
         return row
           ? { genre: g, tracks: row.tracks as TrendingTrack[], fetchedAt: row.fetched_at }
           : null;
       })
-      .filter((r): r is TrendingGenreResult => r !== null);
+      .filter((r: TrendingGenreResult | null): r is TrendingGenreResult => r !== null);
 
     return NextResponse.json({ results });
   } catch (err) {

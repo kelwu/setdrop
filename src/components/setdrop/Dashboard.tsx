@@ -86,6 +86,7 @@ export function Dashboard() {
   });
   const [trendingData, setTrendingData] = useState<TrendingGenreResult[] | null>(null);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingError, setTrendingError] = useState<string | null>(null);
   const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
   const [gapMeta, setGapMeta] = useState<{ tracksAnalyzed: number; genresAnalyzed: number } | null>(null);
   const [gapError, setGapError] = useState<string | null>(null);
@@ -166,22 +167,31 @@ export function Dashboard() {
     });
   }, []);
 
-  useEffect(() => {
+  async function loadTrending() {
     setTrendingLoading(true);
-    fetch('/api/dashboard/trending-charts')
-      .then(r => r.json())
-      .then((data: { results?: TrendingGenreResult[]; error?: string }) => {
-        if (!data.error) setTrendingData(data.results ?? []);
-      })
-      .catch(() => setTrendingData([]))
-      .finally(() => setTrendingLoading(false));
-  }, []);
+    setTrendingError(null);
+    try {
+      const res = await fetch('/api/dashboard/trending-charts');
+      if (!res.ok) throw new Error(`Server error ${res.status} — try again`);
+      const data = await res.json() as { results?: TrendingGenreResult[]; error?: string };
+      if (data.error) throw new Error(data.error);
+      setTrendingData(data.results ?? []);
+    } catch (err) {
+      console.error('[trending]', err);
+      setTrendingError(err instanceof Error ? err.message : 'Failed to load');
+    } finally {
+      setTrendingLoading(false);
+    }
+  }
+
+  useEffect(() => { loadTrending(); }, []);
 
   async function analyzeLibrary() {
     setGapLoading(true);
     setGapError(null);
     try {
       const res = await fetch('/api/library/analyze-gaps');
+      if (!res.ok) throw new Error(`Server error ${res.status} — try again`);
       const data = await res.json() as { gaps?: LibraryGap[]; meta?: { tracksAnalyzed: number; genresAnalyzed: number }; error?: string };
       if (data.error) throw new Error(data.error);
       setGapReport(data.gaps ?? []);
@@ -420,6 +430,15 @@ export function Dashboard() {
             {trendingLoading ? (
               <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
                 Finding what&apos;s trending in your genres...
+              </div>
+            ) : trendingError ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444' }}>
+                  {trendingError}
+                </span>
+                <SDButton ghost onClick={loadTrending} style={{ fontSize: 11, padding: '4px 10px' }}>
+                  Retry
+                </SDButton>
               </div>
             ) : !trendingData || trendingData.length === 0 ? (
               <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
