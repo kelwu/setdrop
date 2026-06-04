@@ -31,7 +31,8 @@ export async function POST() {
       await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id);
     }
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'https://setdrop-phi.vercel.app';
+    const origin = process.env.NEXT_PUBLIC_APP_URL;
+    if (!origin) return NextResponse.json({ error: 'NEXT_PUBLIC_APP_URL not configured' }, { status: 500 });
 
     const session = await getStripe().checkout.sessions.create({
       customer: customerId,

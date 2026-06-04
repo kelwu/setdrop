@@ -158,8 +158,8 @@ function computeLibraryProfile(tracks: LibraryTrack[]): LibraryProfile {
   );
   const topArtists = Object.entries(artistCounts)
     .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([a]) => a);
-  const bpmMin = bpms.length ? Math.min(...bpms) : 0;
-  const bpmMax = bpms.length ? Math.max(...bpms) : 0;
+  const bpmMin = bpms.length ? bpms.reduce((a, b) => a < b ? a : b) : 0;
+  const bpmMax = bpms.length ? bpms.reduce((a, b) => a > b ? a : b) : 0;
   const bpmAvg = bpms.length ? Math.round(bpms.reduce((s, b) => s + b, 0) / bpms.length) : 0;
 
   const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);

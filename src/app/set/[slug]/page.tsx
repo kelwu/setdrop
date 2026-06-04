@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+
+export const revalidate = 3600;
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
 
@@ -191,7 +193,7 @@ export default async function PublicSetPage({ params }: Props) {
               padding: '13px 36px', borderRadius: 3, textDecoration: 'none',
             }}>Try SetDrop Free</a>
             <div style={{ marginTop: 14, fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
-              {process.env.NEXT_PUBLIC_APP_URL ?? 'setdrop-phi.vercel.app'}
+              {process.env.NEXT_PUBLIC_APP_URL ?? ''}
             </div>
           </div>
         </div>
