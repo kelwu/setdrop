@@ -53,12 +53,13 @@ export async function POST() {
   const BATCH = 10;
   let enriched = 0;
 
-  // Wishlist tracks missing BPM or key
+  // Wishlist tracks missing BPM or key — cap at 50 to bound Anthropic spend
   const { data: wishlistTracks } = await supabase
     .from('wishlist_tracks')
     .select('id, artist, title, bpm, key')
     .eq('user_id', user.id)
-    .or('bpm.is.null,key.is.null');
+    .or('bpm.is.null,key.is.null')
+    .limit(50);
 
   const wishlistToEnrich = (wishlistTracks ?? []).filter(t => !t.bpm || !t.key);
 

@@ -74,8 +74,9 @@ export async function POST(req: NextRequest) {
         };
       });
 
-    if (toInsert.length) {
-      const { error } = await supabase.from('wishlist_tracks').insert(toInsert);
+    const BATCH = 500;
+    for (let i = 0; i < toInsert.length; i += BATCH) {
+      const { error } = await supabase.from('wishlist_tracks').insert(toInsert.slice(i, i + BATCH));
       if (error) throw error;
     }
 

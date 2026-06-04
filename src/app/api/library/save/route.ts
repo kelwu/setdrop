@@ -83,17 +83,11 @@ export async function POST(req: NextRequest) {
       );
       const newPaths = new Set(dedupedTracks.filter(t => t.filePath).map(t => t.filePath!));
 
-      // Delete tracks no longer in the library
       const toDeleteIds = (existingTracks ?? [])
         .filter(t => t.file_path && !newPaths.has(t.file_path as string))
         .map(t => t.id as string);
 
-      for (let i = 0; i < toDeleteIds.length; i += BATCH) {
-        await admin.from('serato_tracks').delete().in('id', toDeleteIds.slice(i, i + BATCH));
-      }
-      removed = toDeleteIds.length;
-
-      // Insert tracks not yet in the library
+      // Insert new tracks FIRST — if this fails we abort before touching existing rows
       const toInsert = dedupedTracks
         .filter(t => !t.filePath || !existingByPath.has(t.filePath))
         .map(t => ({
@@ -112,6 +106,12 @@ export async function POST(req: NextRequest) {
       }
       added = toInsert.length;
       unchanged = dedupedTracks.length - toInsert.length;
+
+      // Only delete after all inserts succeeded — library is never left in a broken state
+      for (let i = 0; i < toDeleteIds.length; i += BATCH) {
+        await admin.from('serato_tracks').delete().in('id', toDeleteIds.slice(i, i + BATCH));
+      }
+      removed = toDeleteIds.length;
     }
 
     return NextResponse.json({ ok: true, libraryId, trackCount: dedupedTracks.length, added, removed, unchanged });
