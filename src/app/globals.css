@@ -167,6 +167,9 @@ body::after {
   pointer-events: none;
   z-index: 9999;
 }
+.sd-no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.sd-no-scrollbar::-webkit-scrollbar { display: none; }
+
 @media (max-width: 768px) {
   .sd-decorative { display: none !important; }
   .sd-grid-3 { grid-template-columns: 1fr !important; }

@@ -90,31 +90,27 @@ Then call report_trending_tracks with all results.`;
 
 async function fetchFromAI(genres: string[]): Promise<Array<{ genre: string; tracks: TrendingTrack[] }>> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const userMsg = `Find the top 5 trending tracks right now for each of these DJ genres: ${genres.join(', ')}`;
+  const userMsg = `Search for the top 5 trending tracks RIGHT NOW in 2026 for each of these DJ genres: ${genres.join(', ')}. Check the appropriate chart source for each genre.`;
 
-  const msg = await anthropic.messages.create({
+  // Phase 1: force a web search — tool_choice 'any' with only WEB_SEARCH means the model must search
+  const searched = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 2048,
     system: SYSTEM,
     messages: [{ role: 'user', content: userMsg }],
-    tools: [WEB_SEARCH, TRENDING_TOOL],
-    tool_choice: { type: 'auto' },
+    tools: [WEB_SEARCH],
+    tool_choice: { type: 'any' },
   });
 
-  const toolBlock = msg.content.find(
-    (b): b is Anthropic.Messages.ToolUseBlock =>
-      b.type === 'tool_use' && b.name === 'report_trending_tracks',
-  );
-  if (toolBlock) return (toolBlock.input as { results: Array<{ genre: string; tracks: TrendingTrack[] }> }).results;
-
+  // Phase 2: take the search results in context, force structured output
   const forced = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1024,
     system: SYSTEM,
     messages: [
       { role: 'user', content: userMsg },
-      { role: 'assistant', content: msg.content as unknown as Anthropic.Messages.ContentBlockParam[] },
-      { role: 'user', content: 'Now call report_trending_tracks with your results.' },
+      { role: 'assistant', content: searched.content as unknown as Anthropic.Messages.ContentBlockParam[] },
+      { role: 'user', content: 'Based on the chart data you just found, call report_trending_tracks with the top 5 tracks per genre.' },
     ],
     tools: [TRENDING_TOOL],
     tool_choice: { type: 'tool', name: 'report_trending_tracks' },

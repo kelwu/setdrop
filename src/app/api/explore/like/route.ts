@@ -23,11 +23,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (existing) {
-      // Unlike
       await admin.from('set_likes').delete().eq('id', existing.id);
     } else {
-      // Like
-      await admin.from('set_likes').insert({ user_id: user.id, setlist_id: setlistId });
+      // ON CONFLICT DO NOTHING handles the race condition if two requests arrive simultaneously
+      await admin.from('set_likes').upsert(
+        { user_id: user.id, setlist_id: setlistId },
+        { onConflict: 'user_id,setlist_id', ignoreDuplicates: true },
+      );
     }
 
     // Return updated count

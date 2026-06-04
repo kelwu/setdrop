@@ -239,6 +239,30 @@ export function Dashboard() {
   const djName = userEmail ? userEmail.split('@')[0].toUpperCase() : 'DJ';
 
 
+  function genreGradient(genre: string): string {
+    const g = genre.toLowerCase();
+    if (g.includes('hip hop') || g.includes('trap') || g.includes('drill') || g.includes('rap') || g.includes('boom bap'))
+      return 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)';
+    if (g.includes('r&b') || g.includes('rnb') || g.includes('soul'))
+      return 'linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)';
+    if (g.includes('latin') || g.includes('reggaeton') || g.includes('cumbia') || g.includes('salsa'))
+      return 'linear-gradient(135deg, #10b981 0%, #0891b2 100%)';
+    if (g.includes('afrobeat') || g.includes('afropop') || g.includes('dancehall'))
+      return 'linear-gradient(135deg, #eab308 0%, #f97316 100%)';
+    if (g.includes('techno') || g.includes('minimal') || g.includes('industrial'))
+      return 'linear-gradient(135deg, #06b6d4 0%, #4f46e5 100%)';
+    if (g.includes('drum') || g.includes('dnb') || g.includes('jungle') || g.includes('d&b'))
+      return 'linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)';
+    if (g.includes('pop') || g.includes('top 40'))
+      return 'linear-gradient(135deg, #ec4899 0%, #7c3aed 100%)';
+    if (g.includes('edm') || g.includes('big room') || g.includes('electro'))
+      return 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)';
+    if (g.includes('trance') || g.includes('uplifting'))
+      return 'linear-gradient(135deg, #a78bfa 0%, #38bdf8 100%)';
+    // House, Tech House, Afro House, etc.
+    return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
+  }
+
   function Card({ children, style: extra = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
     return (
       <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
@@ -450,66 +474,77 @@ export function Dashboard() {
                   : 'Upload your library to see trending tracks in your genres.'}
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                {trendingData.map((genreResult, gi) => (
-                  <div key={gi}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                      <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>
-                        {genreResult.genre}
-                      </span>
-                      {genreResult.tracks[0]?.chartSource && (
-                        <a
-                          href={genreResult.tracks[0].chartUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted,
-                            textDecoration: 'none', borderBottom: `1px solid ${SD.border}` }}
-                        >
-                          {genreResult.tracks[0].chartSource} ↗
-                        </a>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="sd-no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, alignItems: 'stretch' }}>
+                {trendingData.map((genreResult, gi) => {
+                  const grad = genreGradient(genreResult.genre);
+                  return (
+                    <React.Fragment key={gi}>
+                      {/* Inline genre divider */}
+                      <div style={{ flexShrink: 0, width: 28, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', borderRight: `1px solid ${SD.border}`,
+                        paddingRight: 2, marginRight: 2 }}>
+                        <div style={{ height: 3, width: '100%', background: grad, borderRadius: 1, marginBottom: 8 }} />
+                        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+                          fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
+                          letterSpacing: 1.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                          {genreResult.genre}
+                        </span>
+                      </div>
+                      {/* Track cards */}
                       {genreResult.tracks.slice(0, 5).map((track, ti) => {
                         const wKey = `${track.artist}|${track.title}`;
                         const added = addedToWishlist.has(wKey);
                         return (
-                          <div key={ti} style={{ display: 'flex', alignItems: 'center',
-                            justifyContent: 'space-between', gap: 12,
-                            padding: '10px 14px', background: SD.bg,
-                            border: `1px solid ${SD.border}`, borderRadius: 3 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontFamily: SD.mono, fontSize: 12, fontWeight: 600,
-                                color: SD.text, whiteSpace: 'nowrap', overflow: 'hidden',
-                                textOverflow: 'ellipsis' }}>
-                                {track.artist} — {track.title}
+                          <div key={ti} style={{ width: 152, flexShrink: 0, background: SD.surface,
+                            border: `1px solid ${SD.border}`, borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: 72, background: grad,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontFamily: SD.display, fontSize: 30, fontWeight: 700,
+                                color: 'rgba(255,255,255,0.3)', letterSpacing: 2 }}>
+                                {ti + 1}
+                              </span>
+                            </div>
+                            <div style={{ padding: '9px 9px 7px' }}>
+                              <div style={{ fontFamily: SD.mono, fontSize: 11, fontWeight: 600,
+                                color: SD.text, overflow: 'hidden', textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap', marginBottom: 2 }}>
+                                {track.title}
+                              </div>
+                              <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textSec,
+                                overflow: 'hidden', textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap', marginBottom: 4 }}>
+                                {track.artist}
                               </div>
                               {track.bpm && (
-                                <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 2 }}>
-                                  ~{track.bpm} BPM
+                                <div style={{ fontFamily: SD.mono, fontSize: 10,
+                                  color: SD.textMuted, marginBottom: 6 }}>
+                                  {track.bpm} BPM
                                 </div>
                               )}
+                              <button
+                                onClick={() => addToWishlist({
+                                  artist: track.artist,
+                                  title: track.title,
+                                  bpm: track.bpm ?? null,
+                                  beatportSearchUrl: track.beatportSearchUrl,
+                                })}
+                                disabled={added}
+                                style={{ width: '100%',
+                                  background: added ? SD.surface2 : SD.accentDim,
+                                  border: `1px solid ${added ? SD.border : SD.accent + '44'}`,
+                                  borderRadius: 2, fontFamily: SD.mono, fontSize: 10,
+                                  color: added ? SD.textMuted : SD.accent,
+                                  padding: '4px 0', cursor: added ? 'default' : 'pointer' }}
+                              >
+                                {added ? '✓ Added' : '+ Wishlist'}
+                              </button>
                             </div>
-                            <SDButton
-                              ghost
-                              onClick={() => addToWishlist({
-                                artist: track.artist,
-                                title: track.title,
-                                bpm: track.bpm ?? null,
-                                beatportSearchUrl: track.beatportSearchUrl,
-                              })}
-                              disabled={added}
-                              style={{ fontSize: 11, padding: '4px 10px',
-                                flexShrink: 0, opacity: added ? 0.5 : 1 }}
-                            >
-                              {added ? '✓ Added' : '+ Wishlist'}
-                            </SDButton>
                           </div>
                         );
                       })}
-                    </div>
-                  </div>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </div>
             )}
           </div>
