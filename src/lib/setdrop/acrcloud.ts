@@ -36,7 +36,9 @@ export interface AcrCloudResult {
 }
 
 export async function identifyAudio(audioBuffer: Buffer): Promise<AcrCloudResult> {
-  const host = process.env.ACRCLOUD_HOST ?? 'identify-eu-west-1.acrcloud.com';
+  // Strip any protocol/trailing slash the user may have included in the env var
+  const host = (process.env.ACRCLOUD_HOST ?? 'identify-eu-west-1.acrcloud.com')
+    .replace(/^https?:\/\//i, '').replace(/\/$/, '');
   const accessKey = process.env.ACRCLOUD_ACCESS_KEY ?? '';
   const accessSecret = process.env.ACRCLOUD_ACCESS_SECRET ?? '';
 

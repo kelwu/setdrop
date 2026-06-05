@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const MODEL = 'claude-sonnet-4-6';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
