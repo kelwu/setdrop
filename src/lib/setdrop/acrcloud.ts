@@ -57,16 +57,12 @@ export async function identifyAudio(audioBuffer: Buffer): Promise<AcrCloudResult
   form.append('sample_bytes', audioBuffer.length.toString());
   form.append('timestamp', timestamp);
 
-  const url = `https://${host}/v1/identify`;
-  console.log('[acrcloud] POST', url, 'sample_bytes:', audioBuffer.length);
-
-  const res = await fetch(url, {
+  const res = await fetch(`https://${host}/v1/identify`, {
     method: 'POST',
     body: form,
     signal: AbortSignal.timeout(15000),
   });
 
-  console.log('[acrcloud] response status:', res.status);
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`ACRCloud request failed: ${res.status} ${body}`);
