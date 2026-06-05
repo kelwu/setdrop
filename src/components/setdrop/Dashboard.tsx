@@ -92,6 +92,7 @@ export function Dashboard() {
   const [gapError, setGapError] = useState<string | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState<Set<string>>(new Set());
+  const [discoverTab, setDiscoverTab] = useState<'trending' | 'gaps'>('trending');
 
   useEffect(() => {
     const supabase = createClient();
@@ -350,347 +351,144 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Stats row */}
-        <div className="sd-grid-3" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, marginBottom:16 }}>
-          <Card>
-            <CardHeader title="Serato Library" action={
-              libraryStats ? (
-                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.green,
-                  display:'flex', alignItems:'center', gap:5 }}>
+        {/* Status strip */}
+        <div style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4,
+          padding:'12px 24px', marginBottom:16,
+          display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+          {libraryStats ? (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
                     display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
-                  Synced
+                  <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
+                    {libraryStats.totalTracks.toLocaleString()} tracks
+                  </span>
                 </span>
-              ) : null
-            }/>
-            <div style={{ padding:'28px 24px' }}>
-              <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.text, lineHeight:1 }}>
-                {libraryStats ? libraryStats.totalTracks.toLocaleString() : '—'}
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
+                  {wishlistItems?.length ?? 0} wishlist
+                </span>
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
+                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
+                  {recentSets?.filter(s => {
+                    const d = new Date(s.createdAtRaw), now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                  }).length ?? 0} sets this month
+                </span>
+                {libraryStats.lastSynced && (
+                  <>
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
+                      Synced {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
+                    </span>
+                  </>
+                )}
               </div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
-                textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks in library</div>
-              {libraryStats?.lastSynced && (
-                <div style={{ marginTop:20 }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
-                    letterSpacing:1, textTransform:'uppercase' }}>
-                    Last sync: {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
-                  </div>
-                </div>
-              )}
-              <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'7px 16px' }}>
-                  {libraryStats ? 'Manage Library' : 'Upload Library'}
-                </SDButton>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Wishlist" action={
-              <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>
-                {wishlistItems !== null ? `${wishlistItems.length} tracks` : ''}
-              </span>
-            }/>
-            <div style={{ padding:'28px 24px' }}>
-              <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.accent, lineHeight:1 }}>{wishlistItems?.length ?? '—'}</div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
-                textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Tracks to download</div>
-              <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'7px 16px' }}>
-                  {wishlistItems?.length ? 'View Wishlist' : 'Add to Wishlist'}
-                </SDButton>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="This Month"/>
-            <div style={{ padding:'28px 24px' }}>
-              <div style={{ fontFamily:SD.display, fontSize:72, letterSpacing:2,
-                color:SD.text, lineHeight:1 }}>
-                {recentSets === null ? '—' : recentSets.filter(s => {
-                  const d = new Date(s.createdAtRaw);
-                  const now = new Date();
-                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                }).length}
-              </div>
-              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
-                textTransform:'uppercase', letterSpacing:1.5, marginTop:4 }}>Sets built</div>
-              {recentSets && recentSets.length > 0 && (
-                <div style={{ marginTop:20, display:'flex', gap:24 }}>
-                  <div>
-                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:600, color:SD.text }}>
-                      {Math.round(recentSets.reduce((a, s) => a + s.trackCount, 0) / recentSets.length)}
-                    </div>
-                    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
-                      letterSpacing:1, textTransform:'uppercase', marginTop:2, lineHeight:1.4 }}>Avg tracks/set</div>
-                  </div>
-                </div>
-              )}
-              <div style={{ marginTop:24 }}>
-                <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'7px 16px' }}>
-                  View History
-                </SDButton>
-              </div>
-            </div>
-          </Card>
+              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:11, padding:'5px 12px' }}>
+                Manage Library
+              </SDButton>
+            </>
+          ) : (
+            <>
+              <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>No library connected yet</span>
+              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:11, padding:'5px 12px' }}>
+                Upload Library
+              </SDButton>
+            </>
+          )}
         </div>
 
-        {/* Trending by Genre */}
-        <Card style={{ marginBottom: 16 }}>
-          <CardHeader title="Trending by Genre" action={
-            trendingData && trendingData.length > 0 && (() => {
-              const oldest = trendingData.reduce((a, b) =>
-                a.fetchedAt < b.fetchedAt ? a : b
-              ).fetchedAt;
-              const diffH = Math.round((Date.now() - new Date(oldest).getTime()) / 3600000);
-              return (
-                <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
-                  {diffH < 1 ? 'Just updated' : `Updated ${diffH}h ago`}
-                </span>
-              );
-            })()
-          }/>
-          <div style={{ padding: '20px 24px' }}>
-            {trendingLoading ? (
-              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
-                Finding what&apos;s trending in your genres...
-              </div>
-            ) : trendingError ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444' }}>
-                  {trendingError}
-                </span>
-                <SDButton ghost onClick={loadTrending} style={{ fontSize: 11, padding: '4px 10px' }}>
-                  Retry
-                </SDButton>
-              </div>
-            ) : !trendingData || trendingData.length === 0 ? (
-              <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
-                {libraryStats
-                  ? 'Fetching chart data for your top genres...'
-                  : 'Upload your library to see trending tracks in your genres.'}
-              </div>
-            ) : (
-              <div className="sd-no-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, alignItems: 'stretch' }}>
-                {trendingData.map((genreResult, gi) => {
-                  const grad = genreGradient(genreResult.genre);
-                  return (
-                    <React.Fragment key={gi}>
-                      {/* Inline genre divider */}
-                      <div style={{ flexShrink: 0, width: 28, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', borderRight: `1px solid ${SD.border}`,
-                        paddingRight: 2, marginRight: 2 }}>
-                        <div style={{ height: 3, width: '100%', background: grad, borderRadius: 1, marginBottom: 8 }} />
-                        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-                          fontFamily: SD.mono, fontSize: 9, color: SD.textMuted,
-                          letterSpacing: 1.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                          {genreResult.genre}
-                        </span>
+        {/* Next Gig widget */}
+        {gigHistory !== null && (() => {
+          const nextGig = gigHistory.find(g => new Date(g.gigDate) >= new Date()) ?? null;
+          const daysUntil = nextGig
+            ? Math.ceil((new Date(nextGig.gigDate).getTime() - Date.now()) / 86400000)
+            : null;
+          return (
+            <div style={{ background:SD.surface, border:`1px solid ${nextGig ? SD.borderMid : SD.border}`,
+              borderRadius:4, padding:'14px 24px', marginBottom:16,
+              display:'flex', alignItems:'center', justifyContent:'space-between', gap:16 }}>
+              {nextGig && daysUntil !== null ? (
+                <>
+                  <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                    <div style={{ textAlign:'center', minWidth:44 }}>
+                      <div style={{ fontFamily:SD.display, fontSize:28, letterSpacing:2, lineHeight:1,
+                        color: daysUntil <= 7 ? SD.accent : SD.text }}>
+                        {daysUntil}
                       </div>
-                      {/* Track cards */}
-                      {genreResult.tracks.slice(0, 5).map((track, ti) => {
-                        const wKey = `${track.artist}|${track.title}`;
-                        const added = addedToWishlist.has(wKey);
-                        return (
-                          <div key={ti} style={{ width: 152, flexShrink: 0, background: SD.surface,
-                            border: `1px solid ${SD.border}`, borderRadius: 4, overflow: 'hidden' }}>
-                            <div style={{ height: 72, background: grad,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span style={{ fontFamily: SD.display, fontSize: 30, fontWeight: 700,
-                                color: 'rgba(255,255,255,0.3)', letterSpacing: 2 }}>
-                                {ti + 1}
-                              </span>
-                            </div>
-                            <div style={{ padding: '9px 9px 7px' }}>
-                              <div style={{ fontFamily: SD.mono, fontSize: 11, fontWeight: 600,
-                                color: SD.text, overflow: 'hidden', textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap', marginBottom: 2 }}>
-                                {track.title}
-                              </div>
-                              <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textSec,
-                                overflow: 'hidden', textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap', marginBottom: 4 }}>
-                                {track.artist}
-                              </div>
-                              {track.bpm && (
-                                <div style={{ fontFamily: SD.mono, fontSize: 10,
-                                  color: SD.textMuted, marginBottom: 6 }}>
-                                  {track.bpm} BPM
-                                </div>
-                              )}
-                              <button
-                                onClick={() => addToWishlist({
-                                  artist: track.artist,
-                                  title: track.title,
-                                  bpm: track.bpm ?? null,
-                                  beatportSearchUrl: track.beatportSearchUrl,
-                                })}
-                                disabled={added}
-                                style={{ width: '100%',
-                                  background: added ? SD.surface2 : SD.accentDim,
-                                  border: `1px solid ${added ? SD.border : SD.accent + '44'}`,
-                                  borderRadius: 2, fontFamily: SD.mono, fontSize: 10,
-                                  color: added ? SD.textMuted : SD.accent,
-                                  padding: '4px 0', cursor: added ? 'default' : 'pointer' }}
-                              >
-                                {added ? '✓ Added' : '+ Wishlist'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Library Intelligence */}
-        <Card style={{ marginBottom: 16 }}>
-          <CardHeader title="Library Intelligence" action={
-            <SDButton
-              ghost
-              onClick={analyzeLibrary}
-              disabled={gapLoading || !libraryStats}
-              style={{ fontSize: 12, padding: '5px 12px' }}
-            >
-              {gapLoading ? 'Analyzing...' : 'Analyze Library'}
-            </SDButton>
-          }/>
-          <div style={{ padding: '20px 24px' }}>
-            {gapLoading ? (
-              <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
-                Scanning your library and searching for trending tracks...
-              </div>
-            ) : gapError ? (
-              <div style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444' }}>
-                Error: {gapError}
-              </div>
-            ) : gapReport === null ? (
-              <div style={{ fontFamily: SD.body, fontSize: 13, color: SD.textMuted }}>
-                {libraryStats
-                  ? 'Find BPM and genre gaps in your library — get specific track recommendations to fill them.'
-                  : 'Upload your library to unlock Library Intelligence.'}
-              </div>
-            ) : gapReport.length === 0 ? (
-              <div>
-                <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
-                  No significant gaps detected. Your library looks well-rounded.
-                </div>
-                {gapMeta && (
-                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 6 }}>
-                    Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {gapMeta && (
-                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
-                    Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres
-                  </div>
-                )}
-                {gapReport.map((gap, gi) => {
-                  const sevColor = gap.severity === 'high' ? '#ef4444' : gap.severity === 'medium' ? SD.accent : SD.textSec;
-                  const sevBg = gap.severity === 'high' ? '#ef444418' : gap.severity === 'medium' ? SD.accentDim : SD.surface2;
-                  return (
-                    <div key={gi}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                        <span style={{ fontFamily: SD.mono, fontSize: 10, fontWeight: 700,
-                          textTransform: 'uppercase', letterSpacing: 1.5, color: sevColor,
-                          background: sevBg, border: `1px solid ${sevColor}44`,
-                          borderRadius: 2, padding: '2px 7px' }}>
-                          {gap.severity}
-                        </span>
-                        <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>
-                          {gap.genre}
-                        </span>
-                        <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>
-                          {gap.bpmRange} BPM
-                        </span>
-                        <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
-                          ({gap.currentCount} {gap.currentCount === 1 ? 'track' : 'tracks'})
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {gap.recommendations.map((rec, ri) => {
-                          const wKey = `${rec.artist}|${rec.title}`;
-                          const added = addedToWishlist.has(wKey);
-                          return (
-                            <div key={ri} style={{ display: 'flex', alignItems: 'center',
-                              justifyContent: 'space-between', gap: 12,
-                              padding: '10px 14px', background: SD.bg,
-                              border: `1px solid ${SD.border}`, borderRadius: 3 }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontFamily: SD.mono, fontSize: 12, fontWeight: 600,
-                                  color: SD.text, whiteSpace: 'nowrap', overflow: 'hidden',
-                                  textOverflow: 'ellipsis' }}>
-                                  {rec.artist} — {rec.title}
-                                </div>
-                                <div style={{ fontFamily: SD.mono, fontSize: 11,
-                                  color: SD.textMuted, marginTop: 2 }}>
-                                  {rec.bpm} BPM · {rec.reason}
-                                </div>
-                              </div>
-                              <SDButton
-                                ghost
-                                onClick={() => addToWishlist(rec)}
-                                disabled={added}
-                                style={{ fontSize: 11, padding: '4px 10px',
-                                  flexShrink: 0, opacity: added ? 0.5 : 1 }}
-                              >
-                                {added ? '✓ Added' : '+ Wishlist'}
-                              </SDButton>
-                            </div>
-                          );
-                        })}
+                      <div style={{ fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                        letterSpacing:1.5, textTransform:'uppercase', marginTop:2 }}>
+                        {daysUntil === 1 ? 'day' : 'days'}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </Card>
+                    <div style={{ width:1, height:32, background:SD.border }} />
+                    <div>
+                      <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text }}>
+                        {nextGig.gigName}
+                      </div>
+                      {nextGig.venue && (
+                        <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec, marginTop:2 }}>
+                          {nextGig.venue}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12, padding:'8px 18px', flexShrink:0 }}>
+                    Build Set
+                  </SDButton>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>No upcoming gigs logged</span>
+                  <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:11, padding:'5px 12px' }}>
+                    Log Next Gig
+                  </SDButton>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
-        {/* Gig History */}
-        {gigHistory !== null && gigHistory.length > 0 && (
-          <Card style={{ marginBottom:16 }}>
-            <CardHeader title="Gig History" />
+        {/* Action row: Recent Sets + Wishlist */}
+        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          <Card>
+            <CardHeader title="Recent Setlists" action={
+              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>
+                View All
+              </SDButton>
+            }/>
             <div style={{ padding:'16px' }}>
-              {gigHistory.map((g, i) => (
-                <div key={g.id} style={{
-                  display:'flex', alignItems:'center', justifyContent:'space-between',
-                  padding:'14px 8px',
-                  borderBottom: i < gigHistory.length - 1 ? `1px solid ${SD.border}` : 'none',
-                  gap:16,
-                }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
-                      color:SD.text, marginBottom:3,
-                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {g.gigName}
+              {recentSets === null ? (
+                <div style={{ padding:'32px 16px', textAlign:'center',
+                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
+              ) : recentSets.length === 0 ? (
+                <div style={{ padding:'32px 16px', textAlign:'center' }}>
+                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>No sets yet</div>
+                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>
+                </div>
+              ) : recentSets.map(s => (
+                <div key={s.id} onClick={() => router.push('/history')}
+                  style={{ padding:'18px 16px', marginBottom:8, background:SD.bg,
+                    border:`1px solid ${SD.border}`, borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = SD.borderMid)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = SD.border)}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
+                    <div>
+                      <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text, marginBottom:6 }}>{s.name}</div>
+                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.genre}</div>
                     </div>
-                    {g.venue && (
-                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{g.venue}</div>
-                    )}
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
                   </div>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>
-                    {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+                  <div style={{ display:'flex', gap:16, marginTop:14 }}>
+                    {s.trackCount > 0 && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.trackCount} tracks</span>}
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.duration}</span>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
-        )}
 
-        {/* Bottom row */}
-        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
           <Card>
             <CardHeader title="Wishlist — Download Queue" action={
               <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'5px 12px' }}>
@@ -703,9 +501,7 @@ export function Dashboard() {
                   fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
               ) : wishlistItems.length === 0 ? (
                 <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>
-                    No wishlist tracks yet
-                  </div>
+                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>No wishlist tracks yet</div>
                   <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>
                 </div>
               ) : wishlistItems.map((t, i) => (
@@ -734,52 +530,193 @@ export function Dashboard() {
               ))}
             </div>
           </Card>
+        </div>
 
-          <Card>
-            <CardHeader title="Recent Setlists" action={
-              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>
-                View All
+        {/* Discover — tabbed Trending + Library Gaps */}
+        <Card style={{ marginBottom:16 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'0 24px', borderBottom:`1px solid ${SD.border}` }}>
+            <div style={{ display:'flex' }}>
+              {(['trending', 'gaps'] as const).map(tab => (
+                <button key={tab} onClick={() => setDiscoverTab(tab)} style={{
+                  fontFamily:SD.mono, fontSize:12, letterSpacing:1.5, textTransform:'uppercase',
+                  padding:'18px 20px 16px', background:'none', border:'none', cursor:'pointer',
+                  color: discoverTab === tab ? SD.text : SD.textMuted,
+                  borderBottom: discoverTab === tab ? `2px solid ${SD.accent}` : '2px solid transparent',
+                  transition:'color .15s',
+                }}>
+                  {tab === 'trending' ? 'Trending' : 'Library Gaps'}
+                </button>
+              ))}
+            </div>
+            {discoverTab === 'trending' && trendingData && trendingData.length > 0 && (() => {
+              const oldest = trendingData.reduce((a, b) => a.fetchedAt < b.fetchedAt ? a : b).fetchedAt;
+              const diffH = Math.round((Date.now() - new Date(oldest).getTime()) / 3600000);
+              return <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
+                {diffH < 1 ? 'Just updated' : `Updated ${diffH}h ago`}
+              </span>;
+            })()}
+            {discoverTab === 'gaps' && (
+              <SDButton ghost onClick={analyzeLibrary} disabled={gapLoading || !libraryStats}
+                style={{ fontSize:12, padding:'5px 12px' }}>
+                {gapLoading ? 'Analyzing...' : 'Analyze Library'}
               </SDButton>
+            )}
+          </div>
+
+          <div style={{ padding:'20px 24px' }}>
+            {discoverTab === 'trending' && (
+              trendingLoading ? (
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Finding what&apos;s trending in your genres...</div>
+              ) : trendingError ? (
+                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                  <span style={{ fontFamily:SD.mono, fontSize:12, color:'#ef4444' }}>{trendingError}</span>
+                  <SDButton ghost onClick={loadTrending} style={{ fontSize:11, padding:'4px 10px' }}>Retry</SDButton>
+                </div>
+              ) : !trendingData || trendingData.length === 0 ? (
+                <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
+                  {libraryStats ? 'Fetching chart data for your top genres...' : 'Upload your library to see trending tracks in your genres.'}
+                </div>
+              ) : (
+                <div className="sd-no-scrollbar" style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, alignItems:'stretch' }}>
+                  {trendingData.map((genreResult, gi) => {
+                    const grad = genreGradient(genreResult.genre);
+                    return (
+                      <React.Fragment key={gi}>
+                        <div style={{ flexShrink:0, width:28, display:'flex', flexDirection:'column',
+                          alignItems:'center', borderRight:`1px solid ${SD.border}`, paddingRight:2, marginRight:2 }}>
+                          <div style={{ height:3, width:'100%', background:grad, borderRadius:1, marginBottom:8 }}/>
+                          <span style={{ writingMode:'vertical-rl', transform:'rotate(180deg)',
+                            fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
+                            letterSpacing:1.5, textTransform:'uppercase', whiteSpace:'nowrap' }}>
+                            {genreResult.genre}
+                          </span>
+                        </div>
+                        {genreResult.tracks.slice(0, 5).map((track, ti) => {
+                          const wKey = `${track.artist}|${track.title}`;
+                          const added = addedToWishlist.has(wKey);
+                          return (
+                            <div key={ti} style={{ width:152, flexShrink:0, background:SD.surface,
+                              border:`1px solid ${SD.border}`, borderRadius:4, overflow:'hidden' }}>
+                              <div style={{ height:72, background:grad, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                <span style={{ fontFamily:SD.display, fontSize:30, fontWeight:700,
+                                  color:'rgba(255,255,255,0.3)', letterSpacing:2 }}>{ti + 1}</span>
+                              </div>
+                              <div style={{ padding:'9px 9px 7px' }}>
+                                <div style={{ fontFamily:SD.mono, fontSize:11, fontWeight:600, color:SD.text,
+                                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:2 }}>
+                                  {track.title}
+                                </div>
+                                <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
+                                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:4 }}>
+                                  {track.artist}
+                                </div>
+                                {track.bpm && <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:6 }}>{track.bpm} BPM</div>}
+                                <button onClick={() => addToWishlist({ artist:track.artist, title:track.title, bpm:track.bpm ?? null, beatportSearchUrl:track.beatportSearchUrl })}
+                                  disabled={added}
+                                  style={{ width:'100%', background:added ? SD.surface2 : SD.accentDim,
+                                    border:`1px solid ${added ? SD.border : SD.accent+'44'}`,
+                                    borderRadius:2, fontFamily:SD.mono, fontSize:10,
+                                    color:added ? SD.textMuted : SD.accent, padding:'4px 0', cursor:added ? 'default' : 'pointer' }}>
+                                  {added ? '✓ Added' : '+ Wishlist'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {discoverTab === 'gaps' && (
+              gapLoading ? (
+                <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Scanning your library and searching for trending tracks...</div>
+              ) : gapError ? (
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:'#ef4444' }}>Error: {gapError}</div>
+              ) : gapReport === null ? (
+                <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
+                  {libraryStats ? 'Find BPM and genre gaps in your library — get specific track recommendations to fill them.' : 'Upload your library to unlock Library Intelligence.'}
+                </div>
+              ) : gapReport.length === 0 ? (
+                <div>
+                  <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>No significant gaps detected. Your library looks well-rounded.</div>
+                  {gapMeta && <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginTop:6 }}>Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres.</div>}
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+                  {gapMeta && <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres</div>}
+                  {gapReport.map((gap, gi) => {
+                    const sevColor = gap.severity === 'high' ? '#ef4444' : gap.severity === 'medium' ? SD.accent : SD.textSec;
+                    const sevBg = gap.severity === 'high' ? '#ef444418' : gap.severity === 'medium' ? SD.accentDim : SD.surface2;
+                    return (
+                      <div key={gi}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                          <span style={{ fontFamily:SD.mono, fontSize:10, fontWeight:700, textTransform:'uppercase',
+                            letterSpacing:1.5, color:sevColor, background:sevBg,
+                            border:`1px solid ${sevColor}44`, borderRadius:2, padding:'2px 7px' }}>{gap.severity}</span>
+                          <span style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text }}>{gap.genre}</span>
+                          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{gap.bpmRange} BPM</span>
+                          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>({gap.currentCount} {gap.currentCount === 1 ? 'track' : 'tracks'})</span>
+                        </div>
+                        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                          {gap.recommendations.map((rec, ri) => {
+                            const wKey = `${rec.artist}|${rec.title}`;
+                            const added = addedToWishlist.has(wKey);
+                            return (
+                              <div key={ri} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                                gap:12, padding:'10px 14px', background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3 }}>
+                                <div style={{ flex:1, minWidth:0 }}>
+                                  <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600, color:SD.text,
+                                    whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                                    {rec.artist} — {rec.title}
+                                  </div>
+                                  <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginTop:2 }}>
+                                    {rec.bpm} BPM · {rec.reason}
+                                  </div>
+                                </div>
+                                <SDButton ghost onClick={() => addToWishlist(rec)} disabled={added}
+                                  style={{ fontSize:11, padding:'4px 10px', flexShrink:0, opacity:added ? 0.5 : 1 }}>
+                                  {added ? '✓ Added' : '+ Wishlist'}
+                                </SDButton>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+          </div>
+        </Card>
+
+        {/* Gig History — past gigs only, condensed */}
+        {gigHistory !== null && gigHistory.filter(g => new Date(g.gigDate) < new Date()).length > 0 && (
+          <Card style={{ marginBottom:16 }}>
+            <CardHeader title="Gig History" action={
+              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>View All</SDButton>
             }/>
             <div style={{ padding:'16px' }}>
-              {recentSets === null ? (
-                <div style={{ padding:'32px 16px', textAlign:'center',
-                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
-              ) : recentSets.length === 0 ? (
-                <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>
-                    No sets yet
+              {gigHistory.filter(g => new Date(g.gigDate) < new Date()).slice(0, 5).map((g, i, arr) => (
+                <div key={g.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                  padding:'14px 8px', borderBottom: i < arr.length - 1 ? `1px solid ${SD.border}` : 'none', gap:16 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600, color:SD.text, marginBottom:3,
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.gigName}</div>
+                    {g.venue && <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{g.venue}</div>}
                   </div>
-                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>
-                </div>
-              ) : recentSets.map((s) => (
-                <div key={s.id} onClick={() => router.push('/history')}
-                  style={{ padding:'18px 16px', marginBottom:8,
-                    background:SD.bg, border:`1px solid ${SD.border}`,
-                    borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = SD.borderMid)}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = SD.border)}>
-                  <div style={{ display:'flex', alignItems:'flex-start',
-                    justifyContent:'space-between', gap:8 }}>
-                    <div>
-                      <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600,
-                        color:SD.text, marginBottom:6 }}>{s.name}</div>
-                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.genre}</div>
-                    </div>
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
-                  </div>
-                  <div style={{ display:'flex', gap:16, marginTop:14 }}>
-                    {s.trackCount > 0 && (
-                      <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.trackCount} tracks</span>
-                    )}
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.duration}</span>
+                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>
+                    {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
                   </div>
                 </div>
               ))}
             </div>
           </Card>
-        </div>
-
+        )}
 
       </div>
     </div>
