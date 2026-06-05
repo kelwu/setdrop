@@ -171,8 +171,10 @@ export function Dashboard() {
   async function loadTrending() {
     setTrendingLoading(true);
     setTrendingError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 115_000);
     try {
-      const res = await fetch('/api/dashboard/trending-charts');
+      const res = await fetch('/api/dashboard/trending-charts', { signal: controller.signal });
       if (!res.ok) {
         const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
         throw new Error(body.error ?? `Server error ${res.status}`);
@@ -181,9 +183,14 @@ export function Dashboard() {
       if (data.error) throw new Error(data.error);
       setTrendingData(data.results ?? []);
     } catch (err) {
-      console.error('[trending]', err);
-      setTrendingError(err instanceof Error ? err.message : 'Failed to load');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setTrendingError('Chart data is taking a while — try again in a moment');
+      } else {
+        console.error('[trending]', err);
+        setTrendingError(err instanceof Error ? err.message : 'Failed to load');
+      }
     } finally {
+      clearTimeout(timeout);
       setTrendingLoading(false);
     }
   }
