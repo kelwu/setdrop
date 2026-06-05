@@ -353,36 +353,32 @@ export function Dashboard() {
 
         {/* Status strip */}
         <div style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4,
-          padding:'12px 24px', marginBottom:16,
+          padding:'16px 24px', marginBottom:16,
           display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
           {libraryStats ? (
             <>
-              <div style={{ display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
-                <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
-                    display:'inline-block', boxShadow:`0 0 6px ${SD.green}` }}/>
-                  <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
-                    {libraryStats.totalTracks.toLocaleString()} tracks
-                  </span>
-                </span>
-                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
-                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
-                  {wishlistItems?.length ?? 0} wishlist
-                </span>
-                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
-                <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>
-                  {recentSets?.filter(s => {
-                    const d = new Date(s.createdAtRaw), now = new Date();
-                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-                  }).length ?? 0} sets this month
-                </span>
+              <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+                {[
+                  { value: libraryStats.totalTracks.toLocaleString(), label: 'tracks', green: true },
+                  { value: String(wishlistItems?.length ?? 0), label: 'wishlist' },
+                  { value: String(recentSets?.filter(s => {
+                      const d = new Date(s.createdAtRaw), now = new Date();
+                      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    }).length ?? 0), label: 'sets this month' },
+                ].map(({ value, label, green }) => (
+                  <div key={label} style={{ display:'flex', alignItems:'baseline', gap:5 }}>
+                    {green && <span style={{ width:6, height:6, borderRadius:'50%', background:SD.green,
+                      display:'inline-block', boxShadow:`0 0 6px ${SD.green}`, marginBottom:2 }}/>}
+                    <span style={{ fontFamily:SD.display, fontSize:28, letterSpacing:2,
+                      color:SD.text, lineHeight:1 }}>{value}</span>
+                    <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+                      letterSpacing:1, textTransform:'uppercase' }}>{label}</span>
+                  </div>
+                ))}
                 {libraryStats.lastSynced && (
-                  <>
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.border }}>·</span>
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
-                      Synced {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
-                    </span>
-                  </>
+                  <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, letterSpacing:.5 }}>
+                    Synced {new Date(libraryStats.lastSynced).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
+                  </span>
                 )}
               </div>
               <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:11, padding:'5px 12px' }}>
