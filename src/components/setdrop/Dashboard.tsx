@@ -302,9 +302,14 @@ export function Dashboard() {
             <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
               margin:0, color:SD.text, lineHeight:1 }}>{greeting()}, {djName}</h1>
           </div>
-          <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
-            + Build New Set
-          </SDButton>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            <SDButton ghost onClick={() => router.push('/id')} style={{ fontSize:13, padding:'13px 24px' }}>
+              ID a Track
+            </SDButton>
+            <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
+              + Build New Set
+            </SDButton>
+          </div>
         </div>
 
         {/* Onboarding — shown until library uploaded + first set built */}
