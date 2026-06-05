@@ -1,22 +1,71 @@
 export const SD = {
+  // ─── Surfaces ────────────────────────────────────────────────────────────
   bg: '#0A0A0A',
   surface: '#141414',
   surface2: '#1A1A1A',
   surface3: '#222222',
   border: 'rgba(255,255,255,0.07)',
   borderMid: 'rgba(255,255,255,0.12)',
+
+  // ─── Brand / accent ──────────────────────────────────────────────────────
+  // Use accent for PRIMARY ACTIONS and wishlist-related UI only.
+  // Do not use as default text color or generic decoration.
   accent: '#F5A623',
   accentDim: 'rgba(245,166,35,0.12)',
   accentHover: '#FFBA45',
+
+  // ─── Text ────────────────────────────────────────────────────────────────
   text: '#F0F0F0',
   textSec: '#ADADAD',
   textMuted: '#909090',
+
+  // ─── Semantic colors (use these by intent, not by color name) ────────────
+  // success: library health, "synced", "in library", confirmation states
+  success: '#22C55E',
+  successDim: 'rgba(34,197,94,0.13)',
+  // warning: yellow flags, "limited match", caution
+  warning: '#EAB308',
+  warningDim: 'rgba(234,179,8,0.13)',
+  // danger: errors, destructive actions, "not found"
+  danger: '#EF4444',
+  dangerDim: 'rgba(239,68,68,0.13)',
+  // info: secondary state, neutral notifications
+  info: '#3B82F6',
+  infoDim: 'rgba(59,130,246,0.13)',
+
+  // ─── Legacy color aliases (kept for back-compat; prefer semantic names) ──
   green: '#22C55E',
   greenDim: 'rgba(34,197,94,0.13)',
   yellow: '#EAB308',
   yellowDim: 'rgba(234,179,8,0.13)',
   red: '#EF4444',
   redDim: 'rgba(239,68,68,0.13)',
+
+  // ─── Spacing scale (use sN tokens instead of magic numbers) ──────────────
+  s1: 4, s2: 8, s3: 12, s4: 16, s5: 20, s6: 24, s7: 32, s8: 48, s9: 64,
+
+  // ─── Type scale ──────────────────────────────────────────────────────────
+  // t10: micro labels, eyebrows
+  // t11: small mono labels, badges
+  // t12: standard mono body text, default UI
+  // t13: emphasized mono / small headings within cards
+  // t14: nav links, buttons
+  // t16: card titles, larger labels
+  // t20: section headings (small)
+  // t28: medium display (status strip numbers, gig countdown)
+  // t40: large display (Track ID page H1)
+  // t52: hero display (Dashboard greeting)
+  // t72: extra-large display (large stat numbers, special use)
+  t10: 10, t11: 11, t12: 12, t13: 13, t14: 14, t16: 16, t20: 20, t28: 28, t40: 40, t52: 52, t72: 72,
+
+  // ─── Border radius scale ─────────────────────────────────────────────────
+  // r1: badges, pills, tightest corners
+  // r2: small cards, buttons inside cards
+  // r3: standard cards, surface containers
+  // r4: featured cards, modals
+  r1: 2, r2: 3, r3: 4, r4: 6,
+
+  // ─── Fonts ───────────────────────────────────────────────────────────────
   mono: "var(--font-mono), monospace",
   display: "var(--font-display), sans-serif",
   body: "var(--font-body), sans-serif",
