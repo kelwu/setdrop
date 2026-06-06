@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { GeneratedSetlist, SetlistTrack } from '@/lib/agents/types';
-import { SDButton } from './shared';
+import { SDButton, PageHeader, LoadingState, Badge } from './shared';
 
 interface DbSetlist {
   id: string;
@@ -115,24 +115,18 @@ export function SetlistHistory() {
     <div style={{ background: SD.bg, minHeight: '100vh', paddingTop: 56, color: SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth: 900, margin: '0 auto', padding: '48px 40px' }}>
 
-        <div style={{ marginBottom: 36, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-              Set History
-            </div>
-            <h1 style={{ fontFamily: SD.display, fontSize: 52, letterSpacing: 4, margin: 0, color: SD.text, lineHeight: 1 }}>
-              YOUR SETS
-            </h1>
-          </div>
-          <SDButton onClick={() => router.push('/builder')} style={{ fontSize: 13, padding: '13px 32px' }}>
-            + Build New Set
-          </SDButton>
-        </div>
+        <PageHeader
+          eyebrow="Set History"
+          title="YOUR SETS"
+          actions={
+            <SDButton onClick={() => router.push('/builder')} style={{ fontSize: 13, padding: '13px 32px' }}>
+              + Build New Set
+            </SDButton>
+          }
+        />
 
         {sets === null ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
-            Loading...
-          </div>
+          <LoadingState />
         ) : sets.length === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center' }}>
             <div style={{ fontFamily: SD.display, fontSize: 48, letterSpacing: 3, color: SD.textMuted, marginBottom: 16 }}>
@@ -152,11 +146,11 @@ export function SetlistHistory() {
               {items.map(row => (
                 <div key={row.id} style={{ marginBottom: 8 }}>
                   {confirmDeleteId === row.id ? (
-                    <div style={{ padding: '16px 20px', background: 'rgba(220,50,50,0.06)', border: '1px solid rgba(220,50,50,0.25)', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ padding: '16px 20px', background: SD.dangerDim, border: `1px solid ${SD.danger}40`, borderRadius: SD.r3, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.text, flex: 1 }}>Delete &ldquo;{row.name}&rdquo;?</span>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <SDButton onClick={() => handleDelete(row.id)}
-                          style={{ fontSize: 12, background: 'rgba(220,50,50,0.15)', borderColor: 'rgba(220,50,50,0.4)', color: '#E05555', opacity: deletingId === row.id ? 0.6 : 1 }}>
+                          style={{ fontSize: 12, background: SD.danger + '26', borderColor: SD.danger + '66', color: SD.danger, opacity: deletingId === row.id ? 0.6 : 1 }}>
                           {deletingId === row.id ? 'Deleting...' : 'Delete'}
                         </SDButton>
                         <SDButton ghost onClick={() => setConfirmDeleteId(null)} style={{ fontSize: 12 }}>Cancel</SDButton>
@@ -187,11 +181,7 @@ export function SetlistHistory() {
                               style={{ cursor: 'text' }}
                             >{row.name}</span>
                           )}
-                          {row.is_public && (
-                            <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.green, background: SD.greenDim, border: `1px solid ${SD.green}44`, borderRadius: 2, padding: '2px 6px', letterSpacing: 1, textTransform: 'uppercase' }}>
-                              Public
-                            </span>
-                          )}
+                          {row.is_public && <Badge variant="success">Public</Badge>}
                         </div>
                         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                           <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{genre(row)}</span>
