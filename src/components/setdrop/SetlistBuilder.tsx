@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
-import { SDButton, GenrePillSelector, SDInput, AgentProgress } from './shared';
+import { SDButton, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 
 export function SetlistBuilder() {
   const router = useRouter();
@@ -426,12 +426,7 @@ export function SetlistBuilder() {
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
-        <div style={{ marginBottom:32 }}>
-          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
-            letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>Setlist Builder</div>
-          <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
-            margin:0, color:SD.text, lineHeight:1 }}>BUILD YOUR SET</h1>
-        </div>
+        <PageHeader eyebrow="Setlist Builder" title="BUILD YOUR SET" />
 
         {/* Library status banner */}
         <div style={{ marginBottom:24, padding:'12px 16px', borderRadius:3,
