@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
-import { SDButton } from './shared';
+import { SDButton, PageHeader, Card, CardHeader, Tabs, Badge, EmptyState, LoadingState } from './shared';
 
 interface LibraryStats {
   totalTracks: number;
@@ -271,46 +271,24 @@ export function Dashboard() {
     return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
   }
 
-  function Card({ children, style: extra = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
-    return (
-      <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
-        borderRadius:4, ...extra }}>{children}</div>
-    );
-  }
-
-  function CardHeader({ title, action }: { title: string; action?: React.ReactNode }) {
-    return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'18px 24px', borderBottom:`1px solid ${SD.border}` }}>
-        <span style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
-          textTransform:'uppercase', color:SD.textSec }}>{title}</span>
-        {action}
-      </div>
-    );
-  }
-
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom:40, display:'flex', alignItems:'flex-end',
-          justifyContent:'space-between', flexWrap:'wrap', gap:16 }}>
-          <div>
-            <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
-              letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Dashboard</div>
-            <h1 style={{ fontFamily:SD.display, fontSize:52, letterSpacing:4,
-              margin:0, color:SD.text, lineHeight:1 }}>{greeting()}, {djName}</h1>
-          </div>
-          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-            <SDButton ghost onClick={() => router.push('/id')} style={{ fontSize:13, padding:'13px 24px' }}>
-              ID a Track
-            </SDButton>
-            <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
-              + Build New Set
-            </SDButton>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Dashboard"
+          title={`${greeting()}, ${djName}`}
+          actions={
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              <SDButton ghost onClick={() => router.push('/id')} style={{ fontSize:13, padding:'13px 24px' }}>
+                ID a Track
+              </SDButton>
+              <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
+                + Build New Set
+              </SDButton>
+            </div>
+          }
+        />
 
         {/* Onboarding — shown until library uploaded + first set built */}
         {!onboardingDismissed && (libraryStats === null || (recentSets !== null && recentSets.length === 0)) && (
@@ -468,13 +446,12 @@ export function Dashboard() {
             }/>
             <div style={{ padding:'16px' }}>
               {recentSets === null ? (
-                <div style={{ padding:'32px 16px', textAlign:'center',
-                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
+                <LoadingState />
               ) : recentSets.length === 0 ? (
-                <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>No sets yet</div>
-                  <SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>
-                </div>
+                <EmptyState
+                  title="No sets yet"
+                  cta={<SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>}
+                />
               ) : recentSets.map(s => (
                 <div key={s.id} onClick={() => router.push('/history')}
                   style={{ padding:'18px 16px', marginBottom:8, background:SD.bg,
@@ -505,13 +482,12 @@ export function Dashboard() {
             }/>
             <div style={{ padding:'16px' }}>
               {wishlistItems === null ? (
-                <div style={{ padding:'32px 16px', textAlign:'center',
-                  fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading...</div>
+                <LoadingState />
               ) : wishlistItems.length === 0 ? (
-                <div style={{ padding:'32px 16px', textAlign:'center' }}>
-                  <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, marginBottom:12 }}>No wishlist tracks yet</div>
-                  <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>
-                </div>
+                <EmptyState
+                  title="No wishlist tracks yet"
+                  cta={<SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>}
+                />
               ) : wishlistItems.map((t, i) => (
                 <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
                   padding:'12px 8px', borderBottom: i < wishlistItems.length - 1 ? `1px solid ${SD.border}` : 'none' }}>
@@ -542,35 +518,31 @@ export function Dashboard() {
 
         {/* Discover — tabbed Trending + Library Gaps */}
         <Card style={{ marginBottom:16 }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-            padding:'0 24px', borderBottom:`1px solid ${SD.border}` }}>
-            <div style={{ display:'flex' }}>
-              {(['trending', 'gaps'] as const).map(tab => (
-                <button key={tab} onClick={() => setDiscoverTab(tab)} style={{
-                  fontFamily:SD.mono, fontSize:12, letterSpacing:1.5, textTransform:'uppercase',
-                  padding:'18px 20px 16px', background:'none', border:'none', cursor:'pointer',
-                  color: discoverTab === tab ? SD.text : SD.textMuted,
-                  borderBottom: discoverTab === tab ? `2px solid ${SD.accent}` : '2px solid transparent',
-                  transition:'color .15s',
-                }}>
-                  {tab === 'trending' ? 'Trending' : 'Library Gaps'}
-                </button>
-              ))}
-            </div>
-            {discoverTab === 'trending' && trendingData && trendingData.length > 0 && (() => {
-              const oldest = trendingData.reduce((a, b) => a.fetchedAt < b.fetchedAt ? a : b).fetchedAt;
-              const diffH = Math.round((Date.now() - new Date(oldest).getTime()) / 3600000);
-              return <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>
-                {diffH < 1 ? 'Just updated' : `Updated ${diffH}h ago`}
-              </span>;
-            })()}
-            {discoverTab === 'gaps' && (
-              <SDButton ghost onClick={analyzeLibrary} disabled={gapLoading || !libraryStats}
-                style={{ fontSize:12, padding:'5px 12px' }}>
-                {gapLoading ? 'Analyzing...' : 'Analyze Library'}
-              </SDButton>
-            )}
-          </div>
+          <Tabs
+            tabs={[{ id: 'trending', label: 'Trending' }, { id: 'gaps', label: 'Library Gaps' }]}
+            value={discoverTab}
+            onChange={(id) => setDiscoverTab(id as 'trending' | 'gaps')}
+            action={
+              discoverTab === 'trending' && trendingData && trendingData.length > 0
+                ? (() => {
+                    const oldest = trendingData.reduce((a, b) => a.fetchedAt < b.fetchedAt ? a : b).fetchedAt;
+                    const diffH = Math.round((Date.now() - new Date(oldest).getTime()) / 3600000);
+                    return (
+                      <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
+                        {diffH < 1 ? 'Just updated' : `Updated ${diffH}h ago`}
+                      </span>
+                    );
+                  })()
+                : discoverTab === 'gaps'
+                ? (
+                    <SDButton ghost onClick={analyzeLibrary} disabled={gapLoading || !libraryStats}
+                      style={{ fontSize: 12, padding: '5px 12px' }}>
+                      {gapLoading ? 'Analyzing...' : 'Analyze Library'}
+                    </SDButton>
+                  )
+                : null
+            }
+          />
 
           <div style={{ padding:'20px 24px' }}>
             {discoverTab === 'trending' && (
@@ -657,14 +629,12 @@ export function Dashboard() {
                 <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
                   {gapMeta && <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres</div>}
                   {gapReport.map((gap, gi) => {
-                    const sevColor = gap.severity === 'high' ? '#ef4444' : gap.severity === 'medium' ? SD.accent : SD.textSec;
-                    const sevBg = gap.severity === 'high' ? '#ef444418' : gap.severity === 'medium' ? SD.accentDim : SD.surface2;
+                    const sevVariant: 'danger' | 'warning' | 'default' =
+                      gap.severity === 'high' ? 'danger' : gap.severity === 'medium' ? 'warning' : 'default';
                     return (
                       <div key={gi}>
                         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                          <span style={{ fontFamily:SD.mono, fontSize:10, fontWeight:700, textTransform:'uppercase',
-                            letterSpacing:1.5, color:sevColor, background:sevBg,
-                            border:`1px solid ${sevColor}44`, borderRadius:2, padding:'2px 7px' }}>{gap.severity}</span>
+                          <Badge variant={sevVariant}>{gap.severity}</Badge>
                           <span style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text }}>{gap.genre}</span>
                           <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{gap.bpmRange} BPM</span>
                           <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>({gap.currentCount} {gap.currentCount === 1 ? 'track' : 'tracks'})</span>
