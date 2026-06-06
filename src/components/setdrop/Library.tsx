@@ -487,6 +487,7 @@ export function Library() {
   const [bpmMin, setBpmMin] = useState('');
   const [bpmMax, setBpmMax] = useState('');
   const [uploadedTracks, setUploadedTracks] = useState<LibraryTrack[] | null>(null);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -534,7 +535,7 @@ export function Library() {
           if (raw) setUploadedTracks(JSON.parse(raw));
         } catch { /* ignore corrupted data */ }
       }
-    });
+    }).finally(() => setLibraryLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -909,8 +910,16 @@ export function Library() {
           />
         )}
 
-        {/* Upload zone — shown when toggled or when no library yet, hidden during upload */}
-        {uploadStage === 'idle' && (showUpload || (!uploadedTracks && tab === 'library')) && (
+        {/* Loading state — shown while the initial library fetch is in flight */}
+        {uploadStage === 'idle' && !libraryLoaded && tab === 'library' && (
+          <div style={{ padding:'80px 0', textAlign:'center',
+            fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
+            Loading your library...
+          </div>
+        )}
+
+        {/* Upload zone — shown when toggled OR when load completed and there's no library, hidden during upload */}
+        {uploadStage === 'idle' && libraryLoaded && (showUpload || (!uploadedTracks && tab === 'library')) && (
           <UploadZone
             onFile={handleFile}
             dragOver={dragOver}
