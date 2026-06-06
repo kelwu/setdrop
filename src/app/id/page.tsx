@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SD } from '@/lib/setdrop/constants';
-import { SDButton } from '@/components/setdrop/shared';
+import { SDButton, PageHeader, Card, EmptyState } from '@/components/setdrop/shared';
 import type { AcrCloudMatch } from '@/lib/setdrop/acrcloud';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'result' | 'no-match' | 'quota';
@@ -169,24 +169,20 @@ export default function TrackIdPage() {
     <div style={{ background: SD.bg, minHeight: '100vh', paddingTop: 56, color: SD.text }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '48px 24px' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted,
-            letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Track ID</div>
-          <h1 style={{ fontFamily: SD.display, fontSize: 40, letterSpacing: 3,
-            margin: 0, color: SD.text, lineHeight: 1 }}>ID A TRACK</h1>
-          <p style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec, marginTop: 12 }}>
-            Hold your phone near a speaker. We&apos;ll identify it in seconds.
-          </p>
-        </div>
+        <PageHeader
+          size="medium"
+          eyebrow="Track ID"
+          title="ID A TRACK"
+          subtitle="Hold your phone near a speaker. We'll identify it in seconds."
+        />
 
         {/* ── Idle ── */}
         {stage === 'idle' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {error && (
-              <div style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444',
-                background: '#ef444418', border: '1px solid #ef444433',
-                borderRadius: 3, padding: '10px 14px', marginBottom: 4 }}>
+              <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.danger,
+                background: SD.dangerDim, border: `1px solid ${SD.danger}33`,
+                borderRadius: SD.r2, padding: '10px 14px', marginBottom: 4 }}>
                 {error}
               </div>
             )}
@@ -243,8 +239,10 @@ export default function TrackIdPage() {
 
         {/* ── Recording ── */}
         {stage === 'recording' && (
-          <div style={{ background: SD.surface, border: `1px solid ${SD.accent}44`,
-            borderRadius: 4, padding: '40px 24px', textAlign: 'center' }}>
+          <Card
+            padding="40px 24px"
+            style={{ border: `1px solid ${SD.accent}44`, textAlign: 'center' }}
+          >
             {/* Waveform animation */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
               gap: 4, height: 40, marginBottom: 24 }}>
@@ -274,13 +272,12 @@ export default function TrackIdPage() {
             >
               {canStop ? 'Stop & Identify' : `Wait ${MIN_RECORD_S - elapsed}s...`}
             </SDButton>
-          </div>
+          </Card>
         )}
 
         {/* ── Processing ── */}
         {stage === 'processing' && (
-          <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
-            borderRadius: 4, padding: '60px 24px', textAlign: 'center' }}>
+          <Card padding="60px 24px" style={{ textAlign: 'center' }}>
             <div style={{ display: 'inline-block', width: 32, height: 32,
               border: `2px solid ${SD.border}`, borderTopColor: SD.accent,
               borderRadius: '50%', animation: 'sdSpin 0.8s linear infinite',
@@ -291,13 +288,13 @@ export default function TrackIdPage() {
             <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 8 }}>
               Usually 2 – 5 seconds
             </div>
-          </div>
+          </Card>
         )}
 
         {/* ── Result: Match ── */}
         {stage === 'result' && topMatch && (
           <div>
-            <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.green,
+            <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.success,
               letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
               ✓ Match found
             </div>
@@ -324,8 +321,7 @@ export default function TrackIdPage() {
             )}
 
             {/* Match card */}
-            <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
-              borderRadius: 4, padding: '20px 20px', marginBottom: 16 }}>
+            <Card padding="20px" style={{ marginBottom: 16 }}>
               <div style={{ fontFamily: SD.mono, fontSize: 16, fontWeight: 600,
                 color: SD.text, marginBottom: 4 }}>
                 {topMatch.title}
@@ -359,9 +355,9 @@ export default function TrackIdPage() {
               {/* Library / wishlist dedup */}
               {result?.alreadyInLibrary && (
                 <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 12,
-                  color: SD.green, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  color: SD.success, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%',
-                    background: SD.green, display: 'inline-block' }} />
+                    background: SD.success, display: 'inline-block' }} />
                   Already in your library
                 </div>
               )}
@@ -373,10 +369,10 @@ export default function TrackIdPage() {
                   Already in your wishlist
                 </div>
               )}
-            </div>
+            </Card>
 
             {saveError && (
-              <div style={{ fontFamily: SD.mono, fontSize: 12, color: '#ef4444', marginBottom: 12 }}>
+              <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.danger, marginBottom: 12 }}>
                 {saveError}
               </div>
             )}
@@ -416,40 +412,34 @@ export default function TrackIdPage() {
 
         {/* ── No Match ── */}
         {stage === 'no-match' && (
-          <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
-            borderRadius: 4, padding: '40px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec, marginBottom: 8 }}>
-              No match found
-            </div>
-            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, marginBottom: 28 }}>
-              Probably an unreleased track, promo, or dub.
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <SDButton onClick={reset}>Try Again</SDButton>
-              <SDButton ghost onClick={() => router.push('/library')}>Add Manually</SDButton>
-            </div>
-          </div>
+          <Card padding="20px 24px">
+            <EmptyState
+              title="No match found"
+              body="Probably an unreleased track, promo, or dub."
+              cta={
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <SDButton onClick={reset}>Try Again</SDButton>
+                  <SDButton ghost onClick={() => router.push('/library')}>Add Manually</SDButton>
+                </div>
+              }
+            />
+          </Card>
         )}
 
         {/* ── Quota Exhausted ── */}
         {stage === 'quota' && (
-          <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
-            borderRadius: 4, padding: '40px 24px', textAlign: 'center' }}>
-            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.text, marginBottom: 8 }}>
-              Out of free IDs this month
-            </div>
-            <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, marginBottom: 6 }}>
-              You&apos;ve used your {quotaInfo?.limit ?? 10} free IDs.
-            </div>
-            {quotaInfo?.resetsAt && (
-              <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, marginBottom: 28 }}>
-                Resets {new Date(quotaInfo.resetsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-              </div>
-            )}
-            <SDButton onClick={() => router.push('/account')}>
-              Upgrade to Pro — $12/mo
-            </SDButton>
-          </div>
+          <Card padding="20px 24px">
+            <EmptyState
+              title="Out of free IDs this month"
+              body={
+                `You've used your ${quotaInfo?.limit ?? 10} free IDs.` +
+                (quotaInfo?.resetsAt
+                  ? ` Resets ${new Date(quotaInfo.resetsAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.`
+                  : '')
+              }
+              cta={<SDButton onClick={() => router.push('/account')}>Upgrade to Pro — $12/mo</SDButton>}
+            />
+          </Card>
         )}
 
       </div>
