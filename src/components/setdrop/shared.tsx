@@ -230,6 +230,224 @@ export function SDButton({ children, onClick, href, small, ghost, disabled, full
   );
 }
 
+// ─── PageHeader ────────────────────────────────────────────────────────────
+// Eyebrow + display heading + optional subtitle + optional right-aligned actions.
+// `size: 'medium'` (40px) suits narrower pages like Track ID; `'large'` (52px) is the default for dashboard-style pages.
+interface PageHeaderProps {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+  size?: 'large' | 'medium';
+}
+export function PageHeader({ eyebrow, title, subtitle, actions, size = 'large' }: PageHeaderProps) {
+  const titleSize = size === 'large' ? SD.t52 : SD.t40;
+  const titleSpacing = size === 'large' ? 4 : 3;
+  return (
+    <div style={{
+      marginBottom: SD.s8, display: 'flex', alignItems: 'flex-end',
+      justifyContent: 'space-between', flexWrap: 'wrap', gap: SD.s4,
+    }}>
+      <div style={{ minWidth: 0 }}>
+        {eyebrow && (
+          <div style={{
+            fontFamily: SD.mono, fontSize: SD.t12, color: SD.textMuted,
+            letterSpacing: 2, textTransform: 'uppercase', marginBottom: SD.s2,
+          }}>{eyebrow}</div>
+        )}
+        <h1 style={{
+          fontFamily: SD.display, fontSize: titleSize, letterSpacing: titleSpacing,
+          margin: 0, color: SD.text, lineHeight: 1,
+        }}>{title}</h1>
+        {subtitle && (
+          <div style={{
+            fontFamily: SD.mono, fontSize: SD.t13, color: SD.textSec,
+            marginTop: SD.s3,
+          }}>{subtitle}</div>
+        )}
+      </div>
+      {actions}
+    </div>
+  );
+}
+
+// ─── Card / CardHeader ─────────────────────────────────────────────────────
+// Standard surface container. Pass `padding` only if children don't manage their own.
+// Most cards wrap a CardHeader plus an inner div with its own padding.
+interface CardProps {
+  children: React.ReactNode;
+  padding?: number | string;
+  style?: React.CSSProperties;
+}
+export function Card({ children, padding, style: extra = {} }: CardProps) {
+  return (
+    <div style={{
+      background: SD.surface,
+      border: `1px solid ${SD.border}`,
+      borderRadius: SD.r3,
+      ...(padding !== undefined ? { padding } : {}),
+      ...extra,
+    }}>{children}</div>
+  );
+}
+
+interface CardHeaderProps {
+  title: string;
+  action?: React.ReactNode;
+}
+export function CardHeader({ title, action }: CardHeaderProps) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '18px 24px', borderBottom: `1px solid ${SD.border}`,
+    }}>
+      <span style={{
+        fontFamily: SD.mono, fontSize: SD.t12, letterSpacing: 2,
+        textTransform: 'uppercase', color: SD.textSec,
+      }}>{title}</span>
+      {action}
+    </div>
+  );
+}
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+// Single tab implementation. Replaces Dashboard Discover tabs + Library page tabs.
+// `action` slot is for context (e.g. "Updated 3h ago" or an "Analyze" button) right of the tabs.
+export interface TabItem {
+  id: string;
+  label: string;
+}
+interface TabsProps {
+  tabs: TabItem[];
+  value: string;
+  onChange: (id: string) => void;
+  action?: React.ReactNode;
+}
+export function Tabs({ tabs, value, onChange, action }: TabsProps) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 24px', borderBottom: `1px solid ${SD.border}`,
+    }}>
+      <div style={{ display: 'flex' }}>
+        {tabs.map(tab => {
+          const on = value === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onChange(tab.id)}
+              style={{
+                fontFamily: SD.mono, fontSize: SD.t12, letterSpacing: 1.5,
+                textTransform: 'uppercase', padding: '18px 20px 16px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: on ? SD.text : SD.textMuted,
+                borderBottom: on ? `2px solid ${SD.accent}` : '2px solid transparent',
+                transition: 'color .15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+// ─── Badge ─────────────────────────────────────────────────────────────────
+// Use variant by INTENT, not color. `accent` = wishlist/primary; `success` = library health;
+// `warning` = caution; `danger` = errors/destructive; `info` = neutral notifications.
+type BadgeVariant = 'default' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
+interface BadgeProps {
+  children: React.ReactNode;
+  variant?: BadgeVariant;
+}
+export function Badge({ children, variant = 'default' }: BadgeProps) {
+  const palette: Record<BadgeVariant, { color: string; bg: string; border: string }> = {
+    default: { color: SD.textSec, bg: SD.surface2, border: SD.border },
+    accent:  { color: SD.accent,  bg: SD.accentDim,  border: SD.accent + '44' },
+    success: { color: SD.success, bg: SD.successDim, border: SD.success + '44' },
+    warning: { color: SD.warning, bg: SD.warningDim, border: SD.warning + '44' },
+    danger:  { color: SD.danger,  bg: SD.dangerDim,  border: SD.danger + '44' },
+    info:    { color: SD.info,    bg: SD.infoDim,    border: SD.info + '44' },
+  };
+  const p = palette[variant];
+  return (
+    <span style={{
+      fontFamily: SD.mono, fontSize: SD.t10, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: 1.5,
+      color: p.color, background: p.bg,
+      border: `1px solid ${p.border}`,
+      borderRadius: SD.r1, padding: '2px 7px',
+    }}>
+      {children}
+    </span>
+  );
+}
+
+// ─── EmptyState ────────────────────────────────────────────────────────────
+// Empty list / no-data state. Pass an SDButton or link as `cta`.
+interface EmptyStateProps {
+  icon?: React.ReactNode;
+  title: string;
+  body?: string;
+  cta?: React.ReactNode;
+}
+export function EmptyState({ icon, title, body, cta }: EmptyStateProps) {
+  return (
+    <div style={{
+      padding: '32px 16px', textAlign: 'center',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SD.s3,
+    }}>
+      {icon && <div style={{ marginBottom: SD.s2, opacity: 0.6 }}>{icon}</div>}
+      <div style={{ fontFamily: SD.mono, fontSize: SD.t13, color: SD.text }}>{title}</div>
+      {body && (
+        <div style={{
+          fontFamily: SD.body, fontSize: SD.t13, color: SD.textMuted,
+          maxWidth: 320, lineHeight: 1.5,
+        }}>{body}</div>
+      )}
+      {cta && <div style={{ marginTop: SD.s2 }}>{cta}</div>}
+    </div>
+  );
+}
+
+// ─── LoadingState ──────────────────────────────────────────────────────────
+// `spinner` mode renders a 32px ring animation; without it, just centered muted text.
+// Uses the `sdSpin` keyframe defined in globals.css.
+interface LoadingStateProps {
+  message?: string;
+  spinner?: boolean;
+}
+export function LoadingState({ message = 'Loading...', spinner = false }: LoadingStateProps) {
+  if (spinner) {
+    return (
+      <div style={{
+        padding: '32px 16px', textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SD.s3,
+      }}>
+        <div style={{
+          width: 32, height: 32,
+          border: `2px solid ${SD.border}`, borderTopColor: SD.accent,
+          borderRadius: '50%', animation: 'sdSpin 0.8s linear infinite',
+        }} />
+        {message && (
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t13, color: SD.textMuted }}>
+            {message}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div style={{
+      padding: '32px 16px', textAlign: 'center',
+      fontFamily: SD.mono, fontSize: SD.t13, color: SD.textMuted,
+    }}>{message}</div>
+  );
+}
+
 // ─── ConfidenceBadge ───────────────────────────────────────────────────────
 export function ConfidenceBadge({ status, label, href }: { status: ConfidenceStatus; label: string; href?: string }) {
   const c = { green:SD.green, yellow:SD.yellow, red:SD.red }[status];
