@@ -123,17 +123,28 @@ SetDrop's unique angle: **the complete pre-gig system end-to-end** + gig context
 ## Recent Commits
 
 ```
+03eefc5 feat(design-system): Phase 1.1 — extend SD with spacing, type, semantic-color, and radius scales
+435ea70 docs: update setdrop-context.md with strategic pivot — pre-gig system focus, live mode parked, co-pilot principle
 f9c3c23 chore: add nightly context updater GitHub Action + initial setdrop-context.md
 69302df feat: give Track ID a proper home — nav link, mobile nav, dashboard CTA
-afe0f15 fix: AbortController timeout on trending fetch
+afe0f15 fix: add AbortController timeout to trending fetch — graceful error on slow dev server
 f2f423b fix: restore visual weight in status strip — 28px display numbers
 2c8c52f feat: dashboard UI refresh — status strip, next gig widget, tabbed discover
-80f5a44 feat: Track ID — mic + file upload via ACRCloud
-e54829e fix: low-severity issues from Opus final review
+c2395f7 chore: remove debug logging from acrcloud
+af25333 debug: add ACRCloud URL and response logging
+d85baad fix: strip protocol from ACRCLOUD_HOST, bump trending-charts timeout
+80f5a44 feat: Track ID — identify tracks via microphone or file upload
+e54829e fix: low-severity issues from final review
 aa123c0 fix: library save atomicity, enrichment credit cap, Spotify batch insert
-fc760aa fix: critical Stripe webhook RLS bug, account delete safety
+fc760aa fix: critical billing bug, account delete safety, and UX improvements
+43f1337 fix: surface actual error message from trending-charts 500 response
+f1d9d0e fix: remove web_search from analyze-gaps to eliminate 504 timeout
+630bca2 fix: 504 timeout and JSON parse crash on trending-charts and analyze-gaps
+2da3dd3 docs: add YouTube episode build brief with full feature breakdown and stack diagram
+bdc64ef feat: Trending by Genre dashboard card with genre-aware chart sources
+4e79aab fix: use claude-sonnet-4-6 for analyze-gaps — haiku does not support web_search + custom tools together
 ```
 
 ---
 
-*Last updated: 2026-06-05*
+*Last updated: 2026-06-06*
