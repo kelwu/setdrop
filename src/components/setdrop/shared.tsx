@@ -316,6 +316,7 @@ export function CardHeader({ title, action }: CardHeaderProps) {
 export interface TabItem {
   id: string;
   label: string;
+  count?: number;
 }
 interface TabsProps {
   tabs: TabItem[];
@@ -346,6 +347,11 @@ export function Tabs({ tabs, value, onChange, action }: TabsProps) {
               }}
             >
               {tab.label}
+              {tab.count !== undefined && (
+                <span style={{ marginLeft: 8, color: on ? SD.accent : SD.textMuted }}>
+                  ({tab.count})
+                </span>
+              )}
             </button>
           );
         })}

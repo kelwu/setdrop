@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
-import { SDButton, SDInput, ConfidenceBadge, EnergyDot } from './shared';
+import { SDButton, SDInput, ConfidenceBadge, EnergyDot, Tabs } from './shared';
 
 
 function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
@@ -827,23 +827,6 @@ export function Library() {
     });
   }, [uploadedTracks, filteredRaw, allTracks, search, bpmMin, bpmMax, tab]);
 
-  function TabBtn({ id, label, count }: { id: string; label: string; count: number }) {
-    return (
-      <button onClick={() => setTab(id)} style={{
-        fontFamily:SD.mono, fontSize:13, letterSpacing:1.5, textTransform:'uppercase',
-        padding:'10px 24px', border:'none', cursor:'pointer',
-        background: tab === id ? SD.surface2 : 'transparent',
-        color: tab === id ? SD.text : SD.textMuted,
-        borderBottom: tab === id ? `2px solid ${SD.accent}` : '2px solid transparent',
-        transition:'all .15s',
-      }}>
-        {label}
-        <span style={{ marginLeft:8, fontFamily:SD.mono, fontSize:13,
-          color: tab === id ? SD.accent : SD.textMuted }}>({count})</span>
-      </button>
-    );
-  }
-
   const cols = tab === 'wishlist' ? '32px 1fr 64px 48px 64px 1fr 80px' : '32px 1fr 64px 48px 64px 80px 80px';
   const headers = ['#','Track','BPM','Key','Energy',
     tab === 'wishlist' ? 'Stores' : 'Date Added',
@@ -931,17 +914,16 @@ export function Library() {
         )}
 
         {/* Tabs */}
-        <div style={{ borderBottom:`1px solid ${SD.border}`, marginBottom:28 }}>
-          <TabBtn id="library" label="In Library" count={allTracks.length} />
-          <TabBtn id="wishlist" label="Wishlist" count={wishlistTracks.length} />
-          <button onClick={() => setTab('wordplay')} style={{
-            fontFamily:SD.mono, fontSize:13, letterSpacing:1.5, textTransform:'uppercase',
-            padding:'10px 24px', border:'none', cursor:'pointer',
-            background: tab === 'wordplay' ? SD.surface2 : 'transparent',
-            color: tab === 'wordplay' ? SD.text : SD.textMuted,
-            borderBottom: tab === 'wordplay' ? `2px solid ${SD.accent}` : '2px solid transparent',
-            transition:'all .15s',
-          }}>Wordplay</button>
+        <div style={{ marginBottom:28 }}>
+          <Tabs
+            tabs={[
+              { id: 'library', label: 'In Library', count: allTracks.length },
+              { id: 'wishlist', label: 'Wishlist', count: wishlistTracks.length },
+              { id: 'wordplay', label: 'Wordplay' },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
         </div>
 
         {/* Filters */}
