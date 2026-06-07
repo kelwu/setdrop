@@ -142,6 +142,7 @@ export function SetlistOutput() {
   const [libraryOnly, setLibraryOnly] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [making, setMaking] = useState(false);
+  const [publishedFlash, setPublishedFlash] = useState(false);
   const [showGigForm, setShowGigForm] = useState(false);
   const [gigVenue, setGigVenue] = useState('');
   const [gigDate, setGigDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -182,7 +183,9 @@ export function SetlistOutput() {
       setIsPublic(true);
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      setPublishedFlash(true);
       setTimeout(() => setCopied(false), 3000);
+      setTimeout(() => setPublishedFlash(false), 8000);
     } finally {
       setMaking(false);
     }
@@ -564,8 +567,8 @@ export function SetlistOutput() {
             {displayTracks.map(t => <TrackRow key={t.pos} track={t} />)}
           </div>
 
-          {/* Sidebar */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12, position:'sticky', top:72 }}>
+          {/* Sidebar — sticky on desktop, static on mobile */}
+          <div className="sd-sticky-on-desktop" style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`,
               borderRadius:4, padding:'20px 16px 10px', overflow:'hidden' }}>
               <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
@@ -575,7 +578,9 @@ export function SetlistOutput() {
               </div>
             </div>
 
-            <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {/* Stat grid kept 2x2 on mobile (not using sd-grid-2 since the page-level
+                grid already collapsed; collapsing again would stack 4 boxes vertically) */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               <StatBox value={avgBpm} label="Avg BPM" />
               <StatBox value={displayTracks.length} label="Tracks" />
               <StatBox value={keys.length} label="Keys used" />
@@ -638,6 +643,23 @@ export function SetlistOutput() {
                         style={{ fontSize:12, opacity: making ? 0.6 : 1 }}>
                         {making ? 'Publishing...' : 'Make Public + Copy Link'}
                       </SDButton>
+                    )}
+                    {publishedFlash && (
+                      <div style={{
+                        display:'flex', alignItems:'center', justifyContent:'space-between',
+                        gap:8, padding:'8px 12px',
+                        background:SD.successDim, border:`1px solid ${SD.success}44`,
+                        borderRadius:SD.r2,
+                      }}>
+                        <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.success, letterSpacing:.5 }}>
+                          ✓ Live on Explore
+                        </span>
+                        <span onClick={() => router.push('/explore?highlight=' + (setlist?.dbSlug ?? ''))}
+                          style={{ fontFamily:SD.mono, fontSize:11, color:SD.success, cursor:'pointer',
+                            textDecoration:'underline', letterSpacing:.5 }}>
+                          View →
+                        </span>
+                      </div>
                     )}
                     {setlist?.dbSlug && (
                       <SDButton ghost full onClick={() => router.push('/set/' + setlist.dbSlug)} style={{ fontSize:12 }}>
