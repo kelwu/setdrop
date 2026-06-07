@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { SD, GENRES } from '@/lib/setdrop/constants';
-import { SDButton } from './shared';
+import { SDButton, PageHeader, LoadingState, Badge } from './shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,22 +77,8 @@ function SetCard({ set, onLike }: { set: ExploreSet; onLike: (id: string) => voi
     >
       {/* Genre + Slot badges */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {set.primaryGenre && (
-          <span style={{
-            fontFamily: SD.mono, fontSize: 11, letterSpacing: 1.2,
-            textTransform: 'uppercase', padding: '3px 8px',
-            background: SD.accentDim, color: SD.accent,
-            border: `1px solid ${SD.accent}33`, borderRadius: 2,
-          }}>{set.primaryGenre}</span>
-        )}
-        {set.lineupSlot && (
-          <span style={{
-            fontFamily: SD.mono, fontSize: 11, letterSpacing: 1.2,
-            textTransform: 'uppercase', padding: '3px 8px',
-            background: SD.surface3, color: SD.textSec,
-            border: `1px solid ${SD.border}`, borderRadius: 2,
-          }}>{set.lineupSlot}</span>
-        )}
+        {set.primaryGenre && <Badge variant="accent">{set.primaryGenre}</Badge>}
+        {set.lineupSlot && <Badge>{set.lineupSlot}</Badge>}
       </div>
 
       {/* Set name */}
@@ -281,15 +267,7 @@ export function Explore() {
     <div style={{ background: SD.bg, minHeight: '100vh', paddingTop: 56, color: SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 40px' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-            Community
-          </div>
-          <h1 style={{ fontFamily: SD.display, fontSize: 52, letterSpacing: 4, margin: 0, color: SD.text, lineHeight: 1 }}>
-            DISCOVER
-          </h1>
-        </div>
+        <PageHeader eyebrow="Community" title="DISCOVER" />
 
         {/* ── Trending Tracks ── */}
         <div style={{ marginBottom: 56 }}>
@@ -314,9 +292,7 @@ export function Explore() {
           </div>
 
           {trendingLoading ? (
-            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, padding: '24px 0' }}>
-              Loading...
-            </div>
+            <LoadingState />
           ) : trending.length === 0 ? (
             <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, padding: '24px 0' }}>
               No public sets yet — be the first to share one.
@@ -399,9 +375,7 @@ export function Explore() {
 
           {/* Grid */}
           {setsLoading && sets.length === 0 ? (
-            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, padding: '40px 0' }}>
-              Loading sets...
-            </div>
+            <LoadingState message="Loading sets..." />
           ) : sets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '80px 40px' }}>
               <div style={{ fontFamily: SD.display, fontSize: 48, letterSpacing: 3, color: SD.textMuted, marginBottom: 12 }}>
