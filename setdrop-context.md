@@ -85,20 +85,28 @@ AI is good at: track ID, BPM/key detection, library data, tracklist annotation, 
 ## Recent Commits
 
 ```
-4ce5645 feat(design-system): Phase 1.2 — shared primitives PageHeader, Card, Tabs, Badge, EmptyState, LoadingState
+1eaf05a fix(library): eliminate 3-second flash of UploadZone before library loads
+1ca8a4e refactor(builder): Phase 1.3d — PageHeader
+0f34c14 refactor(history): Phase 1.3c — PageHeader, LoadingState, Badge, semantic colors
+7ddedda refactor(track-id): Phase 1.3b — adopt shared primitives + semantic colors
+63cd614 refactor(dashboard): Phase 1.3a — swap inline UI to shared primitives
+1aeda86 docs: update setdrop-context.md with Phase 1.2 commit + plan progress
+fadda3b feat(design-system): Phase 1.2 — shared primitives PageHeader, Card, Tabs, Badge, EmptyState, LoadingState
+4ea3221 chore: nightly context update 2026-06-06
 03eefc5 feat(design-system): Phase 1.1 — extend SD with spacing, type, semantic-color, and radius scales
-435ea70 docs: update setdrop-context.md with strategic pivot
-f9c3c23 chore: add nightly context updater GitHub Action
-69302df feat: Track ID nav home (desktop link, mobile nav, dashboard CTA)
-afe0f15 fix: AbortController timeout on trending fetch
-f2f423b fix: restore status strip visual weight — 28px display numbers
-2c8c52f feat: dashboard UI refresh — status strip, Next Gig, tabbed Discover
-80f5a44 feat: Track ID v1 — mic + file upload via ACRCloud
-e54829e fix: low-severity issues from Opus final review
-aa123c0 fix: library save atomicity, BPM enrichment cap, Spotify batch insert
-fc760aa fix: critical Stripe webhook RLS bug, account delete safety
+435ea70 docs: update setdrop-context.md with strategic pivot — pre-gig system focus, live mode parked, co-pilot principle
+f9c3c23 chore: add nightly context updater GitHub Action + initial setdrop-context.md
+69302df feat: give Track ID a proper home — nav link, mobile nav, dashboard CTA
+afe0f15 fix: add AbortController timeout to trending fetch — graceful error on slow dev server
+f2f423b fix: restore visual weight in status strip — 28px display numbers
+2c8c52f feat: dashboard UI refresh — status strip, next gig widget, tabbed discover
+c2395f7 chore: remove debug logging from acrcloud
+af25333 debug: add ACRCloud URL and response logging
+d85baad fix: strip protocol from ACRCLOUD_HOST, bump trending-charts timeout
+80f5a44 feat: Track ID — identify tracks via microphone or file upload
+e54829e fix: low-severity issues from final review
 ```
 
 ---
 
-*Last updated: 2026-06-06*
+*Last updated: 2026-06-07*
