@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
@@ -482,6 +483,7 @@ async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
 }
 
 export function Library() {
+  const router = useRouter();
   const [tab, setTab] = useState('library');
   const [search, setSearch] = useState('');
   const [bpmMin, setBpmMin] = useState('');
@@ -1171,14 +1173,27 @@ export function Library() {
                             fontStyle:'italic', marginBottom:12, lineHeight:1.6 }}>
                             &ldquo;{p.bridge}&rdquo;
                           </div>
-                          <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-                            <span style={{ fontFamily:SD.mono, fontSize:12, color: p.bpmDiff <= 5 ? SD.green : p.bpmDiff <= 10 ? SD.accent : '#E05555' }}>
+                          <div style={{ display:'flex', gap:16, flexWrap:'wrap', alignItems:'center' }}>
+                            <span style={{ fontFamily:SD.mono, fontSize:12, color: p.bpmDiff <= 5 ? SD.success : p.bpmDiff <= 10 ? SD.accent : SD.danger }}>
                               {p.fromBpm} → {p.toBpm} BPM ({p.bpmDiff > 0 ? `${p.bpmDiff} diff` : 'same'})
                             </span>
                             <span style={{ fontFamily:SD.mono, fontSize:12,
-                              color: p.keysCompatible ? SD.green : SD.textMuted }}>
+                              color: p.keysCompatible ? SD.success : SD.textMuted }}>
                               {p.keysCompatible ? '✓ Keys compatible' : '⚠ Key clash — use acapella or loop to mask'}
                             </span>
+                            <SDButton
+                              ghost
+                              style={{ fontSize: 11, padding: '4px 12px', marginLeft: 'auto' }}
+                              onClick={() => {
+                                sessionStorage.setItem('sd_builder_prefill', JSON.stringify({
+                                  seedSearch: `${p.fromArtist} ${p.fromTitle}`,
+                                  wordplay: wordplayWord,
+                                }));
+                                router.push('/builder');
+                              }}
+                            >
+                              Use in Set →
+                            </SDButton>
                           </div>
                         </div>
                       ))}
