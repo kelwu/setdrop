@@ -241,9 +241,9 @@ function UploadZone({
         />
       </div>
       {parseError && (
-        <div style={{ marginTop:12, padding:'12px 16px', background:'rgba(220,50,50,0.08)',
-          border:'1px solid rgba(220,50,50,0.3)', borderRadius:3,
-          fontFamily:SD.mono, fontSize:13, color:'#E05555' }}>
+        <div style={{ marginTop:12, padding:'12px 16px', background:SD.dangerDim,
+          border:`1px solid ${SD.danger}4D`, borderRadius:SD.r2,
+          fontFamily:SD.mono, fontSize:13, color:SD.danger }}>
           {parseError}
         </div>
       )}
@@ -1014,7 +1014,7 @@ export function Library() {
                     )}
                     {importResult && (
                       <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 13,
-                        color: importResult.imported < 0 ? '#E05555' : SD.green }}>
+                        color: importResult.imported < 0 ? SD.danger : SD.green }}>
                         {importResult.imported < 0
                           ? 'Import failed — check console'
                           : `✓ ${importResult.imported} tracks added${importResult.skipped ? `, ${importResult.skipped} already in wishlist` : ''}`}
@@ -1065,7 +1065,7 @@ export function Library() {
                   <SDInput value={addGenre} onChange={setAddGenre} placeholder="Genre (optional)" />
                 </div>
                 {addError && (
-                  <div style={{ fontFamily:SD.mono, fontSize:13, color:'#E05555', marginBottom:10 }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.danger, marginBottom:10 }}>
                     {addError}
                   </div>
                 )}
@@ -1111,7 +1111,7 @@ export function Library() {
             </div>
 
             {wordplayError && (
-              <div style={{ fontFamily:SD.mono, fontSize:13, color:'#E05555', marginBottom:24 }}>{wordplayError}</div>
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.danger, marginBottom:24 }}>{wordplayError}</div>
             )}
 
             {wordplayResults && (

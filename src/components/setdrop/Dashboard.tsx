@@ -550,7 +550,7 @@ export function Dashboard() {
                 <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Finding what&apos;s trending in your genres...</div>
               ) : trendingError ? (
                 <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                  <span style={{ fontFamily:SD.mono, fontSize:12, color:'#ef4444' }}>{trendingError}</span>
+                  <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.danger }}>{trendingError}</span>
                   <SDButton ghost onClick={loadTrending} style={{ fontSize:11, padding:'4px 10px' }}>Retry</SDButton>
                 </div>
               ) : !trendingData || trendingData.length === 0 ? (
@@ -615,7 +615,7 @@ export function Dashboard() {
               gapLoading ? (
                 <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Scanning your library and searching for trending tracks...</div>
               ) : gapError ? (
-                <div style={{ fontFamily:SD.mono, fontSize:12, color:'#ef4444' }}>Error: {gapError}</div>
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.danger }}>Error: {gapError}</div>
               ) : gapReport === null ? (
                 <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
                   {libraryStats ? 'Find BPM and genre gaps in your library — get specific track recommendations to fill them.' : 'Upload your library to unlock Library Intelligence.'}

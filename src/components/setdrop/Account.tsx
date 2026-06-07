@@ -197,11 +197,11 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>Danger Zone</div>
           {!showDeleteConfirm ? (
             <SDButton ghost onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize: 12, padding: '7px 16px', color: '#E05555', borderColor: 'rgba(220,50,50,0.3)' }}>
+              style={{ fontSize: 12, padding: '7px 16px', color: SD.danger, borderColor: SD.danger + '4D' }}>
               Delete Account
             </SDButton>
           ) : (
-            <div style={{ background: 'rgba(220,50,50,0.06)', border: '1px solid rgba(220,50,50,0.25)',
+            <div style={{ background: SD.dangerDim, border: `1px solid ${SD.danger}40`,
               borderRadius: 4, padding: '20px 24px' }}>
               <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.text, marginBottom: 8 }}>
                 Delete your account?
@@ -211,8 +211,8 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <SDButton onClick={handleDeleteAccount}
-                  style={{ fontSize: 13, background: 'rgba(220,50,50,0.15)',
-                    borderColor: 'rgba(220,50,50,0.4)', color: '#E05555',
+                  style={{ fontSize: 13, background: SD.danger + '26',
+                    borderColor: SD.danger + '66', color: SD.danger,
                     opacity: deleting ? 0.6 : 1, pointerEvents: deleting ? 'none' : 'auto' }}>
                   {deleting ? 'Deleting...' : 'Yes, delete everything'}
                 </SDButton>
