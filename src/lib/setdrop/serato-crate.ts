@@ -1,6 +1,7 @@
 // Serato crate binary format writer
 // Format: tag-based structure with 4-char type + uint32BE length + payload
 // Strings are UTF-16 Big Endian, no BOM
+import { BRAND } from '../brand';
 
 function encodeUtf16BE(str: string): Uint8Array {
   // str.length counts UTF-16 code units (surrogates count as 2), so this
@@ -69,7 +70,7 @@ export function buildCrate(rawPaths: string[]): Uint8Array {
 }
 
 export function downloadCrate(data: Uint8Array, name: string): void {
-  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || 'SetDrop';
+  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || BRAND.name;
   const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, DM_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { NavWrapper } from "@/components/setdrop/NavWrapper";
+import { BRAND } from "@/lib/brand";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -28,12 +29,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SetDrop — From Spotify to Serato",
+  title: `${BRAND.name} — From Spotify to Serato`,
   description: "AI-powered setlist planning. Connect your Spotify, build your set, export to Serato.",
   openGraph: {
-    title: "SetDrop — From Spotify to Serato",
+    title: `${BRAND.name} — From Spotify to Serato`,
     description: "AI-powered setlist planning. Spotify to Serato in minutes.",
-    siteName: "SetDrop",
+    siteName: BRAND.name,
   },
 };
 

@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores, orderedStores } from '@/lib/setdrop/constants';
+import { BRAND } from '@/lib/brand';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
 export function Nav() {
@@ -70,7 +71,7 @@ export function Nav() {
         <span onClick={() => router.push('/')} style={{
           fontFamily:SD.display, fontSize:26, letterSpacing:4, cursor:'pointer', color:SD.text,
         }}>
-          SET<span style={{ color:SD.accent }}>DROP</span>
+          {BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span>
         </span>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36, marginRight:12 }}>

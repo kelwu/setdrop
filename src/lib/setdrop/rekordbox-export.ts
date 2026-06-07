@@ -1,5 +1,6 @@
 import { LibraryTrack } from '@/lib/agents/types';
 import { SetlistTrack } from '@/lib/agents/types';
+import { BRAND } from '../brand';
 
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -122,7 +123,7 @@ export function buildM3u(
 }
 
 export function downloadM3u(m3u: string, name: string): void {
-  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || 'SetDrop';
+  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || BRAND.name;
   const blob = new Blob([m3u], { type: 'audio/x-mpegurl' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -135,7 +136,7 @@ export function downloadM3u(m3u: string, name: string): void {
 }
 
 export function downloadRekordboxXml(xml: string, name: string): void {
-  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || 'SetDrop';
+  const safe = name.replace(/[<>:"/\\|?*]/g, '').trim() || BRAND.name;
   const blob = new Blob([xml], { type: 'application/xml' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

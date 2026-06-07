@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import { InvoiceData } from './types';
+import { BRAND } from '../brand';
 
 const ORANGE = '#F5A623';
 const DARK = '#111827';
@@ -179,7 +180,7 @@ function InvoicePDF({ data }: { data: InvoiceData }) {
 
         <View style={s.footer} fixed>
           <Text style={s.footerTxt}>Thank you for your business.</Text>
-          <Text style={s.footerTxt}>Generated with SetDrop</Text>
+          <Text style={s.footerTxt}>Generated with {BRAND.name}</Text>
         </View>
       </Page>
     </Document>

@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { BRAND } from './brand';
 
 let _stripe: Stripe | null = null;
 
@@ -16,12 +17,12 @@ export function getStripe(): Stripe {
 
 export const PLANS = {
   pro: {
-    name: 'SetDrop Pro',
+    name: `${BRAND.name} Pro`,
     priceId: process.env.STRIPE_PRO_PRICE_ID ?? '',
     limit: 50,
   },
   free: {
-    name: 'SetDrop Free',
+    name: `${BRAND.name} Free`,
     limit: 5,
   },
 } as const;

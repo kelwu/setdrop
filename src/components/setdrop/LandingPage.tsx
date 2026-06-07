@@ -2,13 +2,14 @@ import React from 'react';
 import { SD, SAMPLE_TRACKS } from '@/lib/setdrop/constants';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 import { ScrollFade } from './ScrollFade';
+import { BRAND } from '@/lib/brand';
 
 export function LandingPage() {
   const HOW_IT_WORKS = [
     { n:'01', label:'Import', desc:"Upload your Serato DB or Rekordbox XML, or add wishlist tracks manually. Your entire library is instantly searchable." },
     { n:'02', label:'Enrich', desc:"AI enriches every track with BPM, key, energy score, and genre tags — no manual tagging." },
-    { n:'03', label:'Bridge', desc:"SetDrop checks Beatport, Traxsource, BPM Supreme, and DJcity to tell you where each track can be purchased." },
-    { n:'04', label:'Sync', desc:"Download and import to Serato or Rekordbox. SetDrop tracks what's in your library and what still needs to get there." },
+    { n:'03', label:'Bridge', desc:`${BRAND.name} checks Beatport, Traxsource, BPM Supreme, and DJcity to tell you where each track can be purchased.` },
+    { n:'04', label:'Sync', desc:`Download and import to Serato or Rekordbox. ${BRAND.name} tracks what's in your library and what still needs to get there.` },
     { n:'05', label:'Build', desc:"Set the gig context — genre, crowd, energy arc, duration. AI architects the perfect set from your library." },
     { n:'06', label:'Perform', desc:"Export your Serato crate or Rekordbox playlist. Hit the decks. Do not repeat." },
   ];
@@ -36,7 +37,7 @@ export function LandingPage() {
         borderBottom:`1px solid ${SD.border}`,
       }}>
         <a href="/" style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, textDecoration:'none' }}>
-          SET<span style={{ color:SD.accent }}>DROP</span>
+          {BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span>
         </a>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <a href="/login" className="sd-landing-login" style={{
@@ -182,14 +183,14 @@ export function LandingPage() {
             fontFamily:SD.display, fontSize:'clamp(80px,14vw,160px)',
             letterSpacing:8, lineHeight:.9, margin:'0 0 8px', color:SD.text,
             animation:'sdFadeUp 0.7s 0.25s ease both',
-          }}>SET<span style={{ color:SD.accent }}>DROP</span></h1>
+          }}>{BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span></h1>
 
           <p style={{
             fontFamily:SD.body, fontSize:17, color:SD.textSec,
             lineHeight:1.75, margin:'32px auto 48px', maxWidth:540,
             animation:'sdFadeUp 0.7s 0.45s ease both',
           }}>
-            SetDrop connects your entire DJ workflow — from building your library to walking into the booth ready to play.
+            {BRAND.name} connects your entire DJ workflow — from building your library to walking into the booth ready to play.
           </p>
 
           <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap',
@@ -363,7 +364,7 @@ export function LandingPage() {
                 </div>
                 <span style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
                   letterSpacing:1.5, textTransform:'uppercase', marginLeft:8 }}>
-                  SetDrop — Friday Night Affair
+                  {BRAND.name} — Friday Night Affair
                 </span>
               </div>
 
@@ -394,7 +395,7 @@ export function LandingPage() {
       <section className="sd-pad-x" style={{ padding:'120px 40px', maxWidth:1200, margin:'0 auto' }}>
         <ScrollFade style={{ textAlign:'center', marginBottom:72 }}>
           <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:3, color:SD.accent,
-            textTransform:'uppercase', marginBottom:12 }}>Why SetDrop</div>
+            textTransform:'uppercase', marginBottom:12 }}>Why {BRAND.name}</div>
           <h2 style={{ fontFamily:SD.display, fontSize:'clamp(40px,5vw,72px)', letterSpacing:4,
             margin:0, color:SD.text }}>BUILT FOR REAL DJs</h2>
         </ScrollFade>
@@ -567,7 +568,7 @@ export function LandingPage() {
           <SDButton href="/builder" style={{ fontSize:14, padding:'16px 48px' }}>
             Get Started — It&apos;s Free
           </SDButton>
-          <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>setdrop.app</div>
+          <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{BRAND.domain}</div>
         </ScrollFade>
       </section>
 
@@ -575,7 +576,7 @@ export function LandingPage() {
       <footer className="sd-pad-x" style={{ borderTop:`1px solid ${SD.border}`, padding:'40px 40px 32px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:32, marginBottom:32 }}>
           <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:3, color:SD.textMuted }}>
-            SET<span style={{ color:SD.accent }}>DROP</span>
+            {BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span>
           </span>
           <div style={{ display:'flex', gap:48, flexWrap:'wrap' }}>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
@@ -609,10 +610,10 @@ export function LandingPage() {
         </div>
         <div style={{ borderTop:`1px solid ${SD.border}`, paddingTop:24,
           display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
-          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>© 2026 SetDrop</span>
+          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>© 2026 {BRAND.name}</span>
           <div style={{ display:'flex', gap:24 }}>
             <a href="/privacy" style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, textDecoration:'none' }}>Privacy Policy</a>
-            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>setdrop.app</span>
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{BRAND.domain}</span>
           </div>
         </div>
       </footer>

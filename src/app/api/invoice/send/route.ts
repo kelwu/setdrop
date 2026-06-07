@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice/pdf';
 import type { InvoiceData } from '@/lib/invoice/types';
+import { BRAND } from '@/lib/brand';
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
         ${invoiceData.eventName ? `<p><strong>Event:</strong> ${invoiceData.eventName}${invoiceData.eventDate ? ` — ${invoiceData.eventDate}` : ''}</p>` : ''}
         <p>Thank you!</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
-        <p style="color:#9CA3AF;font-size:12px">Sent via <a href="https://setdrop.app" style="color:#F5A623">SetDrop</a></p>
+        <p style="color:#9CA3AF;font-size:12px">Sent via <a href="https://${BRAND.domain}" style="color:#F5A623">${BRAND.name}</a></p>
       `,
       attachments: [{
         filename: `invoice-${invoiceData.invoiceNumber}.pdf`,

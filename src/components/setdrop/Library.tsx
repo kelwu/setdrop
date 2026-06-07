@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { BRAND } from '@/lib/brand';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { LibraryTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
@@ -1085,7 +1086,7 @@ export function Library() {
         {tab === 'wordplay' && (
           <div>
             <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, lineHeight:1.8, marginBottom:24 }}>
-              Enter a word or phrase. SetDrop will scan your library for tracks that feature it prominently in their lyrics
+              Enter a word or phrase. {BRAND.name} will scan your library for tracks that feature it prominently in their lyrics
               and suggest DJ transition pairs — the hip hop technique of bridging songs through matching vocals.
             </div>
             <div style={{ display:'flex', gap:10, marginBottom:32 }}>

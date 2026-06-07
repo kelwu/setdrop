@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from './shared';
 import { createClient } from '@/lib/supabase/client';
+import { BRAND } from '@/lib/brand';
 
 interface AccountProps {
   email: string;
@@ -87,7 +88,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
           <div style={{ marginBottom: 24, padding: '16px 20px',
             background: SD.greenDim, border: `1px solid ${SD.green}44`,
             borderRadius: 4, fontFamily: SD.mono, fontSize: 12, color: SD.green }}>
-            ✓ You&apos;re now on SetDrop Pro. Enjoy unlimited generation.
+            ✓ You&apos;re now on {BRAND.name} Pro. Enjoy unlimited generation.
           </div>
         )}
 

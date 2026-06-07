@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 export const revalidate = 3600;
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
+import { BRAND } from '@/lib/brand';
 
 const S = {
   bg: '#0A0A0A', surface: '#141414', border: 'rgba(255,255,255,0.07)',
@@ -23,13 +24,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq('share_url', slug)
     .eq('is_public', true)
     .single();
-  if (!data) return { title: 'SetDrop' };
+  if (!data) return { title: BRAND.name };
   const genre = [data.primary_genre, data.secondary_genre].filter(Boolean).join(' / ');
-  const desc = genre ? `${genre} setlist, built with SetDrop` : 'Built with SetDrop';
+  const desc = genre ? `${genre} setlist, built with ${BRAND.name}` : `Built with ${BRAND.name}`;
   return {
-    title: `${data.name} — SetDrop`,
+    title: `${data.name} — ${BRAND.name}`,
     description: desc,
-    openGraph: { title: `${data.name} — SetDrop`, description: desc, siteName: 'SetDrop' },
+    openGraph: { title: `${data.name} — ${BRAND.name}`, description: desc, siteName: BRAND.name },
   };
 }
 
@@ -75,10 +76,10 @@ export default async function PublicSetPage({ params }: Props) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ fontFamily: S.display, fontSize: 22, letterSpacing: 3,
           color: S.text, textDecoration: 'none' }}>
-          SET<span style={{ color: S.accent }}>DROP</span>
+          {BRAND.logoLeft}<span style={{ color: S.accent }}>{BRAND.logoRight}</span>
         </a>
         <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted, letterSpacing: 1.5 }}>
-          Built with SetDrop
+          Built with {BRAND.name}
         </span>
       </div>
 
@@ -191,7 +192,7 @@ export default async function PublicSetPage({ params }: Props) {
               fontFamily: S.mono, fontSize: 13, fontWeight: 600,
               letterSpacing: 1.5, textTransform: 'uppercase',
               padding: '13px 36px', borderRadius: 3, textDecoration: 'none',
-            }}>Try SetDrop Free</a>
+            }}>Try {BRAND.name} Free</a>
             <div style={{ marginTop: 14, fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
               {process.env.NEXT_PUBLIC_APP_URL ?? ''}
             </div>

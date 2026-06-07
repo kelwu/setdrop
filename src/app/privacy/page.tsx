@@ -1,8 +1,9 @@
 ﻿import type { Metadata } from 'next';
+import { BRAND } from '@/lib/brand';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — SetDrop',
-  description: 'How SetDrop collects, uses, and protects your data.',
+  title: `Privacy Policy — ${BRAND.name}`,
+  description: `How ${BRAND.name} collects, uses, and protects your data.`,
 };
 
 const S = {
@@ -76,7 +77,7 @@ export default function PrivacyPage() {
             PRIVACY POLICY
           </h1>
           <P>
-            SetDrop is a tool for DJs. We take your data seriously and keep this policy short and plain.
+            {BRAND.name} is a tool for DJs. We take your data seriously and keep this policy short and plain.
             If you have questions, email <a href="mailto:kelcwu@gmail.com"
               style={{ color: S.accent, textDecoration: 'none' }}>kelcwu@gmail.com</a>.
           </P>
@@ -85,14 +86,14 @@ export default function PrivacyPage() {
         <div style={{ height: 1, background: S.border, marginBottom: 8 }} />
 
         {/* 1 */}
-        <H2>1. What SetDrop Is</H2>
+        <H2>1. What {BRAND.name} Is</H2>
         <P>
-          SetDrop is a web app that helps DJs plan setlists. It imports your Serato library,
+          {BRAND.name} is a web app that helps DJs plan setlists. It imports your Serato library,
           uses AI (Claude by Anthropic) to generate a sequenced set based on your gig context,
           and exports the result back to Serato as a <code style={{ color: S.accent }}>.crate</code> file.
         </P>
         <P>
-          SetDrop is operated by Kel Wu, an individual developer. Contact:{' '}
+          {BRAND.name} is operated by Kel Wu, an individual developer. Contact:{' '}
           <a href="mailto:kelcwu@gmail.com" style={{ color: S.accent, textDecoration: 'none' }}>
             kelcwu@gmail.com
           </a>
@@ -109,7 +110,7 @@ export default function PrivacyPage() {
           'Email address (used to log in and contact you)',
           'A Supabase-generated user ID (UUID)',
           'Account creation timestamp',
-          'No passwords are stored by SetDrop — Supabase Auth handles credential storage using bcrypt hashing',
+          'No passwords are stored by {BRAND.name} — Supabase Auth handles credential storage using bcrypt hashing',
         ]} />
 
         <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
@@ -117,7 +118,7 @@ export default function PrivacyPage() {
           Serato Library
         </p>
         <P>
-          When you upload your Serato library file, SetDrop extracts and stores per-track metadata:
+          When you upload your Serato library file, {BRAND.name} extracts and stores per-track metadata:
         </P>
         <UL items={[
           'Artist name',
@@ -125,7 +126,7 @@ export default function PrivacyPage() {
           'BPM',
           'Musical key',
           'Genre',
-          'File path (the path on your local machine as stored by Serato — used only to generate .crate files for re-import; SetDrop never accesses your files remotely)',
+          'File path (the path on your local machine as stored by Serato — used only to generate .crate files for re-import; {BRAND.name} never accesses your files remotely)',
         ]} />
         <P>Audio files are never uploaded. Only the text metadata above is stored.</P>
 
@@ -150,7 +151,7 @@ export default function PrivacyPage() {
           What We Do NOT Collect
         </p>
         <UL items={[
-          'Payment information (SetDrop has no paid features)',
+          'Payment information ({BRAND.name} has no paid features)',
           'Audio files or audio content',
           'Location data',
           'Analytics or behavioral tracking data',
@@ -189,7 +190,7 @@ export default function PrivacyPage() {
           Vercel
         </p>
         <P>
-          SetDrop is hosted on Vercel. Standard server logs (request metadata, IP addresses) are
+          {BRAND.name} is hosted on Vercel. Standard server logs (request metadata, IP addresses) are
           retained per Vercel&apos;s own policy.{' '}
           <a href="https://vercel.com/legal/privacy-policy" style={{ color: S.accent, textDecoration: 'none' }}>
             Vercel Privacy Policy ↗
@@ -201,7 +202,7 @@ export default function PrivacyPage() {
           Anthropic (Claude AI)
         </p>
         <P>
-          When you generate a setlist, SetDrop sends your library metadata (artist, title, BPM, key, genre)
+          When you generate a setlist, {BRAND.name} sends your library metadata (artist, title, BPM, key, genre)
           and gig parameters to the Anthropic Claude API. No personally identifying information is included.
           Anthropic does not use API inputs to train its models by default.{' '}
           <a href="https://www.anthropic.com/privacy" style={{ color: S.accent, textDecoration: 'none' }}>
@@ -259,7 +260,7 @@ export default function PrivacyPage() {
         {/* 6 */}
         <H2>6. Cookies</H2>
         <P>
-          SetDrop uses one cookie: the Supabase session cookie (prefixed <code style={{ color: S.accent }}>sb-</code>),
+          {BRAND.name} uses one cookie: the Supabase session cookie (prefixed <code style={{ color: S.accent }}>sb-</code>),
           set when you log in. It is HTTP-only, Secure, and SameSite. It expires when you sign out or
           after the session token expires (~1 hour, auto-refreshed while you&apos;re active).
         </P>
@@ -298,14 +299,14 @@ export default function PrivacyPage() {
           encrypted in transit (TLS). Passwords are hashed by Supabase Auth (bcrypt).
         </P>
         <P>
-          SetDrop is a small indie project. While we follow reasonable security practices, no system
+          {BRAND.name} is a small indie project. While we follow reasonable security practices, no system
           is perfectly secure. Do not store sensitive personal information in setlist names or notes.
         </P>
 
         {/* 9 */}
         <H2>9. Children&apos;s Privacy</H2>
         <P>
-          SetDrop is not directed at children under 13. We do not knowingly collect personal information
+          {BRAND.name} is not directed at children under 13. We do not knowingly collect personal information
           from anyone under 13. If you believe a child has provided us with personal data, contact us
           and we will delete it promptly.
         </P>
@@ -314,7 +315,7 @@ export default function PrivacyPage() {
         <H2>10. Changes to This Policy</H2>
         <P>
           When we make material changes, we&apos;ll update the &ldquo;Last updated&rdquo; date at the top.
-          Continued use of SetDrop after changes means you accept the updated policy.
+          Continued use of {BRAND.name} after changes means you accept the updated policy.
           For significant changes, we&apos;ll notify users by email if possible.
         </P>
 
@@ -330,7 +331,7 @@ export default function PrivacyPage() {
         <div style={{ height: 1, background: S.border, margin: '48px 0 32px' }} />
         <P>
           <span style={{ color: S.textMuted }}>
-            SetDrop is operated by Kel Wu · {' '}
+            {BRAND.name} is operated by Kel Wu · {' '}
             <a href="mailto:kelcwu@gmail.com" style={{ color: S.textMuted, textDecoration: 'none' }}>
               kelcwu@gmail.com
             </a>
