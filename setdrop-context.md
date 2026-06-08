@@ -116,18 +116,26 @@ Plan file: `C:\Users\wuazn\.claude\plans\compressed-dreaming-cocke.md`
 ## Recent Commits
 
 ```
+7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
 61aaf0b feat(track-id): Phase 2 MVP — Mix Tracklist scanner
 07168c7 refactor(brand): extract BRAND constant for easy rename
-1b2cc20 refactor(colors): Phase 1.5 — hex hardcodes → semantic tokens
+1b2cc20 refactor(colors): Phase 1.5 — replace hardcoded danger hex values with semantic tokens
 e51eff9 feat(library): Phase 1.6 — Wordplay → Builder integration
 0e75ca5 refactor(explore): Phase 1.3f — adopt shared primitives
 2ddfc8c fix(output): mobile sidebar stacking + publish-to-Explore feedback loop
-cb58164 refactor(library): swap inline TabBtn for shared Tabs
-1eaf05a fix(library): eliminate 3-second flash of UploadZone
-fadda3b feat(design-system): Phase 1.2 — shared primitives
-03eefc5 feat(design-system): Phase 1.1 — token extension
-80f5a44 feat: Track ID v1 — mic + file upload via ACRCloud
-fc760aa fix: critical Stripe webhook RLS bug, account delete safety
+cb58164 refactor(library): swap inline TabBtn for shared Tabs primitive
+ac0b177 chore: nightly context update 2026-06-07
+1eaf05a fix(library): eliminate 3-second flash of UploadZone before library loads
+1ca8a4e refactor(builder): Phase 1.3d — PageHeader
+0f34c14 refactor(history): Phase 1.3c — PageHeader, LoadingState, Badge, semantic colors
+7ddedda refactor(track-id): Phase 1.3b — adopt shared primitives + semantic colors
+63cd614 refactor(dashboard): Phase 1.3a — swap inline UI to shared primitives
+1aeda86 docs: update setdrop-context.md with Phase 1.2 commit + plan progress
+fadda3b feat(design-system): Phase 1.2 — shared primitives PageHeader, Card, Tabs, Badge, EmptyState, LoadingState
+4ea3221 chore: nightly context update 2026-06-06
+03eefc5 feat(design-system): Phase 1.1 — extend SD with spacing, type, semantic-color, and radius scales
+435ea70 docs: update setdrop-context.md with strategic pivot — pre-gig system focus, live mode parked, co-pilot principle
+f9c3c23 chore: add nightly context updater GitHub Action + initial setdrop-context.md
 ```
 
 ---
@@ -139,4 +147,4 @@ fc760aa fix: critical Stripe webhook RLS bug, account delete safety
 
 ---
 
-*Last updated: 2026-06-07*
+*Last updated: 2026-06-08*
