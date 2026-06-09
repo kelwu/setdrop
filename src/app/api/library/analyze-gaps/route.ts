@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -31,20 +31,61 @@ export interface GapRecommendation {
   beatportSearchUrl: string;
 }
 
+export interface EmergingArtist {
+  artist: string;
+  reason: string;
+  beatportSearchUrl: string;
+}
+
+export interface EnergyInsight {
+  genre: string;
+  message: string;
+  severity: 'high' | 'medium';
+}
+
 export interface LibraryGap {
   genre: string;
   bpmRange: string;
   currentCount: number;
   severity: 'high' | 'medium' | 'low';
   recommendations: GapRecommendation[];
+  emergingArtists?: EmergingArtist[];
 }
 
-function detectGaps(tracks: Array<{ bpm: number | null; genre: string | null }>): RawGap[] {
+// ─── Sub-genre resolution via lastfm tags ────────────────────────────────────
+
+const SUB_GENRE_MATCHERS: { tag: string; subGenre: string }[] = [
+  { tag: 'tech house',        subGenre: 'Tech House' },
+  { tag: 'deep house',        subGenre: 'Deep House' },
+  { tag: 'afro house',        subGenre: 'Afro House' },
+  { tag: 'progressive house', subGenre: 'Progressive House' },
+  { tag: 'disco house',       subGenre: 'Disco House' },
+  { tag: 'melodic techno',    subGenre: 'Melodic House & Techno' },
+  { tag: 'melodic house',     subGenre: 'Melodic House & Techno' },
+  { tag: 'minimal techno',    subGenre: 'Minimal Techno' },
+  { tag: 'industrial techno', subGenre: 'Industrial Techno' },
+  { tag: 'trap',              subGenre: 'Trap' },
+  { tag: 'drill',             subGenre: 'Drill' },
+  { tag: 'boom bap',          subGenre: 'Boom Bap' },
+  { tag: 'reggaeton',         subGenre: 'Reggaeton' },
+  { tag: 'drum and bass',     subGenre: 'Drum & Bass' },
+  { tag: 'dnb',               subGenre: 'Drum & Bass' },
+];
+
+function resolveSubGenre(genre: string, tags: string[]): string {
+  for (const { tag, subGenre } of SUB_GENRE_MATCHERS) {
+    if (tags.includes(tag)) return subGenre;
+  }
+  return (genre ?? '').trim() || 'Unknown';
+}
+
+// ─── BPM gap detection ───────────────────────────────────────────────────────
+
+function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGap[] {
   const byGenre: Record<string, number[]> = {};
   for (const t of tracks) {
     if (!t.bpm || t.bpm < 60 || t.bpm > 220) continue;
-    const genre = (t.genre ?? '').trim() || 'Unknown';
-    (byGenre[genre] ??= []).push(t.bpm);
+    (byGenre[t.genre] ??= []).push(t.bpm);
   }
 
   const gaps: RawGap[] = [];
@@ -52,7 +93,6 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string | null }>)
   for (const [genre, bpms] of Object.entries(byGenre)) {
     if (bpms.length < 10) continue;
 
-    // Use 10th–90th percentile range to avoid outliers defining the active range
     const sorted = [...bpms].sort((a, b) => a - b);
     const p10 = sorted[Math.floor(sorted.length * 0.1)];
     const p90 = sorted[Math.min(Math.ceil(sorted.length * 0.9), sorted.length - 1)];
@@ -89,6 +129,63 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string | null }>)
   gaps.sort((a, b) => order[a.severity] - order[b.severity]);
   return gaps.slice(0, 5);
 }
+
+// ─── Energy gap detection ────────────────────────────────────────────────────
+
+const ENERGY_TIERS: Record<string, { warmupMax: number; peakMin: number }> = {
+  'House':                  { warmupMax: 120, peakMin: 128 },
+  'Tech House':             { warmupMax: 122, peakMin: 130 },
+  'Deep House':             { warmupMax: 118, peakMin: 124 },
+  'Afro House':             { warmupMax: 120, peakMin: 126 },
+  'Progressive House':      { warmupMax: 122, peakMin: 128 },
+  'Disco House':            { warmupMax: 118, peakMin: 124 },
+  'Melodic House & Techno': { warmupMax: 120, peakMin: 126 },
+  'Techno':                 { warmupMax: 128, peakMin: 138 },
+  'Minimal Techno':         { warmupMax: 126, peakMin: 136 },
+  'Industrial Techno':      { warmupMax: 130, peakMin: 140 },
+  'Drum & Bass':            { warmupMax: 165, peakMin: 175 },
+  'Hip Hop':                { warmupMax: 85,  peakMin: 100 },
+  'Trap':                   { warmupMax: 75,  peakMin: 90  },
+  'Drill':                  { warmupMax: 70,  peakMin: 85  },
+  'Boom Bap':               { warmupMax: 90,  peakMin: 105 },
+  'Afrobeats':              { warmupMax: 100, peakMin: 115 },
+  'Reggaeton':              { warmupMax: 85,  peakMin: 100 },
+};
+
+const DEFAULT_TIERS = { warmupMax: 100, peakMin: 120 };
+
+function detectEnergyGaps(tracks: Array<{ bpm: number | null; genre: string }>): EnergyInsight[] {
+  const byGenre: Record<string, number[]> = {};
+  for (const t of tracks) {
+    if (!t.bpm || t.bpm < 60 || t.bpm > 220) continue;
+    (byGenre[t.genre] ??= []).push(t.bpm);
+  }
+
+  const insights: EnergyInsight[] = [];
+  for (const [genre, bpms] of Object.entries(byGenre)) {
+    if (bpms.length < 15) continue;
+    const { warmupMax, peakMin } = ENERGY_TIERS[genre] ?? DEFAULT_TIERS;
+    const warmupPct = bpms.filter(b => b <= warmupMax).length / bpms.length;
+    const peakPct   = bpms.filter(b => b >= peakMin).length   / bpms.length;
+
+    if (peakPct >= 0.70 && warmupPct < 0.10) {
+      insights.push({
+        genre,
+        message: `${Math.round(peakPct * 100)}% peak-energy ${genre} tracks — only ${Math.round(warmupPct * 100)}% warmup material`,
+        severity: warmupPct < 0.03 ? 'high' : 'medium',
+      });
+    } else if (warmupPct >= 0.70 && peakPct < 0.10) {
+      insights.push({
+        genre,
+        message: `${genre} library skews slow — only ${Math.round(peakPct * 100)}% peak-energy tracks`,
+        severity: 'medium',
+      });
+    }
+  }
+  return insights.slice(0, 3);
+}
+
+// ─── AI tools ────────────────────────────────────────────────────────────────
 
 const GAP_TOOL: Anthropic.Tool = {
   name: 'report_library_gaps',
@@ -128,7 +225,48 @@ const GAP_TOOL: Anthropic.Tool = {
   },
 };
 
-const SYSTEM = `You are a DJ library gap analyst. You receive a list of BPM/genre gaps in a DJ's library.
+const EMERGING_TOOL: Anthropic.Tool = {
+  name: 'report_emerging_artists',
+  description: 'Report currently rising/emerging DJ artists per genre.',
+  input_schema: {
+    type: 'object',
+    required: ['results'],
+    properties: {
+      results: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['genre', 'artists'],
+          properties: {
+            genre: { type: 'string' },
+            artists: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['artist', 'reason', 'beatportSearchUrl'],
+                properties: {
+                  artist: { type: 'string' },
+                  reason: { type: 'string' },
+                  beatportSearchUrl: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+const WEB_SEARCH: Anthropic.Messages.WebSearchTool20260209 = {
+  type: 'web_search_20260209',
+  name: 'web_search',
+  max_uses: 3,
+};
+
+// ─── System prompts ───────────────────────────────────────────────────────────
+
+const GAP_SYSTEM = `You are a DJ library gap analyst. You receive a list of BPM/genre gaps in a DJ's library.
 
 For each gap, recommend 3 specific real tracks that would fill it — tracks a professional DJ would know and that are available on Beatport or DJcity. Use your knowledge of well-regarded tracks in the genre and BPM range. Prioritise tracks released in the last 3 years but include classics if they best fit the range.
 
@@ -144,6 +282,78 @@ Genre guidance:
 
 Call report_library_gaps with all gaps filled in. Include 3 recommendations per gap.
 For beatportSearchUrl use: https://www.beatport.com/search?q=ARTIST+TITLE (URL-encode, replace spaces with +).`;
+
+const EMERGING_SYSTEM = `You are a DJ trend scout. Find emerging artists gaining momentum in DJ circles — breakthrough acts, rising artists getting chart placements, new names earning support from established DJs. Prioritise artists who have released in the last 12 months and are gaining traction.`;
+
+// ─── AI fetch functions ───────────────────────────────────────────────────────
+
+async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const userMsg = `Library gaps:\n${JSON.stringify(rawGaps, null, 2)}\n\nRecommend 3 tracks per gap and call report_library_gaps.`;
+
+  const msg = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system: GAP_SYSTEM,
+    messages: [{ role: 'user', content: userMsg }],
+    tools: [GAP_TOOL],
+    tool_choice: { type: 'tool', name: 'report_library_gaps' },
+  });
+
+  const block = msg.content.find(
+    (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
+  );
+  if (!block) throw new Error('No tool_use block from report_library_gaps');
+  return (block.input as { gaps: LibraryGap[] }).gaps;
+}
+
+async function fetchEmergingArtists(
+  genres: string[],
+  libraryArtists: Set<string>,
+): Promise<Map<string, EmergingArtist[]>> {
+  if (!genres.length) return new Map();
+
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const userMsg = `Find 5 emerging/rising artists in each of these DJ genres gaining traction in 2026: ${genres.join(', ')}. Focus on breakthrough acts, not established headliners.`;
+
+  const searched = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    system: EMERGING_SYSTEM,
+    messages: [{ role: 'user', content: userMsg }],
+    tools: [WEB_SEARCH],
+    tool_choice: { type: 'any' },
+  });
+
+  const forced = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system: 'Report the emerging artists you found. For each artist give a one-sentence reason why they are worth tracking now. Set beatportSearchUrl to https://www.beatport.com/search?q=ARTIST (URL-encode, replace spaces with +).',
+    messages: [
+      { role: 'user', content: userMsg },
+      { role: 'assistant', content: searched.content as unknown as Anthropic.Messages.ContentBlockParam[] },
+      { role: 'user', content: 'Call report_emerging_artists with the artists you found.' },
+    ],
+    tools: [EMERGING_TOOL],
+    tool_choice: { type: 'tool', name: 'report_emerging_artists' },
+  });
+
+  const block = forced.content.find(
+    (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
+  );
+  const results = (block?.input as { results: { genre: string; artists: EmergingArtist[] }[] })?.results ?? [];
+
+  const map = new Map<string, EmergingArtist[]>();
+  for (const r of results) {
+    const filtered = r.artists
+      .filter(a => !libraryArtists.has(a.artist.toLowerCase().trim()))
+      .slice(0, 3);
+    map.set(r.genre, filtered);
+  }
+  return map;
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function GET() {
   try {
@@ -161,38 +371,48 @@ export async function GET() {
 
     if (!library) return NextResponse.json({ error: 'No library found' }, { status: 404 });
 
-    const { data: tracks } = await admin
+    const { data: rawTracks } = await admin
       .from('serato_tracks')
-      .select('bpm, genre')
+      .select('bpm, genre, artist, lastfm_tags')
       .eq('library_id', library.id)
       .eq('in_library', true);
 
-    if (!tracks?.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
+    if (!rawTracks?.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
+
+    // Apply sub-genre resolution using lastfm_tags
+    const tracks = rawTracks.map(t => ({
+      bpm: t.bpm,
+      genre: resolveSubGenre(t.genre ?? '', (t.lastfm_tags as string[] | null) ?? []),
+    }));
+
+    const libraryArtists = new Set(
+      rawTracks
+        .map(t => ((t.artist as string | null) ?? '').toLowerCase().trim())
+        .filter(Boolean),
+    );
 
     const rawGaps = detectGaps(tracks);
-    const genresAnalyzed = new Set(tracks.filter(t => t.genre).map(t => t.genre)).size;
+    const energyInsights = detectEnergyGaps(tracks);
+    const genresAnalyzed = new Set(tracks.map(t => t.genre).filter(Boolean)).size;
     const meta = { tracksAnalyzed: tracks.length, genresAnalyzed };
 
-    if (!rawGaps.length) return NextResponse.json({ gaps: [], meta });
+    if (!rawGaps.length) {
+      return NextResponse.json({ gaps: [], energyInsights, meta });
+    }
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const userMsg = `Library gaps:\n${JSON.stringify(rawGaps, null, 2)}\n\nRecommend 3 tracks per gap and call report_library_gaps.`;
+    const gapGenres = [...new Set(rawGaps.map(g => g.genre))].slice(0, 3);
 
-    const msg = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: userMsg }],
-      tools: [GAP_TOOL],
-      tool_choice: { type: 'tool', name: 'report_library_gaps' },
-    });
+    const [gapsWithRecs, emergingMap] = await Promise.all([
+      fetchBpmGapRecs(rawGaps),
+      fetchEmergingArtists(gapGenres, libraryArtists).catch(() => new Map<string, EmergingArtist[]>()),
+    ]);
 
-    const block = msg.content.find(
-      (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
-    );
-    if (!block) throw new Error('No tool_use block from report_library_gaps');
+    const enrichedGaps = gapsWithRecs.map(gap => ({
+      ...gap,
+      emergingArtists: emergingMap.get(gap.genre) ?? [],
+    }));
 
-    return NextResponse.json({ gaps: (block.input as { gaps: LibraryGap[] }).gaps, meta });
+    return NextResponse.json({ gaps: enrichedGaps, energyInsights, meta });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[analyze-gaps]', message);

@@ -5,9 +5,36 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { BRAND } from '@/lib/brand';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
-import { LibraryTrack } from '@/lib/agents/types';
+import { LibraryTrack, SetlistTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
+import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
+import { buildRekordboxXml, buildM3u, downloadRekordboxXml, downloadM3u } from '@/lib/setdrop/rekordbox-export';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot, Tabs } from './shared';
+
+// ─── Crate types ──────────────────────────────────────────────────────────────
+
+interface CrateTrack {
+  id: string;
+  artist: string;
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  filePath: string | null;
+}
+
+interface CrateEntry {
+  id: string;
+  name: string;
+  prompt: string;
+  trackCount: number;
+  createdAt: string;
+}
+
+interface ActiveCrate extends CrateEntry {
+  tracks: CrateTrack[];
+  moodNotes: string;
+}
 
 
 function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
@@ -525,6 +552,13 @@ export function Library() {
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [showSpotifyPanel, setShowSpotifyPanel] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
+  const [cratesList, setCratesList] = useState<CrateEntry[] | null>(null);
+  const [cratesLoading, setCratesLoading] = useState(false);
+  const [cratePrompt, setCratePrompt] = useState('');
+  const [crateTargetCount, setCrateTargetCount] = useState(20);
+  const [crateGenerating, setCrateGenerating] = useState(false);
+  const [crateError, setCrateError] = useState<string | null>(null);
+  const [activeCrate, setActiveCrate] = useState<ActiveCrate | null>(null);
 
   useEffect(() => {
     // Try Supabase first, fall back to localStorage
@@ -788,6 +822,96 @@ export function Library() {
     }
   };
 
+  const loadCrates = async () => {
+    setCratesLoading(true);
+    try {
+      const res = await fetch('/api/crates');
+      const data = await res.json() as { crates?: CrateEntry[]; error?: string };
+      if (data.error) throw new Error(data.error);
+      setCratesList(data.crates ?? []);
+    } catch (err) {
+      setCrateError(err instanceof Error ? err.message : 'Failed to load crates');
+    } finally {
+      setCratesLoading(false);
+    }
+  };
+
+  const handleGenerateCrate = async () => {
+    if (!cratePrompt.trim()) return;
+    setCrateGenerating(true);
+    setCrateError(null);
+    try {
+      const res = await fetch('/api/crates/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: cratePrompt.trim(), targetCount: crateTargetCount }),
+      });
+      const data = await res.json() as { crate?: ActiveCrate; error?: string };
+      if (data.error) throw new Error(data.error);
+      if (data.crate) {
+        setActiveCrate(data.crate);
+        setCratePrompt('');
+        setCratesList(prev => prev
+          ? [{ id: data.crate!.id, name: data.crate!.name, prompt: data.crate!.prompt, trackCount: data.crate!.tracks.length, createdAt: data.crate!.createdAt }, ...prev]
+          : null
+        );
+      }
+    } catch (err) {
+      setCrateError(err instanceof Error ? err.message : 'Generation failed');
+    } finally {
+      setCrateGenerating(false);
+    }
+  };
+
+  const handleDeleteCrate = async (id: string) => {
+    await fetch('/api/crates', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    setCratesList(prev => (prev ?? []).filter(c => c.id !== id));
+    if (activeCrate?.id === id) setActiveCrate(null);
+  };
+
+  const handleLoadCrateDetail = async (entry: CrateEntry) => {
+    const res = await fetch('/api/crates');
+    const data = await res.json() as { crates?: Array<CrateEntry & { tracks: CrateTrack[] }> };
+    const full = (data.crates ?? []).find(c => c.id === entry.id);
+    if (full) setActiveCrate({ ...full, moodNotes: '' });
+  };
+
+  const exportCrateSerato = (crate: ActiveCrate) => {
+    const paths = crate.tracks.map(t => t.filePath).filter((p): p is string => Boolean(p));
+    if (!paths.length) { alert('No file paths — library enrichment may be needed.'); return; }
+    downloadCrate(buildCrate(paths), crate.name);
+  };
+
+  const exportCrateRekordbox = (crate: ActiveCrate) => {
+    const pseudoSetlist: SetlistTrack[] = crate.tracks.map((t, i) => ({
+      position: i + 1, artist: t.artist, title: t.title, bpm: t.bpm ?? 0, key: t.key ?? '',
+      energyLevel: 5, whyThisTrack: '', transitionNotes: '', harmonicMixingNotes: '', isWishlistTrack: false,
+    }));
+    const pseudoLibrary: LibraryTrack[] = crate.tracks.map(t => ({
+      id: t.id, artist: t.artist, title: t.title, bpm: t.bpm ?? 0, key: t.key ?? '',
+      genre: t.genre ?? undefined, filePath: t.filePath ?? undefined, isWishlist: false,
+    }));
+    const { xml } = buildRekordboxXml(crate.name, pseudoSetlist, pseudoLibrary);
+    downloadRekordboxXml(xml, crate.name);
+  };
+
+  const exportCrateM3u = (crate: ActiveCrate) => {
+    const pseudoSetlist: SetlistTrack[] = crate.tracks.map((t, i) => ({
+      position: i + 1, artist: t.artist, title: t.title, bpm: t.bpm ?? 0, key: t.key ?? '',
+      energyLevel: 5, whyThisTrack: '', transitionNotes: '', harmonicMixingNotes: '', isWishlistTrack: false,
+    }));
+    const pseudoLibrary: LibraryTrack[] = crate.tracks.map(t => ({
+      id: t.id, artist: t.artist, title: t.title, bpm: t.bpm ?? 0, key: t.key ?? '',
+      genre: t.genre ?? undefined, filePath: t.filePath ?? undefined, isWishlist: false,
+    }));
+    const { m3u } = buildM3u(crate.name, pseudoSetlist, pseudoLibrary);
+    downloadM3u(m3u, crate.name);
+  };
+
   const handleDeleteWishlist = async (id: string) => {
     const supabase = createClient();
     await supabase.from('wishlist_tracks').delete().eq('id', id);
@@ -923,14 +1047,18 @@ export function Library() {
               { id: 'library', label: 'In Library', count: allTracks.length },
               { id: 'wishlist', label: 'Wishlist', count: wishlistTracks.length },
               { id: 'wordplay', label: 'Wordplay' },
+              { id: 'crates', label: 'Crates' },
             ]}
             value={tab}
-            onChange={setTab}
+            onChange={(id) => {
+              setTab(id);
+              if (id === 'crates' && cratesList === null) loadCrates();
+            }}
           />
         </div>
 
-        {/* Filters */}
-        <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap', alignItems:'flex-end' }}>
+        {/* Filters — hidden on Wordplay and Crates tabs */}
+        <div style={{ display: tab === 'wordplay' || tab === 'crates' ? 'none' : 'flex', gap:12, marginBottom:20, flexWrap:'wrap', alignItems:'flex-end' }}>
           <div style={{ flex:1, minWidth:240 }}>
             <SDInput value={search} onChange={setSearch}
               placeholder={tab === 'library' ? 'Search artist or title...' : 'Search wishlist...'} />
@@ -946,10 +1074,12 @@ export function Library() {
           )}
         </div>
 
-        <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
-          {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
-          {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Library</span>}
-        </div>
+        {tab !== 'wordplay' && tab !== 'crates' && (
+          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
+            {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
+            {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Library</span>}
+          </div>
+        )}
 
         {/* Spotify import panel */}
         {tab === 'wishlist' && spotifyConnected !== null && (
@@ -1217,8 +1347,166 @@ export function Library() {
           </div>
         )}
 
+        {/* Crates */}
+        {tab === 'crates' && (
+          <div>
+            {/* Generate form */}
+            <div style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:SD.r3, padding:'20px 24px', marginBottom:24 }}>
+              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2, color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>
+                Generate a Crate
+              </div>
+              <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, lineHeight:1.7, marginBottom:16 }}>
+                Describe the vibe — {BRAND.name} rounds up matching tracks from your library. You decide what to play.
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <input
+                  value={cratePrompt}
+                  onChange={e => setCratePrompt(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !crateGenerating) handleGenerateCrate(); }}
+                  placeholder='e.g. "Friday peak 1am", "Wedding cocktail hour", "Tech house warmup"'
+                  style={{
+                    width:'100%', boxSizing:'border-box',
+                    background:SD.surface2, border:`1px solid ${SD.border}`,
+                    borderRadius:SD.r2, padding:'10px 14px', color:SD.text,
+                    fontFamily:SD.mono, fontSize:14,
+                  }}
+                />
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16, flexWrap:'wrap' }}>
+                <label style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, display:'flex', alignItems:'center', gap:8 }}>
+                  Track count:
+                  <input
+                    type="number" min={5} max={50} value={crateTargetCount}
+                    onChange={e => setCrateTargetCount(Math.min(50, Math.max(5, Number(e.target.value))))}
+                    style={{
+                      width:64, background:SD.surface2, border:`1px solid ${SD.border}`,
+                      borderRadius:SD.r2, padding:'6px 10px', color:SD.text,
+                      fontFamily:SD.mono, fontSize:13, textAlign:'center',
+                    }}
+                  />
+                </label>
+                <SDButton
+                  onClick={handleGenerateCrate}
+                  style={{ fontSize:13, opacity: crateGenerating || !cratePrompt.trim() ? 0.5 : 1,
+                    pointerEvents: crateGenerating || !cratePrompt.trim() ? 'none' : 'auto' }}
+                >
+                  {crateGenerating ? 'Generating...' : 'Generate Crate'}
+                </SDButton>
+              </div>
+              {crateError && (
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.danger }}>{crateError}</div>
+              )}
+            </div>
+
+            {/* Active crate preview */}
+            {activeCrate && (
+              <div style={{ background:SD.surface, border:`1px solid ${SD.borderMid}`, borderRadius:SD.r3, padding:'20px 24px', marginBottom:24 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:16, flexWrap:'wrap' }}>
+                  <div>
+                    <div style={{ fontFamily:SD.mono, fontSize:16, fontWeight:700, color:SD.text, marginBottom:4 }}>
+                      {activeCrate.name}
+                    </div>
+                    {activeCrate.moodNotes && (
+                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, fontStyle:'italic' }}>
+                        {activeCrate.moodNotes}
+                      </div>
+                    )}
+                    <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginTop:4 }}>
+                      {activeCrate.tracks.length} tracks · from &ldquo;{activeCrate.prompt}&rdquo;
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    <SDButton ghost onClick={() => exportCrateSerato(activeCrate)} style={{ fontSize:11, padding:'5px 12px' }}>
+                      Export .crate
+                    </SDButton>
+                    <SDButton ghost onClick={() => exportCrateRekordbox(activeCrate)} style={{ fontSize:11, padding:'5px 12px' }}>
+                      Rekordbox XML
+                    </SDButton>
+                    <SDButton ghost onClick={() => exportCrateM3u(activeCrate)} style={{ fontSize:11, padding:'5px 12px' }}>
+                      M3U
+                    </SDButton>
+                    <SDButton ghost onClick={() => setActiveCrate(null)} style={{ fontSize:11, padding:'5px 12px', color:SD.textMuted }}>
+                      Close
+                    </SDButton>
+                  </div>
+                </div>
+                <div style={{ overflowX:'auto' }}>
+                  <div style={{ minWidth:420 }}>
+                    <div style={{ display:'grid', gridTemplateColumns:'32px 1fr 64px 52px', gap:12,
+                      padding:'6px 12px', borderBottom:`1px solid ${SD.border}` }}>
+                      {['#','Track','BPM','Key'].map(h => (
+                        <span key={h} style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted,
+                          letterSpacing:1.5, textTransform:'uppercase' }}>{h}</span>
+                      ))}
+                    </div>
+                    {activeCrate.tracks.map((t, i) => (
+                      <div key={t.id} style={{ display:'grid', gridTemplateColumns:'32px 1fr 64px 52px', gap:12,
+                        padding:'11px 12px', borderBottom:`1px solid ${SD.border}`, alignItems:'center' }}>
+                        <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>{String(i + 1).padStart(2,'0')}</span>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text,
+                            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.artist}</div>
+                          <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
+                            whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.title}</div>
+                        </div>
+                        <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textSec }}>{t.bpm ?? '—'}</span>
+                        <span style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>{t.key ?? '—'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Saved crates list */}
+            {cratesLoading ? (
+              <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>Loading crates...</div>
+            ) : cratesList !== null && (
+              <div>
+                {cratesList.length === 0 && !activeCrate ? (
+                  <div style={{ textAlign:'center', padding:'60px 40px' }}>
+                    <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:3, color:SD.textMuted, marginBottom:10 }}>CRATES</div>
+                    <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
+                      Generate your first crate above — describe the vibe and {BRAND.name} rounds up the tracks.
+                    </div>
+                  </div>
+                ) : cratesList.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, color:SD.textMuted,
+                      textTransform:'uppercase', marginBottom:10 }}>Saved Crates</div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      {cratesList.map(entry => (
+                        <div key={entry.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                          gap:12, padding:'14px 16px', background:SD.surface, border:`1px solid ${SD.border}`,
+                          borderRadius:SD.r3 }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text,
+                              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{entry.name}</div>
+                            <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginTop:2 }}>
+                              {entry.trackCount} tracks · &ldquo;{entry.prompt}&rdquo; · {new Date(entry.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
+                            </div>
+                          </div>
+                          <div style={{ display:'flex', gap:6 }}>
+                            <SDButton ghost onClick={() => handleLoadCrateDetail(entry)} style={{ fontSize:11, padding:'4px 10px' }}>
+                              View
+                            </SDButton>
+                            <SDButton ghost onClick={() => handleDeleteCrate(entry.id)}
+                              style={{ fontSize:11, padding:'4px 10px', color:SD.danger }}>
+                              Delete
+                            </SDButton>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Rows */}
-        {tab !== 'wordplay' && (filtered.length === 0 ? (
+        {tab !== 'wordplay' && tab !== 'crates' && (filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 40px' }}>
             <div style={{ fontFamily:SD.display, fontSize:48, letterSpacing:3,
               color:SD.textMuted, marginBottom:12 }}>NOTHING HERE</div>

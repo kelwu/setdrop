@@ -65,12 +65,25 @@ interface TrendingGenreResult {
   fetchedAt: string;
 }
 
+interface EmergingArtist {
+  artist: string;
+  reason: string;
+  beatportSearchUrl: string;
+}
+
+interface EnergyInsight {
+  genre: string;
+  message: string;
+  severity: 'high' | 'medium';
+}
+
 interface LibraryGap {
   genre: string;
   bpmRange: string;
   currentCount: number;
   severity: 'high' | 'medium' | 'low';
   recommendations: GapRecommendation[];
+  emergingArtists?: EmergingArtist[];
 }
 
 export function Dashboard() {
@@ -89,6 +102,7 @@ export function Dashboard() {
   const [trendingError, setTrendingError] = useState<string | null>(null);
   const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
   const [gapMeta, setGapMeta] = useState<{ tracksAnalyzed: number; genresAnalyzed: number } | null>(null);
+  const [energyInsights, setEnergyInsights] = useState<EnergyInsight[]>([]);
   const [gapError, setGapError] = useState<string | null>(null);
   const [gapLoading, setGapLoading] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState<Set<string>>(new Set());
@@ -203,9 +217,10 @@ export function Dashboard() {
     try {
       const res = await fetch('/api/library/analyze-gaps');
       if (!res.ok) throw new Error(`Server error ${res.status} — try again`);
-      const data = await res.json() as { gaps?: LibraryGap[]; meta?: { tracksAnalyzed: number; genresAnalyzed: number }; error?: string };
+      const data = await res.json() as { gaps?: LibraryGap[]; energyInsights?: EnergyInsight[]; meta?: { tracksAnalyzed: number; genresAnalyzed: number }; error?: string };
       if (data.error) throw new Error(data.error);
       setGapReport(data.gaps ?? []);
+      setEnergyInsights(data.energyInsights ?? []);
       setGapMeta(data.meta ?? null);
     } catch (err) {
       console.error('[analyzeLibrary]', err);
@@ -628,6 +643,29 @@ export function Dashboard() {
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
                   {gapMeta && <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted }}>Analyzed {gapMeta.tracksAnalyzed.toLocaleString()} tracks across {gapMeta.genresAnalyzed} genres</div>}
+
+                  {/* Energy insights */}
+                  {energyInsights.length > 0 && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                      {energyInsights.map((insight, i) => (
+                        <div key={i} style={{
+                          display:'flex', alignItems:'center', gap:8,
+                          padding:'8px 12px',
+                          background: insight.severity === 'high' ? SD.dangerDim : SD.warningDim,
+                          border: `1px solid ${insight.severity === 'high' ? SD.danger : SD.warning}33`,
+                          borderRadius: SD.r2,
+                        }}>
+                          <span style={{ fontFamily:SD.mono, fontSize:10, fontWeight:700, letterSpacing:'0.06em',
+                            color: insight.severity === 'high' ? SD.danger : SD.warning, flexShrink:0 }}>
+                            ENERGY
+                          </span>
+                          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.text }}>{insight.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* BPM gaps */}
                   {gapReport.map((gap, gi) => {
                     const sevVariant: 'danger' | 'warning' | 'default' =
                       gap.severity === 'high' ? 'danger' : gap.severity === 'medium' ? 'warning' : 'default';
@@ -663,6 +701,33 @@ export function Dashboard() {
                             );
                           })}
                         </div>
+
+                        {/* Emerging artists in this genre */}
+                        {gap.emergingArtists && gap.emergingArtists.length > 0 && (
+                          <div style={{ marginTop:12 }}>
+                            <div style={{ fontFamily:SD.mono, fontSize:10, fontWeight:700, letterSpacing:'0.06em',
+                              color:SD.textMuted, marginBottom:6, textTransform:'uppercase' }}>
+                              Rising in this genre
+                            </div>
+                            <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                              {gap.emergingArtists.map((ea, eai) => (
+                                <div key={eai} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                                  gap:12, padding:'8px 12px', background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:SD.r2 }}>
+                                  <div style={{ flex:1, minWidth:0 }}>
+                                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600, color:SD.text }}>{ea.artist}</div>
+                                    <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginTop:1,
+                                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{ea.reason}</div>
+                                  </div>
+                                  <a href={ea.beatportSearchUrl} target="_blank" rel="noopener noreferrer"
+                                    style={{ fontFamily:SD.mono, fontSize:11, color:SD.accent, textDecoration:'none',
+                                      flexShrink:0, whiteSpace:'nowrap' }}>
+                                    Search ↗
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
