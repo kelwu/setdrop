@@ -116,6 +116,7 @@ Plan file: `C:\Users\wuazn\.claude\plans\compressed-dreaming-cocke.md`
 ## Recent Commits
 
 ```
+b7d1f82 chore: nightly context update 2026-06-08
 7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
 61aaf0b feat(track-id): Phase 2 MVP — Mix Tracklist scanner
 07168c7 refactor(brand): extract BRAND constant for easy rename
@@ -135,7 +136,6 @@ fadda3b feat(design-system): Phase 1.2 — shared primitives PageHeader, Card, T
 4ea3221 chore: nightly context update 2026-06-06
 03eefc5 feat(design-system): Phase 1.1 — extend SD with spacing, type, semantic-color, and radius scales
 435ea70 docs: update setdrop-context.md with strategic pivot — pre-gig system focus, live mode parked, co-pilot principle
-f9c3c23 chore: add nightly context updater GitHub Action + initial setdrop-context.md
 ```
 
 ---
@@ -147,4 +147,4 @@ f9c3c23 chore: add nightly context updater GitHub Action + initial setdrop-conte
 
 ---
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-09*
