@@ -2,7 +2,7 @@
 
 *Drop this file into any Claude conversation to continue building SetDrop without re-explaining the project.*
 
-> **⚠️ NAMING IN PROGRESS:** "SetDrop.app" taken. "CrateIQ" ruled out — crateiq.app confirmed unavailable on Porkbun (also an active pre-launch AI vinyl pricing tool). Full brainstorm done (Preflight, Loadout, Sift, Digr, Setkit, Vault, Plot, Arc, Selekt, Deploy, Graft) — none selected. Name is still TBD. Rename when ready: update `src/lib/brand.ts` (5 strings) + external services checklist in that file's comments.
+> **✅ NAME LOCKED: SetLab** — domain `setlab.ai` purchased 2026-06-09. `src/lib/brand.ts` updated. External services still need updating — see checklist below.
 
 ---
 
@@ -93,7 +93,7 @@ Both targeting same DJ audience with the same real-time suggestion feature. Thir
 - Djoid (€99/yr) — visual library graph/scatter map
 - Moises AI — stems + practice setlists, adjacent not direct
 
-**Pricing validation:** The DJ market pays $100-$200/yr for AI tools. $144/yr Pro sits at market norm. Willingness to pay is validated.
+**Pricing validation:** The DJ market pays $100-$200/yr for AI tools. SetLab's $144/yr Pro sits at market norm. Willingness to pay is validated.
 
 ---
 
@@ -164,7 +164,15 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 
 ## Pending Decisions
 
-- **App name — TBD, must lock before filming.** Names ruled out: SetDrop (domain taken), CrateIQ (domain unavailable + product conflict). Names explored and rejected this session: Preflight, Loadout, Sift, Digr, Setkit, Vault, Plot, Arc, Selekt, Deploy, Graft. No winner yet.
+- **External services rename** — `brand.ts` is updated. Still to do before launch:
+  - `NEXT_PUBLIC_APP_URL` env var → `https://setlab.ai` (Vercel)
+  - DNS: point `setlab.ai` to Vercel project
+  - GitHub repo rename (cosmetic — clone URLs change)
+  - Vercel project rename (cosmetic)
+  - Supabase project name (cosmetic)
+  - Stripe product names
+  - ACRCloud project name
+  - Resend "from" email and templates
 - **Episode framing:** Developer story vs DJ tool demo — lean developer story per the co-pilot principle.
 - **Phase 4 timing:** Deferred. Needs a real gig recorded after this video ships.
 

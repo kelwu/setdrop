@@ -21,14 +21,14 @@
 //   - Console log tags like '[track-id]', '[trending]'
 export const BRAND = {
   // Plain name used in body text, share copy, etc.
-  name: 'SetDrop',
+  name: 'SetLab',
   // ALL CAPS variant used in display headings and the share-page H1
-  nameAllCaps: 'SETDROP',
+  nameAllCaps: 'SETLAB',
   // Split-color logo pattern: `logoLeft` rendered in default text + `logoRight` in accent
   logoLeft: 'SET',
-  logoRight: 'DROP',
+  logoRight: 'LAB',
   // Bare domain (no protocol) — used in invoice footer, share-page footer
-  domain: 'setdrop.app',
+  domain: 'setlab.ai',
   // One-line tagline for OG / metadata / email signatures
   tagline: 'AI for DJ setlist planning',
 } as const;
