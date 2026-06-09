@@ -249,7 +249,7 @@ export default function PrivacyPage() {
         <H2>5. Public Setlists</H2>
         <P>
           Setlists are private by default. If you click &ldquo;Make Public&rdquo; on a setlist, it becomes
-          accessible to anyone with the link at <code style={{ color: S.accent }}>setdrop-phi.vercel.app/set/[slug]</code>.
+          accessible to anyone with the link at <code style={{ color: S.accent }}>{BRAND.domain}/set/[slug]</code>.
           Public setlists show the track list, energy arc, and metadata — no account information is exposed.
           You cannot currently undo a public setlist through the UI; contact{' '}
           <a href="mailto:kelcwu@gmail.com" style={{ color: S.accent, textDecoration: 'none' }}>
