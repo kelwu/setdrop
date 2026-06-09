@@ -19,7 +19,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const arrayBuffer = await (file as File).arrayBuffer();
+    const fileObj = file as File;
+    if (fileObj.size > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large (max 50MB)' }, { status: 400 });
+    }
+
+    const arrayBuffer = await fileObj.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const { tracks, count } = parseSeratoDatabase(buffer);
 

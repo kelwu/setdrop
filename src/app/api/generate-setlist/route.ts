@@ -48,35 +48,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Rate limiting — must complete before streaming starts so 429 is a real HTTP response
+  // Auth + rate limiting — must complete before streaming starts so errors are real HTTP responses
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    // Beta testers and allowlisted emails bypass rate limiting entirely
-    const betaEmails = (process.env.BETA_EMAILS ?? '')
-      .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    const isBeta = user.email && betaEmails.includes(user.email.toLowerCase());
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!isBeta) {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
-      const { count } = await supabase
-        .from('setlists')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgo);
+  // Beta testers and allowlisted emails bypass rate limiting entirely
+  const betaEmails = (process.env.BETA_EMAILS ?? '')
+    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const isBeta = user.email && betaEmails.includes(user.email.toLowerCase());
 
-      // Check subscription tier — pro users get 50/month, free gets 5
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('subscription_tier')
-        .eq('id', user.id)
-        .single();
-      const tier = userRow?.subscription_tier ?? 'free';
-      const limit = tier === 'pro' ? 50 : 5;
+  if (!isBeta) {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
+    const { count } = await supabase
+      .from('setlists')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', thirtyDaysAgo);
 
-      if ((count ?? 0) >= limit) {
-        return NextResponse.json({ error: 'rate_limit', tier, limit }, { status: 429 });
-      }
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .single();
+    const tier = userRow?.subscription_tier ?? 'free';
+    const limit = tier === 'pro' ? 50 : 5;
+
+    if ((count ?? 0) >= limit) {
+      return NextResponse.json({ error: 'rate_limit', tier, limit }, { status: 429 });
     }
   }
 

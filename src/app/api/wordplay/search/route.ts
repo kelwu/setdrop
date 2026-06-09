@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { jsonrepair } from 'jsonrepair';
+import { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
 
@@ -47,6 +48,10 @@ function camelotCompatible(k1: string, k2: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { word, tracks } = await req.json() as { word?: string; tracks?: TrackInput[] };
     if (!word?.trim()) return NextResponse.json({ error: 'Word is required' }, { status: 400 });
     if (!tracks?.length) return NextResponse.json({ matches: [], pairs: [] });

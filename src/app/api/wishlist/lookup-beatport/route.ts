@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 15;
 
@@ -26,6 +27,10 @@ function toCamelot(key?: BeatportTrack['key']): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { url } = await req.json() as { url?: string };
     const id = extractId(url ?? '');
     if (!id) return NextResponse.json({ error: 'Not a valid Beatport track URL' }, { status: 400 });

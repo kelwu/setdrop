@@ -3,8 +3,13 @@ import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice/pdf';
 import type { InvoiceData } from '@/lib/invoice/types';
 import { BRAND } from '@/lib/brand';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });

@@ -2,7 +2,7 @@
 
 *Drop this file into any Claude conversation to continue building SetDrop without re-explaining the project.*
 
-> **⚠️ NAMING IN PROGRESS:** "SetDrop.app" was already taken. "CrateIQ" also has a conflict (crateiq.app is an active pre-launch AI vinyl pricing tool targeting DJs). Still deciding. All user-visible strings now route through `src/lib/brand.ts` — a rename is one file + the external checklist documented in that file.
+> **⚠️ NAMING IN PROGRESS:** "SetDrop.app" taken. "CrateIQ" ruled out — crateiq.app confirmed unavailable on Porkbun (also an active pre-launch AI vinyl pricing tool). Full brainstorm done (Preflight, Loadout, Sift, Digr, Setkit, Vault, Plot, Arc, Selekt, Deploy, Graft) — none selected. Name is still TBD. Rename when ready: update `src/lib/brand.ts` (5 strings) + external services checklist in that file's comments.
 
 ---
 
@@ -37,7 +37,7 @@ A personal DJ hobby project (the builder's own) using Claude Code + AI to handle
 
 **Track ID v1** — Mic (tap-to-stop 5–15s) + file upload, ACRCloud fingerprinting, library/wishlist dedup badges. Env: `ACRCLOUD_ACCESS_KEY` / `ACRCLOUD_ACCESS_SECRET` / `ACRCLOUD_HOST`.
 
-**Track ID v2 — Mix Tracklist** ← *just shipped* — New "Mix Tracklist" tab on `/id`. User uploads a DJ mix (up to 200MB). Browser decodes via Web Audio API, slices 10s samples every 45s, sends each to existing `/api/track-id`, deduplicates consecutive same-track matches. Returns a timestamped tracklist + bulk "Add All to Wishlist". `src/lib/setdrop/mix-scanner.ts` contains the chunker + WAV encoder + scanner. Each chunk counts as 1 ID against monthly quota; confirm screen shows cost upfront. URL-paste mode (SoundCloud/Mixcloud) deferred — ToS concerns.
+**Track ID v2 — Mix Tracklist** — New "Mix Tracklist" tab on `/id`. User selects a DJ mix file (client-side only — browser decodes via Web Audio API, slices into 10s WAV chunks every 45s, POSTs each chunk to `/api/track-id`). The server never receives the full mix — only chunks up to 10MB each. Deduplicates consecutive same-track matches. Returns a timestamped tracklist + bulk "Add All to Wishlist". `src/lib/setdrop/mix-scanner.ts` contains the chunker + WAV encoder + scanner. Each chunk counts as 1 ID against monthly quota; confirm screen shows cost upfront.
 
 **Community + billing + auth** — Explore feed + likes, Stripe checkout/portal/webhook (admin-client), email + Google OAuth, account delete (auth-first).
 
@@ -50,6 +50,16 @@ A personal DJ hobby project (the builder's own) using Claude Code + AI to handle
 - Publish → Explore: toast after Make Public with "View →" link
 - Library flash fix: `libraryLoaded` boolean gates the UploadZone
 - `src/lib/brand.ts`: BRAND constant — `name`, `nameAllCaps`, `logoLeft`, `logoRight`, `domain`, `tagline`. All user-visible strings route through it.
+
+**Library Intelligence v2 (Phase 3.1 — complete)**
+- `src/app/api/library/analyze-gaps/route.ts` — sub-genre resolution via lastfm_tags (15 sub-genres: tech house, deep house, afro house, trap, drill, etc.), energy gap detection (per-genre BPM tiers), emerging artists via 2-phase web search (cross-referenced against library, strips already-owned artists, runs in parallel with BPM recs). `maxDuration` 120s.
+- Dashboard renders energy insights as warning chips + "Rising in this genre" per gap card with Beatport search links.
+
+**Themed Crates (Phase 3.2 + 3.3 — complete)**
+- Supabase `themed_crates` table (id, user_id, name, prompt, tracks_json, created_at + RLS).
+- `src/app/api/crates/generate/route.ts` — POST `{ prompt, targetCount? }`. Claude parses prompt → structured profile (genre keywords, BPM range, energy direction) → filter library → sort by energy curve → save.
+- `src/app/api/crates/route.ts` — GET (list) + DELETE.
+- `src/components/setdrop/Library.tsx` — new "Crates" tab (4th tab after Wordplay). Generate form (prompt + track count), active crate preview with full track table, Export .crate / Rekordbox XML / M3U buttons, saved crates list with View/Delete. Reuses existing export utilities.
 
 ---
 
@@ -83,60 +93,116 @@ Both targeting same DJ audience with the same real-time suggestion feature. Thir
 - Djoid (€99/yr) — visual library graph/scatter map
 - Moises AI — stems + practice setlists, adjacent not direct
 
-**Pricing validation:** The DJ market pays $100-$200/yr for AI tools. SetDrop's $144/yr Pro sits at market norm. Willingness to pay is validated.
+**Pricing validation:** The DJ market pays $100-$200/yr for AI tools. $144/yr Pro sits at market norm. Willingness to pay is validated.
 
 ---
 
-## Active Plan & Video Roadmap
-
-Plan file: `C:\Users\wuazn\.claude\plans\compressed-dreaming-cocke.md`
-
-**Decision made:** Stop building after Phase 3, start scripting. Phase 4 (post-gig reflection) becomes "what I'm building next" — better as Episode 2 content AND requires real gig footage to be authentic.
+## Build Status
 
 | Phase | Status | Work |
 |-------|--------|------|
 | 1 — Design system | ✅ Done | Tokens, primitives, page refactors, mobile, polish |
 | 2 — Track ID v2 | ✅ Done | Mix Tracklist scanner shipped |
-| 3 — Library Intelligence v2 + Themed Crates | 🔲 Next | Sub-genre awareness, emerging artists, `/api/crates/generate`, Crates tab in Library |
-| 4 — Post-gig Reflection | 🔲 Later | Upload recording → planned vs actual arc (deferred to Ep. 2) |
-| 5 — Script + Film | 🔲 After Phase 3 | |
+| 3 — Library Intelligence v2 + Themed Crates | ✅ Done | Sub-genre awareness, emerging artists, `/api/crates/generate`, Crates tab |
+| 4 — Post-gig Reflection | 🔲 Deferred | Episode 2 — requires real gig footage to be authentic |
+| 5 — Script + Film | 🟡 In progress | Episode script draft exists — see below |
 
-**Video story arc (build-in-public, developer story):**
-1. "I'm a DJ. I built a personal project using Claude Code."
-2. "DJ community pushback: 'AI shouldn't plan your sets.' They're right."
-3. "What AI IS good at: grunt work. Track ID, library data, mix tracklisting."
-4. "Strategic cut: PulseDJ + Banger Button own live suggestions. I own pre-gig."
-5. "Design system overhaul — before/after."
-6. "Track ID v2 — paste a mix, get the tracklist." ← magic moment
-7. "Themed crates on demand from your own library." ← Phase 3
-8. "What building this with Claude Code taught me."
+**Decision:** Stop building. Phase 4 (post-gig reflection) becomes "what I'm building next" — better as Episode 2 content AND requires real gig footage to be authentic.
+
+---
+
+## Security Audit — Complete (2026-06-08)
+
+All issues found and fixed. Safe to go live.
+
+**Fixed — critical (unauthenticated AI endpoints, financial DoS risk):**
+- `generate-setlist` — was callable unauthenticated, skipping rate limiting entirely
+- `setlist/resolve-urls` — no auth + unbounded fan-out (up to 3 Claude calls per track, no array cap). Fixed: auth guard + 100-track cap.
+- `wordplay/search` — no auth. Fixed: auth guard added.
+
+**Fixed — medium:**
+- `invoice/generate` — no auth. Fixed.
+- `invoice/send` — no auth. Fixed.
+- `library/parse-db` — no file size cap before buffering into memory. Fixed: 50MB cap enforced before `arrayBuffer()`.
+
+**Confirmed clean:**
+- All secrets (`ANTHROPIC_API_KEY`, `ACRCLOUD_*`, `SERVICE_ROLE_KEY`, `SPOTIFY_CLIENT_SECRET`, `STRIPE_SECRET`) are server-only — never in client bundle.
+- RLS enabled on all 13 Supabase tables including `themed_crates`. All policies owner-scoped.
+- Stripe webhook: `constructEvent` signature verification in place.
+- Track ID upload: 10MB server-side cap + 1KB floor on audio chunks.
+- Supabase leaked-password protection: enabled.
+
+**Architecture note:** Most data routes use the admin client (service role, bypasses RLS) — real access control is the in-code `getUser()` + `.eq('user_id', user.id)` filters. RLS is the backstop. Any future route that forgets the `user_id` filter on an admin query is an instant cross-user leak. Standing code-review rule.
+
+---
+
+## Episode Script
+
+Draft exists: `C:\Users\wuazn\Downloads\productbykel-crateiq-episode-script.md`
+
+**Known discrepancy in that file:** The pre-filming checklist says "acquire crateiq.app domain" — this is dead. CrateIQ is off the table (domain confirmed unavailable, product conflict). Replace with the actual name once locked.
+
+**Script structure:** Hook → DJ footage intro → Feature showcase (Track ID, Library Intelligence, Themed Crates, Setlist) → How I built it (4-phase workflow, 2-call pipeline, Spotify pivot, design system, 3 lessons) → Close + Episode 2 tease. Target 8–12 min.
+
+---
+
+## Video Story Arc (build-in-public, developer story)
+
+Audience: **fellow builders/developers**, not DJs being sold to. The DJ project is the context; the story is about building with AI dev tools.
+
+1. **Open:** "I'm a DJ. I built a personal project using Claude Code. This is a developer story."
+2. **The hook:** "When I posted about it, the DJ community pushback was harsh — 'you shouldn't need AI to plan sets.' They're right. So I made a cut."
+3. **The pivot:** "I'm not building AI to replace creative work. I'm building AI to handle the grunt work — track ID, library data, mix tracklisting. The DJ stays the creative force."
+4. **The strategic cut:** "I looked at competitors. PulseDJ already does live AI for free. Banger Button owns real-time suggestions. So I went all-in on the one place no one covers end-to-end: the complete pre-gig system."
+5. **The engineering:** "First job — make it feel like one app. Here's the design-system overhaul. Before/after."
+6. **The magic moment:** "Track ID v2 — upload a mix → full timestamped tracklist."
+7. **Augmenting the library:** "Themed crates on demand from your own tracks."
+8. **The takeaway:** "Here's what building this with Claude Code taught me about positioning AI as a co-pilot, not a replacement."
+9. **What's next:** "Post-gig reflection — closing the loop. That's Episode 2."
+
+---
+
+## Pending Decisions
+
+- **App name — TBD, must lock before filming.** Names ruled out: SetDrop (domain taken), CrateIQ (domain unavailable + product conflict). Names explored and rejected this session: Preflight, Loadout, Sift, Digr, Setkit, Vault, Plot, Arc, Selekt, Deploy, Graft. No winner yet.
+- **Episode framing:** Developer story vs DJ tool demo — lean developer story per the co-pilot principle.
+- **Phase 4 timing:** Deferred. Needs a real gig recorded after this video ships.
 
 ---
 
 ## Recent Commits
 
 ```
+[security] fix: auth guards on 5 unauthenticated API routes + parse-db size cap
+  - generate-setlist: hard 401 before rate-limit block
+  - setlist/resolve-urls: auth guard + 100-track fan-out cap
+  - wordplay/search: auth guard
+  - invoice/generate + invoice/send: auth guards
+  - library/parse-db: 50MB size cap before arrayBuffer()
+[phase-3] feat(library): Library Intelligence v2 + Themed Crates
+  - Sub-genre awareness via lastfm_tags in analyze-gaps
+  - Energy gap detection with per-genre BPM tiers
+  - Emerging artists 2-phase web search (parallel with BPM recs)
+  - themed_crates Supabase migration + /api/crates/generate + /api/crates
+  - Crates tab in Library page with generate/preview/export flow
+7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
 61aaf0b feat(track-id): Phase 2 MVP — Mix Tracklist scanner
 07168c7 refactor(brand): extract BRAND constant for easy rename
-1b2cc20 refactor(colors): Phase 1.5 — hex hardcodes → semantic tokens
-e51eff9 feat(library): Phase 1.6 — Wordplay → Builder integration
-0e75ca5 refactor(explore): Phase 1.3f — adopt shared primitives
-2ddfc8c fix(output): mobile sidebar stacking + publish-to-Explore feedback loop
-cb58164 refactor(library): swap inline TabBtn for shared Tabs
-1eaf05a fix(library): eliminate 3-second flash of UploadZone
-fadda3b feat(design-system): Phase 1.2 — shared primitives
-03eefc5 feat(design-system): Phase 1.1 — token extension
-80f5a44 feat: Track ID v1 — mic + file upload via ACRCloud
-fc760aa fix: critical Stripe webhook RLS bug, account delete safety
 ```
 
 ---
 
-## Pending Decisions
+## For Episode Discussion
 
-- **App name still TBD.** Lock this before filming. Rename is: update `src/lib/brand.ts` (5 strings) + external services checklist (domain, GitHub repo, Vercel project, Stripe, ACRCloud, Resend). All external services listed in `brand.ts` comments.
-- **Phase 3 scope:** `src/lib/setdrop/constants.ts` has genres. Themed crates need `themed_crates` table (Supabase migration), `/api/crates/generate` route, and a new "Crates" tab in Library using shared `<Tabs>`.
+Key questions still open:
+
+1. **App name** — must be locked before filming. See Pending Decisions above.
+2. **Hook framing** — how explicit to be about DJ community pushback? Real comments/DMs or paraphrase?
+3. **Magic moment capture** — which mix file to use for the Track ID v2 demo? Use your own recording to avoid copyright flags.
+4. **Crates demo prompts** — "Friday peak 1am — dark afrobeats, high energy" and "warmup set, soulful house" are strong candidates.
+5. **Length** — script targets 8–12 min. Identify which sections to cut if running long.
+6. **Episode 2 tease** — how much to reveal about post-gig reflection at the end?
 
 ---
 
-*Last updated: 2026-06-07*
+*Last updated: 2026-06-08*

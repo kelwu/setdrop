@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
 
@@ -111,13 +112,20 @@ async function searchPool(
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { tracks } = await req.json() as { tracks: TrackInput[] };
   if (!Array.isArray(tracks) || !tracks.length) {
     return NextResponse.json({ resolved: [] });
   }
 
+  // Cap to prevent unbounded fan-out (each wishlist track = 3 Claude web-search calls)
+  const capped = tracks.slice(0, 100);
+
   const results = await Promise.allSettled(
-    tracks.map(async (t): Promise<ResolvedTrack> => {
+    capped.map(async (t): Promise<ResolvedTrack> => {
       const resolved: ResolvedTrack = { position: t.position };
 
       resolved.beatportUrl = await resolveBeatport(t.artist, t.title);
