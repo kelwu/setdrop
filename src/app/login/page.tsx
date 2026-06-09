@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
+import { BRAND } from '@/lib/brand';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -85,7 +86,7 @@ export default function LoginPage() {
           <div style={{
             fontFamily: SD.display, fontSize: 32, letterSpacing: 4, color: SD.text,
           }}>
-            SET<span style={{ color: SD.accent }}>DROP</span>
+            {BRAND.logoLeft}<span style={{ color: SD.accent }}>{BRAND.logoRight}</span>
           </div>
           <div style={{ fontSize: 13, color: SD.textSec, letterSpacing: 1.5, marginTop: 6 }}>
             {mode === 'signin' ? 'SIGN IN TO CONTINUE' : 'CREATE YOUR ACCOUNT'}
