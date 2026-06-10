@@ -7,7 +7,8 @@ export async function GET(req: NextRequest) {
     client_id: process.env.SPOTIFY_CLIENT_ID!,
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: 'playlist-read-private playlist-read-collaborative user-library-read',
+    scope: 'playlist-read-private playlist-read-collaborative user-library-read user-read-private',
+    show_dialog: 'true',
     state,
   });
 

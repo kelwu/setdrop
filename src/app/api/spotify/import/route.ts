@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch all tracks from playlist (paginated)
     const tracks: SpotifyTrack[] = [];
-    let url: string | null = `/playlists/${playlistId}/tracks?limit=50&market=from_token&additional_types=track`;
+    let url: string | null = `/playlists/${playlistId}/tracks?limit=50&additional_types=track`;
 
     while (url) {
       console.log('[spotify/import] fetching', url);
