@@ -85,7 +85,10 @@ export async function POST(req: NextRequest) {
       skipped: tracks.length - toInsert.length,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    let message = err instanceof Error ? err.message : 'Unknown error';
+    if (message === 'Forbidden' || message.includes('403')) {
+      message = 'This playlist cannot be imported — Spotify restricts API access to curated playlists (Discover Weekly, Daily Mix, etc.). Try one of your own playlists.';
+    }
     const status = message.includes('Not connected') ? 401 : 500;
     console.error('[spotify/import]', message);
     return NextResponse.json({ error: message }, { status });

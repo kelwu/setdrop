@@ -6,6 +6,7 @@ interface SpotifyPlaylist {
   name: string;
   tracks: { total: number };
   images: { url: string }[];
+  owner: { id: string };
 }
 
 interface SpotifyPlaylistsResponse {
@@ -21,7 +22,9 @@ export async function GET() {
     while (url) {
       const data: SpotifyPlaylistsResponse = await spotifyGet<SpotifyPlaylistsResponse>(url);
       for (const p of data.items) {
-        if (!p?.id) continue; // skip malformed items (podcasts, etc.)
+        if (!p?.id) continue;
+        // Spotify-owned playlists (Discover Weekly, Daily Mix, etc.) 403 on track access
+        if (p.owner?.id === 'spotify') continue;
         playlists.push({
           id: p.id,
           name: p.name,
