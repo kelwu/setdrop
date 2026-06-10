@@ -32,20 +32,25 @@ export async function POST(req: NextRequest) {
     const { playlistId } = await req.json() as { playlistId: string };
     if (!playlistId) return NextResponse.json({ error: 'playlistId required' }, { status: 400 });
 
-    // Diagnostic: test token + playlist accessibility
-    const token = await getValidSpotifyToken();
-    console.log('[spotify/import] playlistId:', playlistId, 'token present:', !!token);
+    // Diagnostic: try Client Credentials token for public playlist track access
+    const ccRes = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+      },
+      body: new URLSearchParams({ grant_type: 'client_credentials' }),
+    });
+    const ccData = await ccRes.json() as { access_token?: string };
+    const ccToken = ccData.access_token ?? null;
+    console.log('[spotify/import] cc token obtained:', !!ccToken);
 
-    const meRes = await fetch('https://api.spotify.com/v1/me', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-    console.log('[spotify/import] /me status:', meRes.status);
-
-    const plRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}?fields=id,name,owner,public,collaborative,tracks.total`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-    console.log('[spotify/import] /playlists/{id} status:', plRes.status, 'body:', await plRes.text());
-
-    const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-    console.log('[spotify/import] /tracks status:', tracksRes.status, 'www-auth:', tracksRes.headers.get('Www-Authenticate'));
-    if (!tracksRes.ok) {
-      return NextResponse.json({ error: `Spotify ${tracksRes.status} — check Vercel logs` }, { status: 500 });
+    const ccTracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`, {
+      headers: { Authorization: `Bearer ${ccToken}` }, cache: 'no-store',
+    });
+    console.log('[spotify/import] /tracks with cc status:', ccTracksRes.status);
+    if (!ccTracksRes.ok) {
+      return NextResponse.json({ error: `Spotify ${ccTracksRes.status} even with client credentials — Extended Quota Mode required` }, { status: 500 });
     }
 
     // Fetch all tracks from playlist (paginated)
