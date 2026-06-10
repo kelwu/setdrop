@@ -32,15 +32,20 @@ export async function POST(req: NextRequest) {
     const { playlistId } = await req.json() as { playlistId: string };
     if (!playlistId) return NextResponse.json({ error: 'playlistId required' }, { status: 400 });
 
-    // Diagnostic: raw fetch to capture full error details
+    // Diagnostic: test token + playlist accessibility
     const token = await getValidSpotifyToken();
-    const diagUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`;
-    const diagRes = await fetch(diagUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-    console.log('[spotify/import] diag status:', diagRes.status,
-      'www-auth:', diagRes.headers.get('Www-Authenticate'),
-      'body:', await diagRes.text());
-    if (!diagRes.ok) {
-      return NextResponse.json({ error: `Spotify ${diagRes.status} — check Vercel logs for details` }, { status: 500 });
+    console.log('[spotify/import] playlistId:', playlistId, 'token present:', !!token);
+
+    const meRes = await fetch('https://api.spotify.com/v1/me', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+    console.log('[spotify/import] /me status:', meRes.status);
+
+    const plRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}?fields=id,name,owner,public,collaborative,tracks.total`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+    console.log('[spotify/import] /playlists/{id} status:', plRes.status, 'body:', await plRes.text());
+
+    const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+    console.log('[spotify/import] /tracks status:', tracksRes.status, 'www-auth:', tracksRes.headers.get('Www-Authenticate'));
+    if (!tracksRes.ok) {
+      return NextResponse.json({ error: `Spotify ${tracksRes.status} — check Vercel logs` }, { status: 500 });
     }
 
     // Fetch all tracks from playlist (paginated)
