@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { spotifyGet } from '@/lib/spotify/client';
+import { spotifyGet, getValidSpotifyToken } from '@/lib/spotify/client';
 
 interface SpotifyTrack {
   id: string;
@@ -32,12 +32,22 @@ export async function POST(req: NextRequest) {
     const { playlistId } = await req.json() as { playlistId: string };
     if (!playlistId) return NextResponse.json({ error: 'playlistId required' }, { status: 400 });
 
+    // Diagnostic: raw fetch to capture full error details
+    const token = await getValidSpotifyToken();
+    const diagUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`;
+    const diagRes = await fetch(diagUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+    console.log('[spotify/import] diag status:', diagRes.status,
+      'www-auth:', diagRes.headers.get('Www-Authenticate'),
+      'body:', await diagRes.text());
+    if (!diagRes.ok) {
+      return NextResponse.json({ error: `Spotify ${diagRes.status} — check Vercel logs for details` }, { status: 500 });
+    }
+
     // Fetch all tracks from playlist (paginated)
     const tracks: SpotifyTrack[] = [];
-    let url: string | null = `/playlists/${playlistId}/tracks?limit=50&additional_types=track`;
+    let url: string | null = `/playlists/${playlistId}/tracks?limit=50`;
 
     while (url) {
-      console.log('[spotify/import] fetching', url);
       const data: SpotifyPlaylistTracksResponse = await spotifyGet<SpotifyPlaylistTracksResponse>(url);
       for (const item of data.items) {
         if (item.track) tracks.push(item.track);
