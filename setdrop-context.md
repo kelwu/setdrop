@@ -181,21 +181,26 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
-[security] fix: auth guards on 5 unauthenticated API routes + parse-db size cap
-  - generate-setlist: hard 401 before rate-limit block
-  - setlist/resolve-urls: auth guard + 100-track fan-out cap
-  - wordplay/search: auth guard
-  - invoice/generate + invoice/send: auth guards
-  - library/parse-db: 50MB size cap before arrayBuffer()
-[phase-3] feat(library): Library Intelligence v2 + Themed Crates
-  - Sub-genre awareness via lastfm_tags in analyze-gaps
-  - Energy gap detection with per-genre BPM tiers
-  - Emerging artists 2-phase web search (parallel with BPM recs)
-  - themed_crates Supabase migration + /api/crates/generate + /api/crates
-  - Crates tab in Library page with generate/preview/export flow
+e6d41c9 fix(brand): update embed badge + privacy URL to SetLab
+d66fcc8 fix(login): use BRAND constants instead of hardcoded SETDROP
+f9469db Merge branch 'main' of https://github.com/kelwu/setdrop
+94483c1 refactor(brand): rename SetDrop → SetLab, domain setlab.ai
+683a554 fix(security): auth guards on unauthenticated API routes + upload cap
+7d13fe5 feat(phase-3): Library Intelligence v2 + Themed Crates
+f990cfe chore: nightly context update 2026-06-09
+b7d1f82 chore: nightly context update 2026-06-08
 7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
 61aaf0b feat(track-id): Phase 2 MVP — Mix Tracklist scanner
 07168c7 refactor(brand): extract BRAND constant for easy rename
+1b2cc20 refactor(colors): Phase 1.5 — replace hardcoded danger hex values with semantic tokens
+e51eff9 feat(library): Phase 1.6 — Wordplay → Builder integration
+0e75ca5 refactor(explore): Phase 1.3f — adopt shared primitives
+2ddfc8c fix(output): mobile sidebar stacking + publish-to-Explore feedback loop
+cb58164 refactor(library): swap inline TabBtn for shared Tabs primitive
+ac0b177 chore: nightly context update 2026-06-07
+1eaf05a fix(library): eliminate 3-second flash of UploadZone before library loads
+1ca8a4e refactor(builder): Phase 1.3d — PageHeader
+0f34c14 refactor(history): Phase 1.3c — PageHeader, LoadingState, Badge, semantic colors
 ```
 
 ---
@@ -213,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-08*
+*Last updated: 2026-06-10*
