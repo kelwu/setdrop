@@ -549,7 +549,7 @@ export function Library() {
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<{ id: string; name: string; trackCount: number }[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState('');
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errorMsg?: string } | null>(null);
   const [showSpotifyPanel, setShowSpotifyPanel] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [cratesList, setCratesList] = useState<CrateEntry[] | null>(null);
@@ -621,8 +621,9 @@ export function Library() {
       if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
       fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
     } catch (err) {
-      setImportResult({ imported: -1, skipped: 0 });
-      console.error(err);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setImportResult({ imported: -1, skipped: 0, errorMsg: msg });
+      console.error('[spotify/import]', msg);
     } finally {
       setImporting(false);
     }
@@ -1147,7 +1148,7 @@ export function Library() {
                       <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 13,
                         color: importResult.imported < 0 ? SD.danger : SD.green }}>
                         {importResult.imported < 0
-                          ? 'Import failed — check console'
+                          ? `Import failed: ${importResult.errorMsg ?? 'unknown error'}`
                           : `✓ ${importResult.imported} tracks added${importResult.skipped ? `, ${importResult.skipped} already in wishlist` : ''}`}
                       </div>
                     )}

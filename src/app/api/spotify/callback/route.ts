@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   };
 
   const isProd = process.env.NODE_ENV === 'production';
-  const response = NextResponse.redirect(new URL('/?goto=library', req.url));
+  const response = NextResponse.redirect(new URL('/library', req.url));
 
   response.cookies.set('spotify_access_token', access_token, {
     httpOnly: true, secure: isProd, sameSite: 'lax',

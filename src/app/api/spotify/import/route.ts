@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch all tracks from playlist (paginated)
     const tracks: SpotifyTrack[] = [];
-    let url: string | null = `/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,artists,external_urls)),next`;
+    let url: string | null = `/playlists/${playlistId}/tracks?limit=100`;
 
     while (url) {
       const data: SpotifyPlaylistTracksResponse = await spotifyGet<SpotifyPlaylistTracksResponse>(url);
