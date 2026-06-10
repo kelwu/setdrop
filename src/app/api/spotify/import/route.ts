@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { spotifyGet, getValidSpotifyToken } from '@/lib/spotify/client';
+import { spotifyGet } from '@/lib/spotify/client';
 
 interface SpotifyTrack {
   id: string;
@@ -31,27 +31,6 @@ export async function POST(req: NextRequest) {
 
     const { playlistId } = await req.json() as { playlistId: string };
     if (!playlistId) return NextResponse.json({ error: 'playlistId required' }, { status: 400 });
-
-    // Diagnostic: try Client Credentials token for public playlist track access
-    const ccRes = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
-      },
-      body: new URLSearchParams({ grant_type: 'client_credentials' }),
-    });
-    const ccData = await ccRes.json() as { access_token?: string };
-    const ccToken = ccData.access_token ?? null;
-    console.log('[spotify/import] cc token obtained:', !!ccToken);
-
-    const ccTracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=1`, {
-      headers: { Authorization: `Bearer ${ccToken}` }, cache: 'no-store',
-    });
-    console.log('[spotify/import] /tracks with cc status:', ccTracksRes.status);
-    if (!ccTracksRes.ok) {
-      return NextResponse.json({ error: `Spotify ${ccTracksRes.status} even with client credentials — Extended Quota Mode required` }, { status: 500 });
-    }
 
     // Fetch all tracks from playlist (paginated)
     const tracks: SpotifyTrack[] = [];
@@ -108,7 +87,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     let message = err instanceof Error ? err.message : 'Unknown error';
     if (message === 'Forbidden' || message.includes('403')) {
-      message = 'This playlist cannot be imported — Spotify restricts API access to curated playlists (Discover Weekly, Daily Mix, etc.). Try one of your own playlists.';
+      message = 'Spotify import is temporarily unavailable — awaiting Extended Quota Mode approval from Spotify.';
     }
     const status = message.includes('Not connected') ? 401 : 500;
     console.error('[spotify/import]', message);
