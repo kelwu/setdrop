@@ -181,6 +181,17 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+6d1cf76 fix(spotify): clean up diagnostics, honest error for quota restriction
+fc93962 debug(spotify): test client credentials token against tracks endpoint
+f2497aa debug(spotify): test /me + /playlists/{id} + /tracks separately to isolate 403
+38d4c8a debug(spotify): add raw diagnostic fetch to capture full 403 response headers
+fb35df0 fix(spotify): add user-read-private scope + force consent dialog on reconnect
+ed97c54 fix(spotify): add market=from_token + additional_types=track to playlist fetch
+adcb9b5 fix(spotify): filter Spotify-curated playlists, handle 403 gracefully
+f422627 fix(spotify): remove fields param, fix callback redirect, show real import error
+b5d17de Merge branch 'main' of https://github.com/kelwu/setdrop
+19fceaf fix(auth): redirect to /dashboard after OAuth callback instead of /?goto=dashboard
+ad39eb2 chore: nightly context update 2026-06-10
 e6d41c9 fix(brand): update embed badge + privacy URL to SetLab
 d66fcc8 fix(login): use BRAND constants instead of hardcoded SETDROP
 f9469db Merge branch 'main' of https://github.com/kelwu/setdrop
@@ -190,17 +201,6 @@ f9469db Merge branch 'main' of https://github.com/kelwu/setdrop
 f990cfe chore: nightly context update 2026-06-09
 b7d1f82 chore: nightly context update 2026-06-08
 7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
-61aaf0b feat(track-id): Phase 2 MVP — Mix Tracklist scanner
-07168c7 refactor(brand): extract BRAND constant for easy rename
-1b2cc20 refactor(colors): Phase 1.5 — replace hardcoded danger hex values with semantic tokens
-e51eff9 feat(library): Phase 1.6 — Wordplay → Builder integration
-0e75ca5 refactor(explore): Phase 1.3f — adopt shared primitives
-2ddfc8c fix(output): mobile sidebar stacking + publish-to-Explore feedback loop
-cb58164 refactor(library): swap inline TabBtn for shared Tabs primitive
-ac0b177 chore: nightly context update 2026-06-07
-1eaf05a fix(library): eliminate 3-second flash of UploadZone before library loads
-1ca8a4e refactor(builder): Phase 1.3d — PageHeader
-0f34c14 refactor(history): Phase 1.3c — PageHeader, LoadingState, Badge, semantic colors
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-11*
