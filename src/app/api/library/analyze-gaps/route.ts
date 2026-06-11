@@ -297,8 +297,8 @@ async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
   const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
   );
-  if (!block) throw new Error('No tool_use block from report_library_gaps');
-  return (block.input as { gaps: LibraryGap[] }).gaps;
+  if (!block) return [];
+  return (block.input as { gaps: LibraryGap[] }).gaps ?? [];
 }
 
 async function fetchEmergingArtists(
@@ -391,7 +391,7 @@ export async function GET() {
       fetchEmergingArtists(gapGenres, libraryArtists).catch(() => new Map<string, EmergingArtist[]>()),
     ]);
 
-    const enrichedGaps = gapsWithRecs.map(gap => ({
+    const enrichedGaps = (gapsWithRecs ?? []).map(gap => ({
       ...gap,
       emergingArtists: emergingMap.get(gap.genre) ?? [],
     }));
