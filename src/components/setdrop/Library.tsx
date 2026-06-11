@@ -977,8 +977,8 @@ export function Library() {
         <div style={{ marginBottom:28 }}>
           <Tabs
             tabs={[
-              { id: 'library', label: 'In Library', count: allTracks.length },
-              { id: 'wishlist', label: 'Wishlist', count: wishlistTracks.length },
+              { id: 'library', label: 'In Library', count: allTracks.length, subtitle: 'your full catalog' },
+              { id: 'wishlist', label: 'Wishlist', count: wishlistTracks.length, subtitle: 'tracks to download' },
               { id: 'wordplay', label: 'Wordplay', subtitle: 'lyrical connections' },
               { id: 'crates', label: 'Crates', subtitle: 'AI-grouped by vibe' },
             ]}
