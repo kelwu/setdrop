@@ -216,9 +216,8 @@ export function Dashboard() {
     setGapError(null);
     try {
       const res = await fetch('/api/library/analyze-gaps');
-      if (!res.ok) throw new Error(`Server error ${res.status} — try again`);
       const data = await res.json() as { gaps?: LibraryGap[]; energyInsights?: EnergyInsight[]; meta?: { tracksAnalyzed: number; genresAnalyzed: number }; error?: string };
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) throw new Error(data.error ?? `Server error ${res.status}`);
       setGapReport(data.gaps ?? []);
       setEnergyInsights(data.energyInsights ?? []);
       setGapMeta(data.meta ?? null);

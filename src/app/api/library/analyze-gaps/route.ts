@@ -384,7 +384,10 @@ export async function GET() {
     const gapGenres = [...new Set(rawGaps.map(g => g.genre))].slice(0, 3);
 
     const [gapsWithRecs, emergingMap] = await Promise.all([
-      fetchBpmGapRecs(rawGaps),
+      fetchBpmGapRecs(rawGaps).catch(err => {
+        console.error('[analyze-gaps] fetchBpmGapRecs failed:', err instanceof Error ? err.message : err);
+        return rawGaps.map(g => ({ ...g, recommendations: [] as GapRecommendation[] }));
+      }),
       fetchEmergingArtists(gapGenres, libraryArtists).catch(() => new Map<string, EmergingArtist[]>()),
     ]);
 
