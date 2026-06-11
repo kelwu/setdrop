@@ -97,7 +97,6 @@ const SELECTOR_TOOL: Anthropic.Tool = {
             wordplayConnection: { type: 'string' },
             isWishlistTrack: { type: 'boolean' },
             beatportUrl: { type: 'string' },
-            spotifyUrl: { type: 'string' },
             bpmSupremeSearchUrl: { type: 'string' },
             traxsourceSearchUrl: { type: 'string' },
             djcitySearchUrl: { type: 'string' },

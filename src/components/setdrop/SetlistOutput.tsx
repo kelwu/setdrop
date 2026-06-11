@@ -80,7 +80,6 @@ function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls, g
       bpmSupreme: poolConfidence(resolved?.bpmSupremeFound),
       traxsource: poolConfidence(resolved?.traxsourceFound),
       djcity: poolConfidence(resolved?.djcityFound),
-      spotify: 'green' as const,
     },
     storeUrls: {
       ...base,

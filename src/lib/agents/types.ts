@@ -42,7 +42,6 @@ export interface LibraryTrack {
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
   djcitySearchUrl?: string;
-  spotifyUrl?: string;
 }
 
 // Agent 1 output
@@ -108,7 +107,6 @@ export interface SetlistTrack {
   wordplayConnection?: string;
   isWishlistTrack: boolean;
   beatportUrl?: string;
-  spotifyUrl?: string;
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
   djcitySearchUrl?: string;

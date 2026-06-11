@@ -49,7 +49,7 @@ function toDisplayTrack(t: LibraryTrack, idx: number): SampleTrack {
     wordplay: null,
     why: '',
     transition: '',
-    stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', djcity: 'yellow', spotify: 'yellow' },
+    stores: { beatport: 'yellow', bpmSupreme: 'yellow', traxsource: 'yellow', djcity: 'yellow' },
     genre: t.genre,
   };
 }
@@ -545,13 +545,6 @@ export function Library() {
     pairs: Array<{ fromId: string; fromArtist: string; fromTitle: string; fromBpm: number; toId: string; toArtist: string; toTitle: string; toBpm: number; bridge: string; bpmDiff: number; keysCompatible: boolean }>;
   } | null>(null);
   const [wordplayError, setWordplayError] = useState<string | null>(null);
-  const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
-  const [spotifyPlaylists, setSpotifyPlaylists] = useState<{ id: string; name: string; trackCount: number }[]>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState('');
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errorMsg?: string } | null>(null);
-  const [showSpotifyPanel, setShowSpotifyPanel] = useState(false);
-  const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [cratesList, setCratesList] = useState<CrateEntry[] | null>(null);
   const [cratesLoading, setCratesLoading] = useState(false);
   const [cratePrompt, setCratePrompt] = useState('');
@@ -574,67 +567,6 @@ export function Library() {
       }
     }).finally(() => setLibraryLoaded(true));
   }, []);
-
-  useEffect(() => {
-    fetch('/api/spotify/status')
-      .then(r => r.json())
-      .then((d: { connected: boolean }) => setSpotifyConnected(d.connected))
-      .catch(() => setSpotifyConnected(false));
-  }, []);
-
-  const loadSpotifyPlaylists = () => {
-    setSpotifyError(null);
-    fetch('/api/spotify/playlists')
-      .then(async r => {
-        const d = await r.json() as { playlists?: { id: string; name: string; trackCount: number }[]; error?: string };
-        if (!r.ok || d.error) {
-          if (r.status === 401) {
-            setSpotifyConnected(false);
-            setShowSpotifyPanel(false);
-          } else {
-            setSpotifyError(d.error ?? 'Failed to load playlists');
-          }
-          return;
-        }
-        if (d.playlists) {
-          setSpotifyPlaylists(d.playlists);
-          if (d.playlists[0]) setSelectedPlaylist(d.playlists[0].id);
-        }
-      })
-      .catch(e => setSpotifyError(e instanceof Error ? e.message : 'Failed to load playlists'));
-  };
-
-  const handleSpotifyImport = async () => {
-    if (!selectedPlaylist) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const res = await fetch('/api/spotify/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistId: selectedPlaylist }),
-      });
-      const data = await res.json() as { imported?: number; skipped?: number; error?: string };
-      if (data.error) throw new Error(data.error);
-      setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
-      const tracks = await loadLibraryFromSupabase();
-      if (tracks) { setUploadedTracks(tracks); localStorage.setItem('sd_library', JSON.stringify(tracks)); }
-      fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setImportResult({ imported: -1, skipped: 0, errorMsg: msg });
-      console.error('[spotify/import]', msg);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleSpotifyDisconnect = async () => {
-    await fetch('/api/spotify/disconnect', { method: 'POST' });
-    setSpotifyConnected(false);
-    setSpotifyPlaylists([]);
-    setShowSpotifyPanel(false);
-  };
 
   const triggerEnrichment = () => {
     setEnriching(true);
@@ -1079,83 +1011,6 @@ export function Library() {
           <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginBottom:12 }}>
             {filtered.length} track{filtered.length !== 1 ? 's' : ''}{(search || bpmMin || bpmMax) ? ' matching filters' : ''}
             {uploadedTracks && <span style={{ color:SD.accent, marginLeft:8 }}>· Your Library</span>}
-          </div>
-        )}
-
-        {/* Spotify import panel */}
-        {tab === 'wishlist' && spotifyConnected !== null && (
-          <div style={{ marginBottom: 16 }}>
-            {!spotifyConnected ? (
-              <a href="/api/spotify/auth" style={{ textDecoration: 'none' }}>
-                <SDButton ghost style={{ fontSize: 12, padding: '8px 16px' }}>
-                  ♫ Connect Spotify
-                </SDButton>
-              </a>
-            ) : (
-              <div>
-                {!showSpotifyPanel ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <SDButton ghost onClick={() => { setShowSpotifyPanel(true); if (!spotifyPlaylists.length) loadSpotifyPlaylists(); }}
-                      style={{ fontSize: 12, padding: '8px 16px' }}>
-                      ♫ Import from Spotify
-                    </SDButton>
-                    <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.green }}>● Connected</span>
-                    <button onClick={handleSpotifyDisconnect}
-                      style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted,
-                        background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      Disconnect
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ background: SD.surface, border: `1px solid ${SD.border}`,
-                    borderRadius: 4, padding: '20px 24px' }}>
-                    <div style={{ fontFamily: SD.mono, fontSize: 13, letterSpacing: 2,
-                      color: SD.textMuted, textTransform: 'uppercase', marginBottom: 16 }}>
-                      Import from Spotify
-                    </div>
-                    {spotifyError ? (
-                      <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.red }}>
-                        {spotifyError} — try disconnecting and reconnecting Spotify.
-                      </div>
-                    ) : spotifyPlaylists.length === 0 ? (
-                      <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted }}>
-                        Loading playlists...
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <select
-                          value={selectedPlaylist}
-                          onChange={e => setSelectedPlaylist(e.target.value)}
-                          style={{
-                            fontFamily: SD.mono, fontSize: 13, color: SD.text,
-                            background: SD.surface2, border: `1px solid ${SD.border}`,
-                            borderRadius: 3, padding: '8px 12px', cursor: 'pointer', flex: 1, minWidth: 200,
-                          }}>
-                          {spotifyPlaylists.map(p => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} ({p.trackCount} tracks)
-                            </option>
-                          ))}
-                        </select>
-                        <SDButton onClick={handleSpotifyImport} style={{ fontSize: 13 }}>
-                          {importing ? 'Importing...' : 'Import'}
-                        </SDButton>
-                        <SDButton ghost onClick={() => { setShowSpotifyPanel(false); setImportResult(null); }}
-                          style={{ fontSize: 13 }}>Cancel</SDButton>
-                      </div>
-                    )}
-                    {importResult && (
-                      <div style={{ marginTop: 12, fontFamily: SD.mono, fontSize: 13,
-                        color: importResult.imported < 0 ? SD.danger : SD.green }}>
-                        {importResult.imported < 0
-                          ? `Import failed: ${importResult.errorMsg ?? 'unknown error'}`
-                          : `✓ ${importResult.imported} tracks added${importResult.skipped ? `, ${importResult.skipped} already in wishlist` : ''}`}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 

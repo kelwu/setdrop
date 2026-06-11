@@ -41,16 +41,6 @@ function UL({ items }: { items: React.ReactNode[] }) {
   );
 }
 
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ fontFamily: S.mono, fontSize: 13, color: S.accent,
-      background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)',
-      borderRadius: 2, padding: '2px 8px', marginLeft: 8, verticalAlign: 'middle' }}>
-      {children}
-    </span>
-  );
-}
-
 export default function PrivacyPage() {
   return (
     <div style={{ background: S.bg, minHeight: '100vh', color: S.text }}>
@@ -207,41 +197,6 @@ export default function PrivacyPage() {
           Anthropic does not use API inputs to train its models by default.{' '}
           <a href="https://www.anthropic.com/privacy" style={{ color: S.accent, textDecoration: 'none' }}>
             Anthropic Privacy Policy ↗
-          </a>
-        </P>
-
-        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
-          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
-          Spotify <Tag>Coming Soon</Tag>
-        </p>
-        <P>
-          A future update will let you connect your Spotify account to save tracks to a wishlist.
-          Here is what that integration will look like when it launches:
-        </P>
-        <UL items={[
-          <>
-            <strong style={{ color: S.text }}>What we request:</strong> Read-only access to your
-            saved tracks / liked songs (OAuth scope: <code style={{ color: S.accent }}>user-library-read</code>)
-          </>,
-          <>
-            <strong style={{ color: S.text }}>What we store:</strong> Track artist and title only —
-            no listening history, no audio features, no personal profile data
-          </>,
-          <>
-            <strong style={{ color: S.text }}>OAuth tokens:</strong> Stored in Supabase, encrypted
-            at rest. Used only to fetch your saved tracks on your behalf.
-          </>,
-          <>
-            <strong style={{ color: S.text }}>Revoking access:</strong> You can disconnect Spotify
-            from your Spotify account settings at any time (
-            <a href="https://www.spotify.com/account/apps/" style={{ color: S.accent, textDecoration: 'none' }}>
-              spotify.com/account/apps
-            </a>)
-          </>,
-        ]} />
-        <P>
-          <a href="https://www.spotify.com/legal/privacy-policy/" style={{ color: S.accent, textDecoration: 'none' }}>
-            Spotify Privacy Policy ↗
           </a>
         </P>
 
