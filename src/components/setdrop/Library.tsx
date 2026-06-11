@@ -979,8 +979,8 @@ export function Library() {
             tabs={[
               { id: 'library', label: 'In Library', count: allTracks.length },
               { id: 'wishlist', label: 'Wishlist', count: wishlistTracks.length },
-              { id: 'wordplay', label: 'Wordplay' },
-              { id: 'crates', label: 'Crates' },
+              { id: 'wordplay', label: 'Wordplay', subtitle: 'lyrical connections' },
+              { id: 'crates', label: 'Crates', subtitle: 'AI-grouped by vibe' },
             ]}
             value={tab}
             onChange={(id) => {
@@ -1320,10 +1320,20 @@ export function Library() {
             ) : cratesList !== null && (
               <div>
                 {cratesList.length === 0 && !activeCrate ? (
-                  <div style={{ textAlign:'center', padding:'60px 40px' }}>
-                    <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:3, color:SD.textMuted, marginBottom:10 }}>CRATES</div>
-                    <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted }}>
-                      Generate your first crate above — describe the vibe and {BRAND.name} rounds up the tracks.
+                  <div style={{ padding:'48px 0' }}>
+                    <div style={{ fontFamily:SD.display, fontSize:36, letterSpacing:3, color:SD.textMuted, marginBottom:8 }}>NO CRATES YET</div>
+                    <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, lineHeight:1.8, marginBottom:20 }}>
+                      A crate is a focused pocket of tracks from your library built around a moment or vibe.
+                      Describe what you need and {BRAND.name} picks the right tracks — export straight to Serato when done.
+                    </div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                      {['"Friday peak 1am"', '"Smooth wedding opener"', '"90s R&B slow jams"', '"Tech house warmup"'].map(ex => (
+                        <span key={ex} style={{
+                          fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
+                          background:SD.surface, border:`1px solid ${SD.border}`,
+                          borderRadius:3, padding:'5px 10px',
+                        }}>{ex}</span>
+                      ))}
                     </div>
                   </div>
                 ) : cratesList.length > 0 && (

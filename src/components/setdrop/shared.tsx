@@ -318,6 +318,7 @@ export interface TabItem {
   id: string;
   label: string;
   count?: number;
+  subtitle?: string;
 }
 interface TabsProps {
   tabs: TabItem[];
@@ -340,17 +341,29 @@ export function Tabs({ tabs, value, onChange, action }: TabsProps) {
               onClick={() => onChange(tab.id)}
               style={{
                 fontFamily: SD.mono, fontSize: SD.t12, letterSpacing: 1.5,
-                textTransform: 'uppercase', padding: '18px 20px 16px',
+                textTransform: 'uppercase', padding: '14px 20px 12px',
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: on ? SD.text : SD.textMuted,
                 borderBottom: on ? `2px solid ${SD.accent}` : '2px solid transparent',
-                transition: 'color .15s',
+                transition: 'color .15s', textAlign: 'left',
               }}
             >
-              {tab.label}
-              {tab.count !== undefined && (
-                <span style={{ marginLeft: 8, color: on ? SD.accent : SD.textMuted }}>
-                  ({tab.count})
+              <span style={{ display: 'block' }}>
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span style={{ marginLeft: 8, color: on ? SD.accent : SD.textMuted }}>
+                    ({tab.count})
+                  </span>
+                )}
+              </span>
+              {tab.subtitle && (
+                <span style={{
+                  display: 'block', fontFamily: SD.mono, fontSize: 10,
+                  letterSpacing: 0.5, textTransform: 'none',
+                  color: on ? SD.textSec : SD.textMuted,
+                  marginTop: 3, fontWeight: 400,
+                }}>
+                  {tab.subtitle}
                 </span>
               )}
             </button>
