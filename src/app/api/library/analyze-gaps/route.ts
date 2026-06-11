@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -258,12 +258,6 @@ const EMERGING_TOOL: Anthropic.Tool = {
   },
 };
 
-const WEB_SEARCH: Anthropic.Messages.WebSearchTool20260209 = {
-  type: 'web_search_20260209',
-  name: 'web_search',
-  max_uses: 3,
-};
-
 // ─── System prompts ───────────────────────────────────────────────────────────
 
 const GAP_SYSTEM = `You are a DJ library gap analyst. You receive a list of BPM/genre gaps in a DJ's library.
@@ -314,31 +308,18 @@ async function fetchEmergingArtists(
   if (!genres.length) return new Map();
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const userMsg = `Find 5 emerging/rising artists in each of these DJ genres gaining traction in 2026: ${genres.join(', ')}. Focus on breakthrough acts, not established headliners.`;
+  const userMsg = `Find 3 emerging/rising DJ artists in each of these genres gaining traction in 2026: ${genres.join(', ')}. Focus on breakthrough acts with releases in the last 12 months, not established headliners. Call report_emerging_artists with your findings.`;
 
-  const searched = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 2048,
-    system: EMERGING_SYSTEM,
-    messages: [{ role: 'user', content: userMsg }],
-    tools: [WEB_SEARCH],
-    tool_choice: { type: 'any' },
-  });
-
-  const forced = await anthropic.messages.create({
+  const msg = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1024,
-    system: 'Report the emerging artists you found. For each artist give a one-sentence reason why they are worth tracking now. Set beatportSearchUrl to https://www.beatport.com/search?q=ARTIST (URL-encode, replace spaces with +).',
-    messages: [
-      { role: 'user', content: userMsg },
-      { role: 'assistant', content: searched.content as unknown as Anthropic.Messages.ContentBlockParam[] },
-      { role: 'user', content: 'Call report_emerging_artists with the artists you found.' },
-    ],
+    system: EMERGING_SYSTEM,
+    messages: [{ role: 'user', content: userMsg }],
     tools: [EMERGING_TOOL],
     tool_choice: { type: 'tool', name: 'report_emerging_artists' },
   });
 
-  const block = forced.content.find(
+  const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
   );
   const results = (block?.input as { results: { genre: string; artists: EmergingArtist[] }[] })?.results ?? [];

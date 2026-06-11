@@ -451,86 +451,6 @@ export function Dashboard() {
           );
         })()}
 
-        {/* Action row: Recent Sets + Wishlist */}
-        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
-          <Card>
-            <CardHeader title="Recent Setlists" action={
-              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>
-                View All
-              </SDButton>
-            }/>
-            <div style={{ padding:'16px' }}>
-              {recentSets === null ? (
-                <LoadingState />
-              ) : recentSets.length === 0 ? (
-                <EmptyState
-                  title="No sets yet"
-                  cta={<SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>}
-                />
-              ) : recentSets.map(s => (
-                <div key={s.id} onClick={() => router.push('/history')}
-                  style={{ padding:'18px 16px', marginBottom:8, background:SD.bg,
-                    border:`1px solid ${SD.border}`, borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = SD.borderMid)}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = SD.border)}>
-                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
-                    <div>
-                      <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text, marginBottom:6 }}>{s.name}</div>
-                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.genre}</div>
-                    </div>
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
-                  </div>
-                  <div style={{ display:'flex', gap:16, marginTop:14 }}>
-                    {s.trackCount > 0 && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.trackCount} tracks</span>}
-                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.duration}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Wishlist — Download Queue" action={
-              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'5px 12px' }}>
-                View All
-              </SDButton>
-            }/>
-            <div style={{ padding:'16px' }}>
-              {wishlistItems === null ? (
-                <LoadingState />
-              ) : wishlistItems.length === 0 ? (
-                <EmptyState
-                  title="No wishlist tracks yet"
-                  cta={<SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>}
-                />
-              ) : wishlistItems.map((t, i) => (
-                <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
-                  padding:'12px 8px', borderBottom: i < wishlistItems.length - 1 ? `1px solid ${SD.border}` : 'none' }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
-                      color:SD.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      {t.artist} — {t.title}
-                    </div>
-                    <div style={{ display:'flex', gap:10, marginTop:3 }}>
-                      {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>{t.bpm} BPM</span>}
-                      {t.key && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{t.key}</span>}
-                    </div>
-                  </div>
-                  {t.beatportSearchUrl && (
-                    <a href={t.beatportSearchUrl} target="_blank" rel="noreferrer"
-                      style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
-                        background:SD.accentDim, border:`1px solid ${SD.accent}33`,
-                        borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap',
-                        textDecoration:'none', flexShrink:0 }}>
-                      Beatport ↗
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
         {/* Discover — tabbed Trending + Library Gaps */}
         <Card style={{ marginBottom:16 }}>
           <Tabs
@@ -736,6 +656,86 @@ export function Dashboard() {
             )}
           </div>
         </Card>
+
+        {/* Action row: Recent Sets + Wishlist */}
+        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          <Card>
+            <CardHeader title="Recent Setlists" action={
+              <SDButton ghost onClick={() => router.push('/history')} style={{ fontSize:12, padding:'5px 12px' }}>
+                View All
+              </SDButton>
+            }/>
+            <div style={{ padding:'16px' }}>
+              {recentSets === null ? (
+                <LoadingState />
+              ) : recentSets.length === 0 ? (
+                <EmptyState
+                  title="No sets yet"
+                  cta={<SDButton onClick={() => router.push('/builder')} style={{ fontSize:12 }}>Build Your First Set</SDButton>}
+                />
+              ) : recentSets.map(s => (
+                <div key={s.id} onClick={() => router.push('/history')}
+                  style={{ padding:'18px 16px', marginBottom:8, background:SD.bg,
+                    border:`1px solid ${SD.border}`, borderRadius:3, cursor:'pointer', transition:'border-color .15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = SD.borderMid)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = SD.border)}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
+                    <div>
+                      <div style={{ fontFamily:SD.mono, fontSize:13, fontWeight:600, color:SD.text, marginBottom:6 }}>{s.name}</div>
+                      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.genre}</div>
+                    </div>
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>{s.date}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:16, marginTop:14 }}>
+                    {s.trackCount > 0 && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.trackCount} tracks</span>}
+                    <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{s.duration}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Wishlist — Download Queue" action={
+              <SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12, padding:'5px 12px' }}>
+                View All
+              </SDButton>
+            }/>
+            <div style={{ padding:'16px' }}>
+              {wishlistItems === null ? (
+                <LoadingState />
+              ) : wishlistItems.length === 0 ? (
+                <EmptyState
+                  title="No wishlist tracks yet"
+                  cta={<SDButton ghost onClick={() => router.push('/library')} style={{ fontSize:12 }}>Add Tracks</SDButton>}
+                />
+              ) : wishlistItems.map((t, i) => (
+                <div key={t.id} style={{ display:'flex', alignItems:'center', gap:14,
+                  padding:'12px 8px', borderBottom: i < wishlistItems.length - 1 ? `1px solid ${SD.border}` : 'none' }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600,
+                      color:SD.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      {t.artist} — {t.title}
+                    </div>
+                    <div style={{ display:'flex', gap:10, marginTop:3 }}>
+                      {t.bpm && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent }}>{t.bpm} BPM</span>}
+                      {t.key && <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{t.key}</span>}
+                    </div>
+                  </div>
+                  {t.beatportSearchUrl && (
+                    <a href={t.beatportSearchUrl} target="_blank" rel="noreferrer"
+                      style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent,
+                        background:SD.accentDim, border:`1px solid ${SD.accent}33`,
+                        borderRadius:2, padding:'3px 8px', whiteSpace:'nowrap',
+                        textDecoration:'none', flexShrink:0 }}>
+                      Beatport ↗
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         {/* Gig History — past gigs only, condensed */}
         {gigHistory !== null && gigHistory.filter(g => new Date(g.gigDate) < new Date()).length > 0 && (
