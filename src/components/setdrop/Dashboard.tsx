@@ -597,7 +597,7 @@ export function Dashboard() {
                           <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>({gap.currentCount} {gap.currentCount === 1 ? 'track' : 'tracks'})</span>
                         </div>
                         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                          {gap.recommendations.map((rec, ri) => {
+                          {(gap.recommendations ?? []).map((rec, ri) => {
                             const wKey = `${rec.artist}|${rec.title}`;
                             const added = addedToWishlist.has(wKey);
                             return (
@@ -629,7 +629,7 @@ export function Dashboard() {
                               Rising in this genre
                             </div>
                             <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                              {gap.emergingArtists.map((ea, eai) => (
+                              {(gap.emergingArtists ?? []).map((ea, eai) => (
                                 <div key={eai} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
                                   gap:12, padding:'8px 12px', background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:SD.r2 }}>
                                   <div style={{ flex:1, minWidth:0 }}>
