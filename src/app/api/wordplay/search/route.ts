@@ -61,12 +61,12 @@ export async function POST(req: NextRequest) {
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const prompt = `You are a hip-hop DJ wordplay expert with deep knowledge of song lyrics.
+    const prompt = `You are a DJ setlist expert with deep knowledge of popular music.
 
 Given the word/phrase "${word}", identify which tracks from this library prominently feature it in their lyrics — specifically in positions useful for a DJ transition: hook, chorus, drop, outro, or intro.
 
-For each match, describe the specific lyrical context (quote the relevant line if you know it).
-Then list the best pairs where one track could bridge into another through this word — describe the exact lyrical handoff.
+For each match, describe WHERE in the song it appears and how prominently (e.g. "repeated in chorus", "opens the hook", "featured in outro"). Do not quote lyrics verbatim.
+Then list the best transition pairs where one track bridges into another through this shared word — describe the structural handoff (e.g. "Track A ends on this word in the hook → Track B opens with it").
 
 Track list:
 ${JSON.stringify(sample.map(t => ({ id: t.id, artist: t.artist, title: t.title })), null, 2)}
@@ -78,7 +78,7 @@ Output ONLY valid JSON:
       "trackId": "...",
       "artist": "...",
       "title": "...",
-      "lyricContext": "e.g. Features in hook: '...tonight we ride...'",
+      "lyricContext": "e.g. Repeated throughout the chorus, prominent in the hook",
       "position": "hook|chorus|verse|drop|outro|intro|throughout"
     }
   ],
@@ -90,7 +90,7 @@ Output ONLY valid JSON:
       "toId": "...",
       "toArtist": "...",
       "toTitle": "...",
-      "bridge": "e.g. 'Empire State' ends hook on '...tonight...' → 'God's Plan' opens 'Tonight we go hard'"
+      "bridge": "e.g. Track A ends hook with this word → Track B opens its intro on the same word"
     }
   ]
 }
@@ -131,6 +131,9 @@ Only include tracks you are genuinely confident feature this word in their lyric
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Search failed';
     console.error('[wordplay/search]', message);
+    if (message.includes('content filtering') || message.includes('Output blocked')) {
+      return NextResponse.json({ error: 'This search couldn\'t be completed — try a different word or phrase.' }, { status: 400 });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
