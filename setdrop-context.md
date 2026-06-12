@@ -181,6 +181,15 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+571666e fix(analyze-gaps): guard against undefined return from fetchBpmGapRecs
+dfdb027 fix(dashboard): null-guard recommendations and emergingArtists before map
+cfc298e fix(wordplay): remove verbatim lyric quoting to avoid content filter
+39a1818 fix(analyze-gaps): surface real error message + graceful Claude fallback
+c57d5e4 fix(dashboard): move Discover above setlists; fix 504 on analyze-gaps
+4438c01 fix(library): add sub-labels to all tabs for visual consistency
+e641857 feat(library): tab sub-labels + improved Crates empty state
+b759029 remove(spotify): kill Spotify integration entirely
+22ac70a chore: nightly context update 2026-06-11
 6d1cf76 fix(spotify): clean up diagnostics, honest error for quota restriction
 fc93962 debug(spotify): test client credentials token against tracks endpoint
 f2497aa debug(spotify): test /me + /playlists/{id} + /tracks separately to isolate 403
@@ -192,15 +201,6 @@ f422627 fix(spotify): remove fields param, fix callback redirect, show real impo
 b5d17de Merge branch 'main' of https://github.com/kelwu/setdrop
 19fceaf fix(auth): redirect to /dashboard after OAuth callback instead of /?goto=dashboard
 ad39eb2 chore: nightly context update 2026-06-10
-e6d41c9 fix(brand): update embed badge + privacy URL to SetLab
-d66fcc8 fix(login): use BRAND constants instead of hardcoded SETDROP
-f9469db Merge branch 'main' of https://github.com/kelwu/setdrop
-94483c1 refactor(brand): rename SetDrop → SetLab, domain setlab.ai
-683a554 fix(security): auth guards on unauthenticated API routes + upload cap
-7d13fe5 feat(phase-3): Library Intelligence v2 + Themed Crates
-f990cfe chore: nightly context update 2026-06-09
-b7d1f82 chore: nightly context update 2026-06-08
-7093243 docs: comprehensive session export — Phase 2 done, naming TBD, Phase 3 is next
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-11*
+*Last updated: 2026-06-12*
