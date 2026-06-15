@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+549f8c6 chore: nightly context update 2026-06-14
 8b8997d chore: nightly context update 2026-06-13
 d124bea chore: nightly context update 2026-06-12
 571666e fix(analyze-gaps): guard against undefined return from fetchBpmGapRecs
@@ -200,7 +201,6 @@ fb35df0 fix(spotify): add user-read-private scope + force consent dialog on reco
 ed97c54 fix(spotify): add market=from_token + additional_types=track to playlist fetch
 adcb9b5 fix(spotify): filter Spotify-curated playlists, handle 403 gracefully
 f422627 fix(spotify): remove fields param, fix callback redirect, show real import error
-b5d17de Merge branch 'main' of https://github.com/kelwu/setdrop
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-14*
+*Last updated: 2026-06-15*
