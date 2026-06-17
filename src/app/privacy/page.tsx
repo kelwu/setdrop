@@ -100,7 +100,7 @@ export default function PrivacyPage() {
           'Email address (used to log in and contact you)',
           'A Supabase-generated user ID (UUID)',
           'Account creation timestamp',
-          'No passwords are stored by {BRAND.name} — Supabase Auth handles credential storage using bcrypt hashing',
+          <>No passwords are stored by {BRAND.name} — Supabase Auth handles credential storage using bcrypt hashing</>,
         ]} />
 
         <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
@@ -116,7 +116,7 @@ export default function PrivacyPage() {
           'BPM',
           'Musical key',
           'Genre',
-          'File path (the path on your local machine as stored by Serato — used only to generate .crate files for re-import; {BRAND.name} never accesses your files remotely)',
+          <>File path (the path on your local machine as stored by Serato — used only to generate .crate files for re-import; {BRAND.name} never accesses your files remotely)</>,
         ]} />
         <P>Audio files are never uploaded. Only the text metadata above is stored.</P>
 
@@ -141,7 +141,7 @@ export default function PrivacyPage() {
           What We Do NOT Collect
         </p>
         <UL items={[
-          'Payment information ({BRAND.name} has no paid features)',
+          <>Payment information ({BRAND.name} has no paid features)</>,
           'Audio files or audio content',
           'Location data',
           'Analytics or behavioral tracking data',

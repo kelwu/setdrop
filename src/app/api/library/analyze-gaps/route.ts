@@ -72,11 +72,35 @@ const SUB_GENRE_MATCHERS: { tag: string; subGenre: string }[] = [
   { tag: 'dnb',               subGenre: 'Drum & Bass' },
 ];
 
+const GENRE_ALIASES: Record<string, string> = {
+  'hip-hop': 'Hip Hop', 'hiphop': 'Hip Hop', 'hip hop music': 'Hip Hop',
+  'r&b': 'R&B', 'rnb': 'R&B', 'r & b': 'R&B', 'rhythm and blues': 'R&B', 'rhythm & blues': 'R&B',
+  'drum and bass': 'Drum & Bass', 'd&b': 'Drum & Bass', 'dnb': 'Drum & Bass',
+  'tech house': 'Tech House', 'techhouse': 'Tech House',
+  'deep house': 'Deep House', 'deephouse': 'Deep House',
+  'afro house': 'Afro House', 'afrohouse': 'Afro House',
+  'house music': 'House', 'soulful house': 'House',
+  'afrobeats': 'Afrobeats', 'afro beats': 'Afrobeats', 'afropop': 'Afrobeats',
+  'edm': 'EDM', 'electronic dance music': 'EDM',
+  'trap music': 'Trap', 'uk drill': 'UK Drill',
+  'pop music': 'Pop', 'dance pop': 'Dance Pop', 'dance music': 'Dance',
+  'latin music': 'Latin', 'latin pop': 'Latin Pop',
+};
+
+function normalizeGenre(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return 'Unknown';
+  const lower = trimmed.toLowerCase();
+  if (GENRE_ALIASES[lower]) return GENRE_ALIASES[lower];
+  // Title-case fallback (handles "tech House" → "Tech House")
+  return trimmed.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function resolveSubGenre(genre: string, tags: string[]): string {
   for (const { tag, subGenre } of SUB_GENRE_MATCHERS) {
     if (tags.includes(tag)) return subGenre;
   }
-  return (genre ?? '').trim() || 'Unknown';
+  return normalizeGenre(genre ?? '');
 }
 
 // ─── BPM gap detection ───────────────────────────────────────────────────────
@@ -85,40 +109,45 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGa
   const byGenre: Record<string, number[]> = {};
   for (const t of tracks) {
     if (!t.bpm || t.bpm < 60 || t.bpm > 220) continue;
-    (byGenre[t.genre] ??= []).push(t.bpm);
+    (byGenre[t.genre] ??= []).push(Math.round(t.bpm));
   }
 
   const gaps: RawGap[] = [];
 
   for (const [genre, bpms] of Object.entries(byGenre)) {
-    if (bpms.length < 10) continue;
+    if (bpms.length < 8) continue;
 
     const sorted = [...bpms].sort((a, b) => a - b);
-    const p10 = sorted[Math.floor(sorted.length * 0.1)];
-    const p90 = sorted[Math.min(Math.ceil(sorted.length * 0.9), sorted.length - 1)];
+    const p5  = sorted[Math.floor(sorted.length * 0.05)];
+    const p95 = sorted[Math.min(Math.ceil(sorted.length * 0.95), sorted.length - 1)];
 
-    const activeBuckets = BPM_BUCKETS.filter(b => b.max >= p10 && b.min <= p90);
-    if (activeBuckets.length < 2) continue;
+    // Extend range using energy tiers so warmup/peak gaps are visible even
+    // when most tracks cluster in one BPM band
+    const tier = ENERGY_TIERS[genre];
+    const rangeMin = tier ? Math.min(p5,  tier.warmupMax - 10) : p5;
+    const rangeMax = tier ? Math.max(p95, tier.peakMin   + 10) : p95;
+
+    const activeBuckets = BPM_BUCKETS.filter(b => b.max >= rangeMin && b.min <= rangeMax);
+    if (activeBuckets.length < 1) continue;
 
     const counts = activeBuckets.map(b => ({
       ...b,
       count: bpms.filter(bpm => bpm >= b.min && bpm <= b.max).length,
     }));
 
-    const nonEmpty = counts.filter(c => c.count > 0);
-    if (nonEmpty.length < 2) continue;
-
-    const avgDensity = bpms.length / nonEmpty.length;
+    // Divide by ALL active buckets (including empty) so empty buckets drag the
+    // average down and are more likely to breach the threshold
+    const avgDensity = bpms.length / activeBuckets.length;
 
     for (const bucket of counts) {
-      if (bucket.count < avgDensity * 0.3) {
+      if (bucket.count < avgDensity * 0.5) {
         gaps.push({
           genre,
           bpmRange: bucket.label,
           currentCount: bucket.count,
           severity:
-            bucket.count === 0 && avgDensity >= 15 ? 'high'
-            : bucket.count === 0 ? 'medium'
+            bucket.count === 0 && avgDensity >= 10 ? 'high'
+            : bucket.count < avgDensity * 0.2    ? 'medium'
             : 'low',
         });
       }
@@ -127,7 +156,7 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGa
 
   const order: Record<string, number> = { high: 0, medium: 1, low: 2 };
   gaps.sort((a, b) => order[a.severity] - order[b.severity]);
-  return gaps.slice(0, 5);
+  return gaps.slice(0, 8);
 }
 
 // ─── Energy gap detection ────────────────────────────────────────────────────
@@ -158,7 +187,7 @@ function detectEnergyGaps(tracks: Array<{ bpm: number | null; genre: string }>):
   const byGenre: Record<string, number[]> = {};
   for (const t of tracks) {
     if (!t.bpm || t.bpm < 60 || t.bpm > 220) continue;
-    (byGenre[t.genre] ??= []).push(t.bpm);
+    (byGenre[t.genre] ??= []).push(Math.round(t.bpm));
   }
 
   const insights: EnergyInsight[] = [];
@@ -352,13 +381,23 @@ export async function GET() {
 
     if (!library) return NextResponse.json({ error: 'No library found' }, { status: 404 });
 
-    const { data: rawTracks } = await admin
-      .from('serato_tracks')
-      .select('bpm, genre, artist, lastfm_tags')
-      .eq('library_id', library.id)
-      .eq('in_library', true);
+    const PAGE = 1000;
+    const rawTracks: Array<{ bpm: number | null; genre: string | null; artist: string | null; lastfm_tags: unknown }> = [];
+    let from = 0;
+    while (true) {
+      const { data: page } = await admin
+        .from('serato_tracks')
+        .select('bpm, genre, artist, lastfm_tags')
+        .eq('library_id', library.id)
+        .eq('in_library', true)
+        .range(from, from + PAGE - 1);
+      if (!page?.length) break;
+      rawTracks.push(...page);
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
 
-    if (!rawTracks?.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
+    if (!rawTracks.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
 
     // Apply sub-genre resolution using lastfm_tags
     const tracks = rawTracks.map(t => ({
