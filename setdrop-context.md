@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+10de3aa chore: nightly context update 2026-06-16
 aa499f4 chore: nightly context update 2026-06-15
 549f8c6 chore: nightly context update 2026-06-14
 8b8997d chore: nightly context update 2026-06-13
@@ -200,7 +201,6 @@ f2497aa debug(spotify): test /me + /playlists/{id} + /tracks separately to isola
 38d4c8a debug(spotify): add raw diagnostic fetch to capture full 403 response headers
 fb35df0 fix(spotify): add user-read-private scope + force consent dialog on reconnect
 ed97c54 fix(spotify): add market=from_token + additional_types=track to playlist fetch
-adcb9b5 fix(spotify): filter Spotify-curated playlists, handle 403 gracefully
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-16*
+*Last updated: 2026-06-17*
