@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores, orderedStores } from '@/lib/setdrop/constants';
 import { BRAND } from '@/lib/brand';
@@ -76,13 +77,13 @@ export function Nav() {
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36, marginRight:12 }}>
             {links.map(l => (
-              <span key={l.id} onClick={() => router.push('/' + l.id)} style={{
+              <Link key={l.id} href={'/' + l.id} style={{
                 fontFamily:SD.mono, fontSize:13, letterSpacing:1.5,
-                textTransform:'uppercase', cursor:'pointer',
+                textTransform:'uppercase', cursor:'pointer', textDecoration:'none',
                 color: pathname === '/' + l.id ? SD.accent : SD.textSec,
                 borderBottom: pathname === '/' + l.id ? `1px solid ${SD.accent}` : '1px solid transparent',
                 paddingBottom:2, transition:'color .15s',
-              }}>{l.label}</span>
+              }}>{l.label}</Link>
             ))}
             <SDButton onClick={() => router.push('/builder')} small>Build Set</SDButton>
           </div>
@@ -112,7 +113,7 @@ export function Nav() {
                     {user.email}
                   </div>
                 )}
-                <a href="/account"
+                <Link href="/account"
                   style={{
                     display:'block', padding:'10px 14px', fontSize:13, color:SD.textSec,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
@@ -122,8 +123,8 @@ export function Nav() {
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   Account
-                </a>
-                <a href="/invoice"
+                </Link>
+                <Link href="/invoice"
                   style={{
                     display:'block', padding:'10px 14px', fontSize:13, color:SD.textSec,
                     fontFamily:SD.mono, letterSpacing:1, textTransform:'uppercase',
@@ -133,7 +134,7 @@ export function Nav() {
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   Invoice Generator
-                </a>
+                </Link>
                 <div
                   onClick={handleSignOut}
                   style={{
@@ -162,9 +163,9 @@ export function Nav() {
         borderTop:`1px solid ${SD.border}`,
       }}>
         {mobileNavItems.map(item => (
-          <div key={item.id} onClick={() => router.push('/' + item.id)} style={{
+          <Link key={item.id} href={'/' + item.id} style={{
             flex:1, display:'flex', flexDirection:'column', alignItems:'center',
-            justifyContent:'center', gap:3, cursor:'pointer',
+            justifyContent:'center', gap:3, cursor:'pointer', textDecoration:'none',
             color: pathname === '/' + item.id ? SD.accent : SD.textMuted,
             borderTop: pathname === '/' + item.id ? `2px solid ${SD.accent}` : '2px solid transparent',
             transition:'color .15s',
@@ -172,7 +173,7 @@ export function Nav() {
             <span style={{ fontSize:15, lineHeight:1 }}>{item.icon}</span>
             <span style={{ fontFamily:SD.mono, fontSize:10, letterSpacing:1,
               textTransform:'uppercase' }}>{item.label}</span>
-          </div>
+          </Link>
         ))}
       </div>
     </>

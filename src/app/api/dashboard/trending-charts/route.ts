@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Anthropic from '@anthropic-ai/sdk';
@@ -146,31 +147,45 @@ export async function GET() {
 
     if (!topGenres.length) return NextResponse.json({ results: [] });
 
-    // Check cache — entries fresher than 24h are valid
-    const cutoff = new Date(Date.now() - CACHE_TTL_MS).toISOString();
+    // Load all cached entries regardless of age
     const { data: cached } = await admin
       .from('trending_cache')
       .select('genre, tracks, fetched_at')
-      .in('genre', topGenres)
-      .gte('fetched_at', cutoff);
+      .in('genre', topGenres);
 
     type CacheRow = { genre: string; tracks: TrendingTrack[]; fetched_at: string };
     const cachedMap = new Map((cached ?? []).map((c: CacheRow) => [c.genre, c]));
-    const staleGenres = topGenres.filter((g: string) => !cachedMap.has(g));
 
-    // Fetch fresh data for any stale/missing genres
-    if (staleGenres.length > 0) {
-      const aiResults = await fetchFromAI(staleGenres);
+    const cutoff = new Date(Date.now() - CACHE_TTL_MS).toISOString();
+    const missingGenres = topGenres.filter((g: string) => !cachedMap.has(g));
+    const staleGenres = topGenres.filter((g: string) => {
+      const row = cachedMap.get(g);
+      return row && row.fetched_at < cutoff;
+    });
+
+    // Fetch synchronously only for genres with no cache at all
+    if (missingGenres.length > 0) {
+      const aiResults = await fetchFromAI(missingGenres);
       const now = new Date().toISOString();
-
       for (const r of aiResults) {
-        await admin.from('trending_cache').upsert({
-          genre: r.genre,
-          tracks: r.tracks,
-          fetched_at: now,
-        });
+        await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
         cachedMap.set(r.genre, { genre: r.genre, tracks: r.tracks, fetched_at: now });
       }
+    }
+
+    // Refresh stale genres in the background — don't block the response
+    if (staleGenres.length > 0) {
+      after(async () => {
+        try {
+          const aiResults = await fetchFromAI(staleGenres);
+          const now = new Date().toISOString();
+          for (const r of aiResults) {
+            await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
+          }
+        } catch (e) {
+          console.error('[trending-charts] background refresh failed:', e instanceof Error ? e.message : e);
+        }
+      });
     }
 
     const results: TrendingGenreResult[] = topGenres
