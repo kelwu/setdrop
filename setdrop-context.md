@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+285ce73 chore: nightly context update 2026-06-19
 2fcb3ba chore: nightly context update 2026-06-18
 df66195 chore: nightly context update 2026-06-17
 10de3aa chore: nightly context update 2026-06-16
@@ -200,7 +201,6 @@ b759029 remove(spotify): kill Spotify integration entirely
 6d1cf76 fix(spotify): clean up diagnostics, honest error for quota restriction
 fc93962 debug(spotify): test client credentials token against tracks endpoint
 f2497aa debug(spotify): test /me + /playlists/{id} + /tracks separately to isolate 403
-38d4c8a debug(spotify): add raw diagnostic fetch to capture full 403 response headers
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-19*
+*Last updated: 2026-06-20*
