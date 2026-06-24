@@ -121,6 +121,8 @@ export type Database = {
           venue: string | null
           setlist_id: string | null
           played_at: string
+          actual_tracks: Json | null
+          reflection_json: Json | null
         }
         Insert: Omit<Database['public']['Tables']['gig_history']['Row'], 'id' | 'played_at'> & { id?: string; played_at?: string }
         Update: Partial<Database['public']['Tables']['gig_history']['Insert']>
