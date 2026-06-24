@@ -744,15 +744,22 @@ export function Dashboard() {
             }/>
             <div style={{ padding:'16px' }}>
               {gigHistory.filter(g => new Date(g.gigDate) < new Date()).slice(0, 5).map((g, i, arr) => (
-                <div key={g.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-                  padding:'14px 8px', borderBottom: i < arr.length - 1 ? `1px solid ${SD.border}` : 'none', gap:16 }}>
+                <div key={g.id} onClick={() => router.push(`/gigs/${g.id}`)}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'14px 8px', borderBottom: i < arr.length - 1 ? `1px solid ${SD.border}` : 'none',
+                    gap:16, cursor:'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = SD.surface2)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SD.mono, fontSize:12, fontWeight:600, color:SD.text, marginBottom:3,
                       whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.gigName}</div>
                     {g.venue && <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec }}>{g.venue}</div>}
                   </div>
-                  <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>
-                    {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, flexShrink:0 }}>
+                      {new Date(g.gigDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+                    </div>
+                    <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.accent, letterSpacing:1 }}>REFLECT →</div>
                   </div>
                 </div>
               ))}
