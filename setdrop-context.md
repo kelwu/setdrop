@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+54f85cd chore: nightly context update 2026-06-23
 3104c12 chore: nightly context update 2026-06-22
 2a3b146 chore: nightly context update 2026-06-21
 001e345 chore: nightly context update 2026-06-20
@@ -200,7 +201,6 @@ c57d5e4 fix(dashboard): move Discover above setlists; fix 504 on analyze-gaps
 4438c01 fix(library): add sub-labels to all tabs for visual consistency
 e641857 feat(library): tab sub-labels + improved Crates empty state
 b759029 remove(spotify): kill Spotify integration entirely
-22ac70a chore: nightly context update 2026-06-11
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-23*
+*Last updated: 2026-06-24*
