@@ -49,7 +49,7 @@ export default function PrivacyPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ fontFamily: S.display, fontSize: 22, letterSpacing: 3,
           color: S.text, textDecoration: 'none' }}>
-          SET<span style={{ color: S.accent }}>DROP</span>
+          {BRAND.logoLeft}<span style={{ color: S.accent }}>{BRAND.logoRight}</span>
         </a>
         <a href="/" style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           textDecoration: 'none', letterSpacing: 1 }}>← Back to app</a>
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted,
             letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-            Last updated: April 28, 2026
+            Last updated: June 25, 2026
           </div>
           <h1 style={{ fontFamily: S.display, fontSize: 'clamp(48px,7vw,80px)',
             letterSpacing: 4, margin: '0 0 16px', lineHeight: .95, color: S.text }}>
@@ -138,11 +138,38 @@ export default function PrivacyPage() {
 
         <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
           letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          Track ID (Audio Recognition)
+        </p>
+        <P>
+          When you use Track ID — recording a few seconds of a song through your microphone, or
+          uploading an audio file or DJ mix to identify the tracks in it — {BRAND.name} sends that audio
+          to ACRCloud, a third-party music-recognition service, to find a match. See Section 4 for details.
+        </P>
+        <P>
+          {BRAND.name} does <strong style={{ color: S.text }}>not</strong> store your audio recordings or
+          uploaded files. The audio is forwarded to ACRCloud for recognition and then discarded. We retain
+          only the result of each request — the matched track metadata (artist, title, BPM, genre), whether
+          a match was found, and a timestamp — so we can show your history and enforce monthly usage limits.
+        </P>
+
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          Subscriptions &amp; Payments
+        </p>
+        <P>
+          {BRAND.name} offers a paid Pro subscription. Payments are processed entirely by Stripe —
+          {BRAND.name} never sees or stores your card number. We store only a Stripe customer ID, your
+          subscription status and tier, and the current billing period, so we can unlock Pro features and
+          generate invoices. See Section 4 for details.
+        </P>
+
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
           What We Do NOT Collect
         </p>
         <UL items={[
-          <>Payment information ({BRAND.name} has no paid features)</>,
-          'Audio files or audio content',
+          'Your card or bank details (payments are handled entirely by Stripe — see above)',
+          'Stored copies of your audio recordings or uploaded files (used for recognition, then discarded — see above)',
           'Location data',
           'Analytics or behavioral tracking data',
           'Advertising identifiers',
@@ -155,6 +182,9 @@ export default function PrivacyPage() {
           'To store and retrieve your Serato library across devices',
           'To generate AI setlists using your library and gig parameters',
           'To match setlist tracks to your library for .crate file export',
+          'To identify tracks you record or upload via Track ID and add them to your wishlist',
+          'To process your Pro subscription, unlock paid features, and generate invoices',
+          'To enforce monthly usage limits on metered features like Track ID',
           'To display your setlist history on your dashboard',
         ]} />
         <P>We do not sell your data. We do not share it with third parties except as described in Section 4.</P>
@@ -200,6 +230,56 @@ export default function PrivacyPage() {
           </a>
         </P>
 
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          ACRCloud
+        </p>
+        <P>
+          When you use Track ID, the audio you record or upload is sent to ACRCloud for music recognition.
+          ACRCloud processes the audio to return a match and does not receive your account information.
+          {' '}{BRAND.name} does not retain the audio after recognition.{' '}
+          <a href="https://www.acrcloud.com/privacy-policy/" style={{ color: S.accent, textDecoration: 'none' }}>
+            ACRCloud Privacy Policy ↗
+          </a>
+        </P>
+
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          Stripe
+        </p>
+        <P>
+          Stripe processes all payments for {BRAND.name} Pro. When you subscribe, your card details are
+          entered directly with Stripe and never pass through {BRAND.name}&apos;s servers. We receive only a
+          Stripe customer ID and your subscription status.{' '}
+          <a href="https://stripe.com/privacy" style={{ color: S.accent, textDecoration: 'none' }}>
+            Stripe Privacy Policy ↗
+          </a>
+        </P>
+
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          Resend
+        </p>
+        <P>
+          {BRAND.name} uses Resend to send transactional email such as invoices. Your email address is
+          shared with Resend solely to deliver these messages. We do not send marketing email.{' '}
+          <a href="https://resend.com/legal/privacy-policy" style={{ color: S.accent, textDecoration: 'none' }}>
+            Resend Privacy Policy ↗
+          </a>
+        </P>
+
+        <p style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted,
+          letterSpacing: 1.5, textTransform: 'uppercase', margin: '24px 0 10px' }}>
+          Last.fm
+        </p>
+        <P>
+          To enrich track metadata (such as genre and tags), {BRAND.name} may send an artist and title to
+          the Last.fm API. No personally identifying information is included.{' '}
+          <a href="https://www.last.fm/legal/privacy" style={{ color: S.accent, textDecoration: 'none' }}>
+            Last.fm Privacy Policy ↗
+          </a>
+        </P>
+
         {/* 5 */}
         <H2>5. Public Setlists</H2>
         <P>
@@ -233,12 +313,13 @@ export default function PrivacyPage() {
             in the Library tab to delete all imported tracks at any time.
           </>,
           <>
-            <strong style={{ color: S.text }}>Delete account:</strong> Account deletion is not yet
-            available in the UI. Email{' '}
+            <strong style={{ color: S.text }}>Delete account:</strong> Use the &ldquo;Delete Account&rdquo;
+            button in the Account tab to permanently delete your account and all associated data —
+            library, setlists, and Track ID history. You can also email{' '}
             <a href="mailto:kelcwu@gmail.com" style={{ color: S.accent, textDecoration: 'none' }}>
               kelcwu@gmail.com
             </a>{' '}
-            and all your data — account, library, and setlists — will be permanently deleted within 7 days.
+            and we will handle it within 7 days.
           </>,
           <>
             <strong style={{ color: S.text }}>Data portability:</strong> Your generated setlists

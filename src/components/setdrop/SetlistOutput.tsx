@@ -92,6 +92,18 @@ function toDisplayTrack(t: SetlistTrack, idx: number, resolved?: ResolvedUrls, g
   };
 }
 
+function StatBox({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div style={{ textAlign:'center', padding:'20px 16px',
+      background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3 }}>
+      <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:2,
+        color:SD.accent, lineHeight:1 }}>{value}</div>
+      <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
+        letterSpacing:1.5, textTransform:'uppercase', marginTop:6 }}>{label}</div>
+    </div>
+  );
+}
+
 export function SetlistOutput() {
   const router = useRouter();
   const [setlist, setSetlist] = useState<GeneratedSetlist | null>(null);
@@ -384,18 +396,6 @@ export function SetlistOutput() {
   const avgBpm = Math.round(displayTracks.reduce((a, t) => a + t.bpm, 0) / displayTracks.length);
   const keys = [...new Set(displayTracks.map(t => t.key))];
   const wishCount = displayTracks.filter(t => t.wishlist).length;
-
-  function StatBox({ value, label }: { value: string | number; label: string }) {
-    return (
-      <div style={{ textAlign:'center', padding:'20px 16px',
-        background:SD.bg, border:`1px solid ${SD.border}`, borderRadius:3 }}>
-        <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:2,
-          color:SD.accent, lineHeight:1 }}>{value}</div>
-        <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted,
-          letterSpacing:1.5, textTransform:'uppercase', marginTop:6 }}>{label}</div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
