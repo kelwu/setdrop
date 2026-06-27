@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+3c76998 chore: nightly context update 2026-06-26
 8722750 chore: nightly context update 2026-06-25
 0660add chore: nightly context update 2026-06-24
 54f85cd chore: nightly context update 2026-06-23
@@ -200,7 +201,6 @@ dfdb027 fix(dashboard): null-guard recommendations and emergingArtists before ma
 cfc298e fix(wordplay): remove verbatim lyric quoting to avoid content filter
 39a1818 fix(analyze-gaps): surface real error message + graceful Claude fallback
 c57d5e4 fix(dashboard): move Discover above setlists; fix 504 on analyze-gaps
-4438c01 fix(library): add sub-labels to all tabs for visual consistency
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-26*
+*Last updated: 2026-06-27*
