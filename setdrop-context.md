@@ -181,6 +181,10 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+676ce83 fix(privacy): align policy with shipped Track ID, payments, and integrations
+3d0615f feat(phase4): post-gig reflection — upload recording or log manually, planned vs actual diff
+9130f20 feat(dashboard/library): stale-while-revalidate trending cache, improved gap detection, Link navigation
+4114a2d chore: nightly context update 2026-06-27
 3c76998 chore: nightly context update 2026-06-26
 8722750 chore: nightly context update 2026-06-25
 0660add chore: nightly context update 2026-06-24
@@ -197,10 +201,6 @@ aa499f4 chore: nightly context update 2026-06-15
 8b8997d chore: nightly context update 2026-06-13
 d124bea chore: nightly context update 2026-06-12
 571666e fix(analyze-gaps): guard against undefined return from fetchBpmGapRecs
-dfdb027 fix(dashboard): null-guard recommendations and emergingArtists before map
-cfc298e fix(wordplay): remove verbatim lyric quoting to avoid content filter
-39a1818 fix(analyze-gaps): surface real error message + graceful Claude fallback
-c57d5e4 fix(dashboard): move Discover above setlists; fix 504 on analyze-gaps
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-27*
+*Last updated: 2026-06-28*
