@@ -73,18 +73,43 @@ const SUB_GENRE_MATCHERS: { tag: string; subGenre: string }[] = [
 ];
 
 const GENRE_ALIASES: Record<string, string> = {
+  // Hip Hop variants
   'hip-hop': 'Hip Hop', 'hiphop': 'Hip Hop', 'hip hop music': 'Hip Hop',
+  'hip-hop / r&b': 'Hip Hop', 'hip-hop/r&b': 'Hip Hop', 'hip hop / r&b': 'Hip Hop',
+  'hip hop/r&b': 'Hip Hop', 'rap': 'Hip Hop', 'rap / hip-hop': 'Hip Hop',
+  // R&B variants
   'r&b': 'R&B', 'rnb': 'R&B', 'r & b': 'R&B', 'rhythm and blues': 'R&B', 'rhythm & blues': 'R&B',
-  'drum and bass': 'Drum & Bass', 'd&b': 'Drum & Bass', 'dnb': 'Drum & Bass',
+  'r&b / soul': 'R&B', 'soul': 'R&B',
+  // Electronic / Dance catch-alls → EDM
+  'electronic / dance': 'EDM', 'electronic/dance': 'EDM', 'electronic dance music': 'EDM',
+  'edm': 'EDM', 'dance / electronic': 'EDM',
+  // Dance → Dance
+  'dance commercial/mainstream club': 'Dance', 'dance / pop': 'Dance Pop',
+  'dance pop': 'Dance Pop', 'dance music': 'Dance',
+  // House variants
   'tech house': 'Tech House', 'techhouse': 'Tech House',
   'deep house': 'Deep House', 'deephouse': 'Deep House',
+  'deep tech house': 'Deep House',
   'afro house': 'Afro House', 'afrohouse': 'Afro House',
   'house music': 'House', 'soulful house': 'House',
-  'afrobeats': 'Afrobeats', 'afro beats': 'Afrobeats', 'afropop': 'Afrobeats',
-  'edm': 'EDM', 'electronic dance music': 'EDM',
-  'trap music': 'Trap', 'uk drill': 'UK Drill',
-  'pop music': 'Pop', 'dance pop': 'Dance Pop', 'dance music': 'Dance',
+  'latin house': 'Latin House', 'col house': 'Col House',
+  'future house': 'Future House', 'bass house': 'Bass House',
+  'tribal house': 'Tribal House', 'electro house': 'Electro House',
+  // Latin variants
+  'latin / reggaeton': 'Latin', 'latin/reggaeton': 'Latin',
   'latin music': 'Latin', 'latin pop': 'Latin Pop',
+  // Drum & Bass
+  'drum and bass': 'Drum & Bass', 'd&b': 'Drum & Bass', 'dnb': 'Drum & Bass',
+  // Afro
+  'afrobeats': 'Afrobeats', 'afro beats': 'Afrobeats', 'afropop': 'Afrobeats',
+  'afrobeat': 'Afrobeats',
+  // Misc
+  'trap music': 'Trap', 'uk drill': 'UK Drill',
+  'pop music': 'Pop', 'top 40': 'Pop',
+  'nu disco': 'Nu Disco', 'mainstage': 'EDM',
+  'electro': 'Electro', 'future bass': 'Future Bass',
+  'moombahton': 'Moombahton', 'reggae': 'Reggae', 'dancehall': 'Dancehall',
+  'rock': 'Rock', 'blues': 'Blues', 'other': 'Other',
 };
 
 function normalizeGenre(raw: string): string {
@@ -413,7 +438,12 @@ export async function GET() {
 
     const rawGaps = detectGaps(tracks);
     const energyInsights = detectEnergyGaps(tracks);
-    const genresAnalyzed = new Set(tracks.map(t => t.genre).filter(Boolean)).size;
+    // Count only genres with ≥5 tracks and exclude catch-all buckets
+    const EXCLUDED_GENRES = new Set(['Unknown', 'Other', 'EDM', 'Dance', 'Pop']);
+    const genreCountMap: Record<string, number> = {};
+    for (const t of tracks) { if (t.genre) genreCountMap[t.genre] = (genreCountMap[t.genre] ?? 0) + 1; }
+    const genresAnalyzed = Object.entries(genreCountMap)
+      .filter(([g, n]) => n >= 5 && !EXCLUDED_GENRES.has(g)).length;
     const meta = { tracksAnalyzed: tracks.length, genresAnalyzed };
 
     if (!rawGaps.length) {
