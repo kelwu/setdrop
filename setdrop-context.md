@@ -181,6 +181,7 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+a9e297e chore: nightly context update 2026-06-29
 73576bc chore: nightly context update 2026-06-28
 676ce83 fix(privacy): align policy with shipped Track ID, payments, and integrations
 3d0615f feat(phase4): post-gig reflection — upload recording or log manually, planned vs actual diff
@@ -200,7 +201,6 @@ df66195 chore: nightly context update 2026-06-17
 aa499f4 chore: nightly context update 2026-06-15
 549f8c6 chore: nightly context update 2026-06-14
 8b8997d chore: nightly context update 2026-06-13
-d124bea chore: nightly context update 2026-06-12
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-06-30*
