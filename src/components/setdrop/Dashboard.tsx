@@ -100,6 +100,7 @@ export function Dashboard() {
   const [trendingData, setTrendingData] = useState<TrendingGenreResult[] | null>(null);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [trendingError, setTrendingError] = useState<string | null>(null);
+  const [trendingWarming, setTrendingWarming] = useState(false);
   const [gapReport, setGapReport] = useState<LibraryGap[] | null>(null);
   const [gapMeta, setGapMeta] = useState<{ tracksAnalyzed: number; genresAnalyzed: number } | null>(null);
   const [energyInsights, setEnergyInsights] = useState<EnergyInsight[]>([]);
@@ -185,26 +186,24 @@ export function Dashboard() {
   async function loadTrending() {
     setTrendingLoading(true);
     setTrendingError(null);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 115_000);
+    setTrendingWarming(false);
     try {
-      const res = await fetch('/api/dashboard/trending-charts', { signal: controller.signal });
+      const res = await fetch('/api/dashboard/trending-charts');
       if (!res.ok) {
         const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
         throw new Error(body.error ?? `Server error ${res.status}`);
       }
-      const data = await res.json() as { results?: TrendingGenreResult[]; error?: string };
+      const data = await res.json() as { results?: TrendingGenreResult[]; error?: string; warming?: boolean };
       if (data.error) throw new Error(data.error);
       setTrendingData(data.results ?? []);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        setTrendingError('Chart data is taking a while — try again in a moment');
-      } else {
-        console.error('[trending]', err);
-        setTrendingError(err instanceof Error ? err.message : 'Failed to load');
+      if (data.warming) {
+        setTrendingWarming(true);
+        setTimeout(() => loadTrending(), 8_000);
       }
+    } catch (err) {
+      console.error('[trending]', err);
+      setTrendingError(err instanceof Error ? err.message : 'Failed to load');
     } finally {
-      clearTimeout(timeout);
       setTrendingLoading(false);
     }
   }
@@ -486,6 +485,10 @@ export function Dashboard() {
                 <div style={{ display:'flex', alignItems:'center', gap:16 }}>
                   <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.danger }}>{trendingError}</span>
                   <SDButton ghost onClick={loadTrending} style={{ fontSize:11, padding:'4px 10px' }}>Retry</SDButton>
+                </div>
+              ) : trendingWarming ? (
+                <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted }}>
+                  Warming up chart data for your genres — will load in a moment...
                 </div>
               ) : !trendingData || trendingData.length === 0 ? (
                 <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
