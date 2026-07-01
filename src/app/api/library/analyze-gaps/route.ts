@@ -128,41 +128,45 @@ function resolveSubGenre(genre: string, tags: string[]): string {
   return normalizeGenre(genre ?? '');
 }
 
+// Genres excluded from gap detection entirely — too vague to give useful recs
+const DETECTION_SKIP = new Set(['Unknown', 'Other', 'Dance', 'Pop', 'EDM']);
+
 // ─── BPM gap detection ───────────────────────────────────────────────────────
 
 function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGap[] {
   const byGenre: Record<string, number[]> = {};
   for (const t of tracks) {
     if (!t.bpm || t.bpm < 60 || t.bpm > 220) continue;
+    if (DETECTION_SKIP.has(t.genre)) continue;
     (byGenre[t.genre] ??= []).push(Math.round(t.bpm));
   }
 
   const gaps: RawGap[] = [];
 
   for (const [genre, bpms] of Object.entries(byGenre)) {
-    if (bpms.length < 8) continue;
+    if (bpms.length < 25) continue;
 
     const sorted = [...bpms].sort((a, b) => a - b);
     const p5  = sorted[Math.floor(sorted.length * 0.05)];
     const p95 = sorted[Math.min(Math.ceil(sorted.length * 0.95), sorted.length - 1)];
 
-    // Extend range using energy tiers so warmup/peak gaps are visible even
-    // when most tracks cluster in one BPM band
     const tier = ENERGY_TIERS[genre];
     const rangeMin = tier ? Math.min(p5,  tier.warmupMax - 10) : p5;
     const rangeMax = tier ? Math.max(p95, tier.peakMin   + 10) : p95;
 
     const activeBuckets = BPM_BUCKETS.filter(b => b.max >= rangeMin && b.min <= rangeMax);
-    if (activeBuckets.length < 1) continue;
+    if (activeBuckets.length < 2) continue;
 
     const counts = activeBuckets.map(b => ({
       ...b,
       count: bpms.filter(bpm => bpm >= b.min && bpm <= b.max).length,
     }));
 
-    // Divide by ALL active buckets (including empty) so empty buckets drag the
-    // average down and are more likely to breach the threshold
-    const avgDensity = bpms.length / activeBuckets.length;
+    // Base avgDensity only on tracks within the active range — out-of-range
+    // outliers inflated the old calculation and raised the gap threshold
+    const tracksInRange = counts.reduce((s, b) => s + b.count, 0);
+    const avgDensity = tracksInRange / activeBuckets.length;
+    if (avgDensity < 5) continue;
 
     for (const bucket of counts) {
       if (bucket.count < avgDensity * 0.5) {
@@ -171,8 +175,9 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGa
           bpmRange: bucket.label,
           currentCount: bucket.count,
           severity:
-            bucket.count === 0 && avgDensity >= 10 ? 'high'
-            : bucket.count < avgDensity * 0.2    ? 'medium'
+            bucket.count === 0                  ? 'high'
+            : bucket.count < avgDensity * 0.15 ? 'high'
+            : bucket.count < avgDensity * 0.35 ? 'medium'
             : 'low',
         });
       }
@@ -181,7 +186,7 @@ function detectGaps(tracks: Array<{ bpm: number | null; genre: string }>): RawGa
 
   const order: Record<string, number> = { high: 0, medium: 1, low: 2 };
   gaps.sort((a, b) => order[a.severity] - order[b.severity]);
-  return gaps.slice(0, 8);
+  return gaps.slice(0, 6);
 }
 
 // ─── Energy gap detection ────────────────────────────────────────────────────
@@ -341,7 +346,7 @@ async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
 
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: GAP_SYSTEM,
     messages: [{ role: 'user', content: userMsg }],
     tools: [GAP_TOOL],
@@ -443,7 +448,7 @@ export async function GET() {
     const genreCountMap: Record<string, number> = {};
     for (const t of tracks) { if (t.genre) genreCountMap[t.genre] = (genreCountMap[t.genre] ?? 0) + 1; }
     const genresAnalyzed = Object.entries(genreCountMap)
-      .filter(([g, n]) => n >= 5 && !EXCLUDED_GENRES.has(g)).length;
+      .filter(([g, n]) => n >= 25 && !EXCLUDED_GENRES.has(g)).length;
     const meta = { tracksAnalyzed: tracks.length, genresAnalyzed };
 
     if (!rawGaps.length) {
