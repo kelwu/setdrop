@@ -8,6 +8,12 @@ export const maxDuration = 120;
 const MODEL = 'claude-sonnet-4-6';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Normalize genre names so the model's spelling ("Hip-Hop") matches the
+// genre we requested and cache by ("Hip Hop").
+function normalizeGenreKey(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export interface TrendingTrack {
   artist: string;
   title: string;
@@ -168,21 +174,40 @@ export async function GET() {
     // to serve — otherwise every request triggers a new AI call in an infinite loop.
     if (missingGenres.length > 0) {
       const aiResults = await fetchFromAI(missingGenres);
+      // Match AI-returned genre names back to the requested names by a normalized
+      // key, so "Hip-Hop" from the model maps to the "Hip Hop" we queried by.
+      const byNorm = new Map(aiResults.map(r => [normalizeGenreKey(r.genre), r]));
       const now = new Date().toISOString();
-      for (const r of aiResults) {
-        await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
-        cachedMap.set(r.genre, { genre: r.genre, tracks: r.tracks, fetched_at: now });
+      // CRITICAL: write a row for EVERY requested genre, keyed by the requested
+      // name, even if the AI returned nothing or a differently-spelled name.
+      // This guarantees the next request is a cache hit and cannot re-trigger a
+      // fetch until the row goes stale — preventing both the retry loop and the
+      // per-load AI leak that caused the runaway billing.
+      for (const g of missingGenres) {
+        const match = byNorm.get(normalizeGenreKey(g));
+        const tracks = match?.tracks ?? [];
+        await admin.from('trending_cache').upsert({ genre: g, tracks, fetched_at: now });
+        cachedMap.set(g, { genre: g, tracks, fetched_at: now });
       }
     }
 
     // Stale refresh: serve the cached data immediately, refresh in the background.
+    // Bump fetched_at for every stale genre (keyed by the requested name) even if
+    // the model returns nothing — otherwise a name mismatch would leave the row
+    // perpetually stale and fire a background call on every single load.
     if (staleGenres.length > 0) {
       after(async () => {
         try {
           const aiResults = await fetchFromAI(staleGenres);
+          const byNorm = new Map(aiResults.map(r => [normalizeGenreKey(r.genre), r]));
           const now = new Date().toISOString();
-          for (const r of aiResults) {
-            await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
+          for (const g of staleGenres) {
+            const match = byNorm.get(normalizeGenreKey(g));
+            // Only overwrite tracks when the model actually returned some; always
+            // bump fetched_at so the row leaves the stale window.
+            const existing = cachedMap.get(g);
+            const tracks = match?.tracks?.length ? match.tracks : (existing?.tracks ?? []);
+            await admin.from('trending_cache').upsert({ genre: g, tracks, fetched_at: now });
           }
         } catch (e) {
           console.error('[trending-charts] background refresh failed:', e instanceof Error ? e.message : e);
@@ -190,6 +215,8 @@ export async function GET() {
       });
     }
 
+    // Include only genres that actually have tracks. Empty-track rows are still
+    // cached (above) so they won't be re-fetched, but we don't render blank columns.
     const results: TrendingGenreResult[] = topGenres
       .map((g: string) => {
         const row = cachedMap.get(g);
@@ -197,7 +224,7 @@ export async function GET() {
           ? { genre: g, tracks: row.tracks as TrendingTrack[], fetchedAt: row.fetched_at }
           : null;
       })
-      .filter((r: TrendingGenreResult | null): r is TrendingGenreResult => r !== null);
+      .filter((r: TrendingGenreResult | null): r is TrendingGenreResult => r !== null && r.tracks.length > 0);
 
     return NextResponse.json({ results });
   } catch (err) {
