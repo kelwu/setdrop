@@ -163,13 +163,23 @@ export async function GET() {
       return row && row.fetched_at < cutoff;
     });
 
-    // Both missing and stale genres are fetched in the background — never block the response.
-    // On a cold miss the client gets { results: [], warming: true } and auto-retries.
-    const genresToFetch = [...new Set([...missingGenres, ...staleGenres])];
-    if (genresToFetch.length > 0) {
+    // Cold miss: fetch synchronously so the cache is populated before responding.
+    // Background refresh (after()) is only safe when there's already cached data
+    // to serve — otherwise every request triggers a new AI call in an infinite loop.
+    if (missingGenres.length > 0) {
+      const aiResults = await fetchFromAI(missingGenres);
+      const now = new Date().toISOString();
+      for (const r of aiResults) {
+        await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
+        cachedMap.set(r.genre, { genre: r.genre, tracks: r.tracks, fetched_at: now });
+      }
+    }
+
+    // Stale refresh: serve the cached data immediately, refresh in the background.
+    if (staleGenres.length > 0) {
       after(async () => {
         try {
-          const aiResults = await fetchFromAI(genresToFetch);
+          const aiResults = await fetchFromAI(staleGenres);
           const now = new Date().toISOString();
           for (const r of aiResults) {
             await admin.from('trending_cache').upsert({ genre: r.genre, tracks: r.tracks, fetched_at: now });
@@ -189,8 +199,7 @@ export async function GET() {
       })
       .filter((r: TrendingGenreResult | null): r is TrendingGenreResult => r !== null);
 
-    const warming = missingGenres.length > 0 && results.length === 0;
-    return NextResponse.json({ results, warming });
+    return NextResponse.json({ results });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[trending-charts]', message);
