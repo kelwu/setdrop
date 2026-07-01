@@ -181,6 +181,10 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+750639c fix(analyze-gaps): expand genre aliases, report only meaningful genre count
+61f2b38 fix(stack-viz): remove overflow:hidden from layer so tooltips aren't clipped
+5cdf4e5 fix(trending): never block response on cold AI fetch; auto-retry on warm-up
+8a0ac62 chore: nightly context update 2026-06-30
 a9e297e chore: nightly context update 2026-06-29
 73576bc chore: nightly context update 2026-06-28
 676ce83 fix(privacy): align policy with shipped Track ID, payments, and integrations
@@ -197,10 +201,6 @@ a9e297e chore: nightly context update 2026-06-29
 285ce73 chore: nightly context update 2026-06-19
 2fcb3ba chore: nightly context update 2026-06-18
 df66195 chore: nightly context update 2026-06-17
-10de3aa chore: nightly context update 2026-06-16
-aa499f4 chore: nightly context update 2026-06-15
-549f8c6 chore: nightly context update 2026-06-14
-8b8997d chore: nightly context update 2026-06-13
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-01*
