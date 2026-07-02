@@ -120,7 +120,7 @@ export function Dashboard() {
           .from('serato_libraries')
           .select('total_tracks, last_synced')
           .eq('user_id', user.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('setlists')
           .select('id, name, primary_genre, secondary_genre, crowd_context, duration_minutes, created_at, tracks_json')
@@ -187,6 +187,8 @@ export function Dashboard() {
     setTrendingError(null);
     try {
       const res = await fetch('/api/dashboard/trending-charts');
+      // No library yet (404) is not an error — show the neutral empty/upload state.
+      if (res.status === 404) { setTrendingData([]); return; }
       if (!res.ok) {
         const body = await res.json().catch(() => ({} as { error?: string })) as { error?: string };
         throw new Error(body.error ?? `Server error ${res.status}`);
