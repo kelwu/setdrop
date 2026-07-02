@@ -36,8 +36,13 @@ export function LandingPage() {
         background:'rgba(10,10,10,0.85)', backdropFilter:'blur(12px)',
         borderBottom:`1px solid ${SD.border}`,
       }}>
-        <a href="/" style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, textDecoration:'none' }}>
-          {BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span>
+        <a href="/" style={{ fontFamily:SD.display, fontSize:22, letterSpacing:3, color:SD.text, textDecoration:'none', display:'flex', alignItems:'center', gap:8 }}>
+          <span>{BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span></span>
+          <span style={{
+            fontFamily:SD.mono, fontSize:9, letterSpacing:2, textTransform:'uppercase',
+            color:SD.info, background:SD.infoDim, border:`1px solid ${SD.info}44`,
+            borderRadius:3, padding:'2px 6px', lineHeight:1, alignSelf:'center',
+          }}>BETA</span>
         </a>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <a href="/login" className="sd-landing-login" style={{

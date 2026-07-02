@@ -71,8 +71,14 @@ export function Nav() {
       }}>
         <span onClick={() => router.push('/')} style={{
           fontFamily:SD.display, fontSize:26, letterSpacing:4, cursor:'pointer', color:SD.text,
+          display:'flex', alignItems:'center', gap:8,
         }}>
-          {BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span>
+          <span>{BRAND.logoLeft}<span style={{ color:SD.accent }}>{BRAND.logoRight}</span></span>
+          <span style={{
+            fontFamily:SD.mono, fontSize:9, letterSpacing:2, textTransform:'uppercase',
+            color:SD.info, background:SD.infoDim, border:`1px solid ${SD.info}44`,
+            borderRadius:3, padding:'2px 6px', lineHeight:1, alignSelf:'center',
+          }}>BETA</span>
         </span>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
           <div className="sd-nav-links" style={{ display:'flex', alignItems:'center', gap:36, marginRight:12 }}>
