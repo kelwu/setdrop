@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, DM_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { NavWrapper } from "@/components/setdrop/NavWrapper";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { BRAND } from "@/lib/brand";
 
 const bebasNeue = Bebas_Neue({
@@ -46,6 +47,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bebasNeue.variable} ${dmMono.variable} ${spaceGrotesk.variable}`}>
       <body style={{ background: "#0A0A0A", margin: 0, padding: 0 }}>
+        <GoogleAnalytics />
         <NavWrapper />
         {children}
       </body>
