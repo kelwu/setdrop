@@ -41,12 +41,15 @@ export default function LoginPage() {
     setMessage('');
 
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
       });
       if (error) setError(error.message);
+      // If email confirmation is disabled, signUp returns a live session — log in
+      // immediately instead of telling the user to check an email that never comes.
+      else if (data.session) router.push('/dashboard');
       else setMessage('Check your email for a confirmation link.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
