@@ -3,6 +3,7 @@ import { runSetlistPipeline } from '@/lib/agents/pipeline';
 import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types';
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
+import { recordUsage } from '@/lib/api-usage';
 
 export const maxDuration = 300;
 
@@ -53,10 +54,13 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Beta testers and allowlisted emails bypass rate limiting entirely
+  const { banned, isBeta: dbBeta } = await recordUsage(user.id, 'generate-setlist');
+  if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
+
+  // Beta testers (env allowlist or admin-granted flag) bypass rate limiting entirely
   const betaEmails = (process.env.BETA_EMAILS ?? '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-  const isBeta = user.email && betaEmails.includes(user.email.toLowerCase());
+  const isBeta = dbBeta || (!!user.email && betaEmails.includes(user.email.toLowerCase()));
 
   if (!isBeta) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();

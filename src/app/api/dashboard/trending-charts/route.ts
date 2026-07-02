@@ -1,6 +1,7 @@
 import { after } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { recordUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const maxDuration = 120;
@@ -173,6 +174,7 @@ export async function GET() {
     // Background refresh (after()) is only safe when there's already cached data
     // to serve — otherwise every request triggers a new AI call in an infinite loop.
     if (missingGenres.length > 0) {
+      await recordUsage(user.id, 'trending-charts');
       const aiResults = await fetchFromAI(missingGenres);
       // Match AI-returned genre names back to the requested names by a normalized
       // key, so "Hip-Hop" from the model maps to the "Hip Hop" we queried by.
@@ -198,6 +200,7 @@ export async function GET() {
     if (staleGenres.length > 0) {
       after(async () => {
         try {
+          await recordUsage(user.id, 'trending-charts');
           const aiResults = await fetchFromAI(staleGenres);
           const byNorm = new Map(aiResults.map(r => [normalizeGenreKey(r.genre), r]));
           const now = new Date().toISOString();

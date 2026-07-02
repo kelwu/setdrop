@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { recordUsage } from '@/lib/api-usage';
 
 export const maxDuration = 60;
 
@@ -115,6 +116,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { banned } = await recordUsage(user.id, 'resolve-urls');
+  if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
   const { tracks } = await req.json() as { tracks: TrackInput[] };
   if (!Array.isArray(tracks) || !tracks.length) {

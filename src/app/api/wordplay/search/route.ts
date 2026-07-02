@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { jsonrepair } from 'jsonrepair';
 import { createClient } from '@/lib/supabase/server';
+import { recordUsage } from '@/lib/api-usage';
 
 export const maxDuration = 60;
 
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { banned } = await recordUsage(user.id, 'wordplay-search');
+    if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
     const { word, tracks } = await req.json() as { word?: string; tracks?: TrackInput[] };
     if (!word?.trim()) return NextResponse.json({ error: 'Word is required' }, { status: 400 });

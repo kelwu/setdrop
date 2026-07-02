@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { recordUsage } from '@/lib/api-usage';
 import { identifyAudio } from '@/lib/setdrop/acrcloud';
 
 export const maxDuration = 30;
@@ -12,6 +13,9 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { banned, isBeta } = await recordUsage(user.id, 'track-id');
+    if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
     const admin = createAdminClient();
 
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
     const limit = tier === 'pro' ? PRO_LIMIT : FREE_LIMIT;
     const used = count ?? 0;
 
-    if (used >= limit) {
+    if (!isBeta && used >= limit) {
       const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString();
       return NextResponse.json({ error: 'quota_exhausted', tier, limit, used, resetsAt: nextMonth }, { status: 429 });
     }
