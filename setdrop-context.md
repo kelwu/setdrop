@@ -181,6 +181,10 @@ Audience: **fellow builders/developers**, not DJs being sold to. The DJ project 
 ## Recent Commits
 
 ```
+7df2b90 fix(trending): guarantee cache row per requested genre — kill per-load AI leak
+ff613e8 fix(trending): revert cold-miss to synchronous fetch, stop infinite API loop
+9a7dddf fix(analyze-gaps): skip junk genres, fix avgDensity, raise max_tokens, stricter genre count
+6cc2ea9 chore: nightly context update 2026-07-01
 750639c fix(analyze-gaps): expand genre aliases, report only meaningful genre count
 61f2b38 fix(stack-viz): remove overflow:hidden from layer so tooltips aren't clipped
 5cdf4e5 fix(trending): never block response on cold AI fetch; auto-retry on warm-up
@@ -197,10 +201,6 @@ a9e297e chore: nightly context update 2026-06-29
 54f85cd chore: nightly context update 2026-06-23
 3104c12 chore: nightly context update 2026-06-22
 2a3b146 chore: nightly context update 2026-06-21
-001e345 chore: nightly context update 2026-06-20
-285ce73 chore: nightly context update 2026-06-19
-2fcb3ba chore: nightly context update 2026-06-18
-df66195 chore: nightly context update 2026-06-17
 ```
 
 ---
@@ -218,4 +218,4 @@ Key questions still open:
 
 ---
 
-*Last updated: 2026-07-01*
+*Last updated: 2026-07-02*
