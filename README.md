@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SetLab
 
-## Getting Started
+**AI-powered DJ prep tool.** Import your Serato or Rekordbox library, describe your gig, and get an ordered setlist with transition notes, harmonic mixing logic, and per-track reasoning — then export directly back to your DJ software.
 
-First, run the development server:
+Live at [setlab.ai](https://setlab.ai)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What It Does
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+SetLab handles the grunt work of DJ prep so the creative decisions stay with you.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Setlist Generator** — AI builds a starting point from your actual library. Click any track to see why it was chosen, how to transition into the next one, and the harmonic mixing logic behind every move.
+- **Library Intelligence** — Analyzes your collection by sub-genre, surfaces BPM gaps, and finds emerging artists in your genres via live web search.
+- **Track ID** — Tap to identify any track instantly via ACRCloud fingerprinting. Upload a full DJ mix and get a complete timestamped tracklist.
+- **Themed Crates** — Describe a vibe in plain English. SetLab filters and sequences tracks from your library that match.
+- **Wordplay Studio** — Enter a word, find every track in your library connected to it, get suggested transition pairs.
+- **Multi-format export** — Serato `.crate`, Rekordbox XML, M3U.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Framework:** Next.js 16, React 19, TypeScript, Tailwind v4, Shadcn/ui
+- **Auth + DB:** Supabase (Postgres + RLS + Auth)
+- **AI:** Anthropic Claude (`claude-sonnet-4-6`) — setlist generation, BPM/key enrichment, themed crate parsing
+- **Track ID:** ACRCloud audio fingerprinting
+- **Enrichment:** Last.fm (mood/energy tags), Beatport (BPM/key)
+- **Billing:** Stripe (Free + Pro tiers)
+- **Hosting:** Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Pricing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Tier | Price | Limits |
+|------|-------|--------|
+| Free | $0 | 5 AI sets/month · 10 Track IDs/month |
+| Pro | $12/month | 50 AI sets/month · 500 Track IDs/month |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Built By
+
+[Kel Wu](https://setlab.ai) — PM by day, DJ by night.
+Follow the build: [@productbykel](https://youtube.com/@productbykel)
