@@ -3,6 +3,7 @@ import { Bebas_Neue, DM_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { NavWrapper } from "@/components/setdrop/NavWrapper";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { FeedbackWidget } from "@/components/setdrop/FeedbackWidget";
 import { BRAND } from "@/lib/brand";
 
 const bebasNeue = Bebas_Neue({
@@ -50,6 +51,7 @@ export default function RootLayout({
         <GoogleAnalytics />
         <NavWrapper />
         {children}
+        <FeedbackWidget />
       </body>
     </html>
   );
