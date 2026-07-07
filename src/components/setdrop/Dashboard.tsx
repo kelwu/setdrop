@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton, PageHeader, Card, CardHeader, Tabs, Badge, EmptyState, LoadingState } from './shared';
 
@@ -88,6 +89,7 @@ interface LibraryGap {
 
 export function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [libraryStats, setLibraryStats] = useState<LibraryStats | null>(null);
   const [recentSets, setRecentSets] = useState<RecentSet[] | null>(null);
   const [gigHistory, setGigHistory] = useState<GigEntry[] | null>(null);
@@ -107,6 +109,13 @@ export function Dashboard() {
   const [gapLoading, setGapLoading] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState<Set<string>>(new Set());
   const [discoverTab, setDiscoverTab] = useState<'trending' | 'gaps'>('trending');
+
+  useEffect(() => {
+    if (searchParams.get('new_user') === '1') {
+      trackEvent.signUp('google');
+      router.replace('/dashboard');
+    }
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
+import { trackEvent } from '@/lib/analytics';
 
 export function SetlistBuilder() {
   const router = useRouter();
@@ -245,6 +246,12 @@ export function SetlistBuilder() {
         savedId = saved?.id;
       }
     } catch { /* non-fatal */ }
+
+    trackEvent.setGenerated(
+      primaryGenre || 'unknown',
+      finalSetlist.tracks.length,
+      durationMinutes as number,
+    );
 
     setTimeout(() => {
       sessionStorage.setItem('sd_current_setlist', JSON.stringify({

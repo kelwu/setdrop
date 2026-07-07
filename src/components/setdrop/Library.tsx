@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { BRAND } from '@/lib/brand';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
+import { trackEvent } from '@/lib/analytics';
 import { LibraryTrack, SetlistTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
@@ -587,6 +588,7 @@ export function Library() {
   };
 
   const finishUpload = () => {
+    trackEvent.libraryUploaded(uploadMode === 'db' ? 'serato' : 'rekordbox');
     setUploadStage('enrich');
     fetch('/api/library/enrich-lastfm', { method: 'POST' }).catch(() => {});
     setTimeout(() => {
