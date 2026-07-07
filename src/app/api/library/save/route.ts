@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    const { tracks } = await req.json() as { tracks: LibraryTrack[] };
+    const { tracks, source = 'serato' } = await req.json() as { tracks: LibraryTrack[]; source?: 'serato' | 'rekordbox' };
     if (!tracks?.length) return NextResponse.json({ error: 'No tracks provided' }, { status: 400 });
 
     const admin = createAdminClient();
@@ -36,13 +36,13 @@ export async function POST(req: NextRequest) {
 
     if (existing) {
       await admin.from('serato_libraries')
-        .update({ total_tracks: dedupedTracks.length, last_synced: now })
+        .update({ total_tracks: dedupedTracks.length, last_synced: now, source })
         .eq('id', existing.id);
       libraryId = existing.id;
     } else {
       isFirstSync = true;
       const { data, error } = await admin.from('serato_libraries')
-        .insert({ user_id: user.id, total_tracks: dedupedTracks.length, last_synced: now, is_public: false })
+        .insert({ user_id: user.id, total_tracks: dedupedTracks.length, last_synced: now, is_public: false, source })
         .select('id').single();
       if (error || !data) {
         return NextResponse.json({ error: error?.message ?? 'Failed to create library record' }, { status: 500 });

@@ -428,11 +428,11 @@ function StageTracker({ stage, parsedCount, uploadMode, syncStats }: {
 
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
-async function saveLibraryToSupabase(tracks: LibraryTrack[]): Promise<{ added: number; removed: number; unchanged: number }> {
+async function saveLibraryToSupabase(tracks: LibraryTrack[], source: 'serato' | 'rekordbox'): Promise<{ added: number; removed: number; unchanged: number }> {
   const res = await fetch('/api/library/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tracks }),
+    body: JSON.stringify({ tracks, source }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -617,7 +617,7 @@ export function Library() {
           setUploadedTracks(tracks);
           setUploadStage('save');
           try {
-            const stats = await saveLibraryToSupabase(tracks);
+            const stats = await saveLibraryToSupabase(tracks, 'serato');
             setSyncStats(stats);
           } catch (saveErr) {
             throw new Error(`Save error: ${saveErr instanceof Error ? saveErr.message : 'unknown'}`);
@@ -639,7 +639,7 @@ export function Library() {
           localStorage.setItem('sd_library', JSON.stringify(tracks));
           setUploadedTracks(tracks);
           setUploadStage('save');
-          const stats = await saveLibraryToSupabase(tracks);
+          const stats = await saveLibraryToSupabase(tracks, 'rekordbox');
           setSyncStats(stats);
           finishUpload();
         } catch (err) {
