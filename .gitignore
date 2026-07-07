@@ -43,3 +43,6 @@ next-env.d.ts
 .vercel
 
 certificates
+
+# Claude Code session data
+.playwright-mcp/
