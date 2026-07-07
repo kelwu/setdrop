@@ -30,5 +30,5 @@ export const BRAND = {
   // Bare domain (no protocol) — used in invoice footer, share-page footer
   domain: 'setlab.ai',
   // One-line tagline for OG / metadata / email signatures
-  tagline: 'AI for DJ setlist planning',
+  tagline: 'From library to setlist',
 } as const;

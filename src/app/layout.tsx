@@ -31,11 +31,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — From Spotify to Serato`,
-  description: "AI-powered setlist planning. Connect your Spotify, build your set, export to Serato.",
+  title: `${BRAND.name} — From library to setlist`,
+  description: "AI-powered DJ prep. Import your library, build your set, export to Serato or Rekordbox.",
   openGraph: {
-    title: `${BRAND.name} — From Spotify to Serato`,
-    description: "AI-powered setlist planning. Spotify to Serato in minutes.",
+    title: `${BRAND.name} — From library to setlist`,
+    description: "AI-powered DJ prep. Import your library, build your set, export to Serato or Rekordbox.",
     siteName: BRAND.name,
   },
 };
