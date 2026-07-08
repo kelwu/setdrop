@@ -2,6 +2,19 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 
+export interface AdminSetlistRow {
+  id: string;
+  name: string;
+  primaryGenre: string | null;
+  crowdContext: string | null;
+  durationMinutes: number | null;
+  lineupSlot: string | null;
+  isPublic: boolean;
+  shareUrl: string | null;
+  createdAt: string;
+  trackCount: number;
+}
+
 export interface AdminUserRow {
   id: string;
   email: string | null;
@@ -11,8 +24,10 @@ export interface AdminUserRow {
   isBeta: boolean;
   isBanned: boolean;
   libraryTracks: number;
+  librarySource: 'serato' | 'rekordbox' | null;
   setlistCount: number;
   trackIdsThisMonth: number;
+  sets: AdminSetlistRow[];
 }
 
 export interface AdminMetrics {
@@ -72,26 +87,59 @@ export async function getAdminData(): Promise<AdminData> {
   const sevenDaysAgo = now - 7 * 86_400_000;
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  const [authUsers, flagsRes, libsRes, setsRes, tidsRes, aiCountRes] = await Promise.all([
+  const [authUsers, flagsRes, libsRes, setsRes, setTracksRes, tidsRes, aiCountRes] = await Promise.all([
     listAllAuthUsers(admin),
     admin.from('users').select('id, subscription_tier, is_beta, is_banned'),
-    admin.from('serato_libraries').select('user_id, total_tracks'),
-    admin.from('setlists').select('user_id'),
+    admin.from('serato_libraries').select('user_id, total_tracks, source'),
+    admin.from('setlists').select('id, user_id, name, primary_genre, crowd_context, duration_minutes, lineup_slot, is_public, share_url, created_at'),
+    admin.from('setlist_tracks').select('setlist_id'),
     admin.from('track_id_requests').select('user_id').gte('created_at', monthStart),
     admin.from('api_usage').select('id', { count: 'exact', head: true }).gte('created_at', dayAgo),
   ]);
 
   type FlagRow = { id: string; subscription_tier: string | null; is_beta: boolean; is_banned: boolean };
   const flagsById = new Map<string, FlagRow>((flagsRes.data as FlagRow[] ?? []).map((f) => [f.id, f]));
-  const libByUser = new Map<string, number>(
-    (libsRes.data as Array<{ user_id: string; total_tracks: number }> ?? []).map((l) => [l.user_id, l.total_tracks]),
+
+  type LibRow = { user_id: string; total_tracks: number; source: string | null };
+  const libByUser = new Map<string, LibRow>(
+    (libsRes.data as LibRow[] ?? []).map((l) => [l.user_id, l]),
   );
-  const setCountByUser = countBy((setsRes.data as Array<{ user_id: string | null }>) ?? []);
+
+  // Build setlist_id -> track count map
+  type SetTrackRow = { setlist_id: string };
+  const trackCountBySetlist = new Map<string, number>();
+  for (const r of (setTracksRes.data as SetTrackRow[] ?? [])) {
+    trackCountBySetlist.set(r.setlist_id, (trackCountBySetlist.get(r.setlist_id) ?? 0) + 1);
+  }
+
+  // Build user_id -> AdminSetlistRow[] map
+  type SetRow = { id: string; user_id: string; name: string; primary_genre: string | null; crowd_context: string | null; duration_minutes: number | null; lineup_slot: string | null; is_public: boolean; share_url: string | null; created_at: string };
+  const setsByUser = new Map<string, AdminSetlistRow[]>();
+  for (const s of (setsRes.data as SetRow[] ?? [])) {
+    const row: AdminSetlistRow = {
+      id: s.id,
+      name: s.name,
+      primaryGenre: s.primary_genre,
+      crowdContext: s.crowd_context,
+      durationMinutes: s.duration_minutes,
+      lineupSlot: s.lineup_slot,
+      isPublic: s.is_public,
+      shareUrl: s.share_url,
+      createdAt: s.created_at,
+      trackCount: trackCountBySetlist.get(s.id) ?? 0,
+    };
+    const list = setsByUser.get(s.user_id) ?? [];
+    list.push(row);
+    setsByUser.set(s.user_id, list);
+  }
+
   const tidCountByUser = countBy((tidsRes.data as Array<{ user_id: string | null }>) ?? []);
 
   const users: AdminUserRow[] = authUsers
     .map((u) => {
       const f = flagsById.get(u.id);
+      const lib = libByUser.get(u.id);
+      const userSets = (setsByUser.get(u.id) ?? []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return {
         id: u.id,
         email: u.email ?? null,
@@ -100,9 +148,11 @@ export async function getAdminData(): Promise<AdminData> {
         tier: f?.subscription_tier === 'pro' ? 'pro' : 'free',
         isBeta: f?.is_beta === true,
         isBanned: f?.is_banned === true,
-        libraryTracks: libByUser.get(u.id) ?? 0,
-        setlistCount: setCountByUser.get(u.id) ?? 0,
+        libraryTracks: lib?.total_tracks ?? 0,
+        librarySource: (lib?.source === 'rekordbox' ? 'rekordbox' : lib ? 'serato' : null),
+        setlistCount: userSets.length,
         trackIdsThisMonth: tidCountByUser.get(u.id) ?? 0,
+        sets: userSets,
       } as AdminUserRow;
     })
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); // newest first

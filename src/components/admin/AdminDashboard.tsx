@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from '@/components/setdrop/shared';
-import type { AdminMetrics, AdminUserRow } from '@/lib/admin-data';
+import type { AdminMetrics, AdminUserRow, AdminSetlistRow } from '@/lib/admin-data';
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never';
@@ -207,6 +207,7 @@ export function AdminDashboard({
                     {open && (
                       <tr style={{ background: SD.surface2 }}>
                         <td colSpan={7} style={{ padding: '4px 12px 16px' }}>
+                          {/* Actions */}
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                             <SDButton small ghost disabled={busy} onClick={() => act(u.id, u.tier === 'pro' ? 'revoke_pro' : 'grant_pro')}>
                               {u.tier === 'pro' ? 'Revoke Pro' : 'Grant Pro'}
@@ -231,7 +232,29 @@ export function AdminDashboard({
                               {busy ? '…' : 'Delete user'}
                             </button>
                           </div>
-                          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 8 }}>
+
+                          {/* Library source */}
+                          <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted, marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ letterSpacing: 1, textTransform: 'uppercase', fontSize: SD.t10 }}>Library</span>
+                            {u.librarySource
+                              ? <Tag color={u.librarySource === 'rekordbox' ? SD.info : SD.accent}>{u.librarySource.toUpperCase()}</Tag>
+                              : <span style={{ color: SD.textMuted }}>—</span>}
+                            {u.libraryTracks > 0 && <span style={{ color: SD.textMuted }}>{u.libraryTracks.toLocaleString()} tracks</span>}
+                          </div>
+
+                          {/* Sets */}
+                          {u.sets.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 1, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 6 }}>
+                                Sets ({u.sets.length})
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {u.sets.map((s) => <SetRow key={s.id} set={s} />)}
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 10, opacity: 0.5 }}>
                             {u.id}
                           </div>
                         </td>
@@ -246,6 +269,56 @@ export function AdminDashboard({
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SetRow({ set }: { set: AdminSetlistRow }) {
+  const meta = [
+    set.primaryGenre,
+    set.crowdContext,
+    set.durationMinutes ? `${set.durationMinutes}min` : null,
+    set.trackCount ? `${set.trackCount} tracks` : null,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 4, padding: '6px 10px', gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 12, color: '#F0F0F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {set.name}
+        </div>
+        {meta && (
+          <div style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#6A6A6A', marginTop: 2 }}>
+            {meta}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#4A4A4A' }}>
+          {shortDate(set.createdAt)}
+        </span>
+        {set.isPublic && set.shareUrl ? (
+          <a
+            href={`/set/${set.shareUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              fontFamily: 'var(--font-mono), monospace', fontSize: 10, letterSpacing: 0.5,
+              color: '#F5A623', textDecoration: 'none',
+              border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '2px 7px',
+            }}
+          >
+            VIEW →
+          </a>
+        ) : (
+          <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#3A3A3A' }}>private</span>
+        )}
       </div>
     </div>
   );
