@@ -247,6 +247,15 @@ export function SetlistBuilder() {
       }
     } catch { /* non-fatal */ }
 
+    // Email the user a link to their set (non-blocking)
+    if (savedId) {
+      fetch('/api/setlist/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setlistId: savedId }),
+      }).catch(() => {});
+    }
+
     trackEvent.setGenerated(
       primaryGenre || 'unknown',
       finalSetlist.tracks.length,
@@ -417,6 +426,10 @@ export function SetlistBuilder() {
               width:`${(genStep / GEN_STEPS.length) * 100}%`,
               transition:'width 4s ease',
             }}/>
+          </div>
+          <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:SD.t11, color:SD.textMuted, textAlign:'center', lineHeight:1.7 }}>
+            This takes about 30–60 seconds.<br/>
+            We&apos;ll email you a link when it&apos;s ready — just stay on this tab.
           </div>
           {genError && (
             <div style={{ marginTop:32, background:SD.redDim, border:`1px solid ${SD.red}44`,
