@@ -71,7 +71,20 @@ export const SD = {
   body: "var(--font-body), sans-serif",
 } as const;
 
-export const GENRES = ['Hip Hop','R&B','House','Tech House','Disco House','Afrobeats','Techno','Drum & Bass','Dancehall','Latin','Pop','Other'] as const;
+export const GENRE_GROUPS: { label: string; genres: string[] }[] = [
+  { label: 'House', genres: ['House', 'Deep House', 'Tech House', 'Afro House', 'Progressive House', 'Melodic House', 'Disco House', 'Nu-Disco', 'Electro House', 'Future House', 'Tropical House', 'Bass House', 'Indie Dance', 'Organic House'] },
+  { label: 'Techno', genres: ['Techno', 'Minimal Techno', 'Melodic Techno', 'Industrial Techno', 'Peak-Time Techno', 'Hypnotic Techno'] },
+  { label: 'Electronic Bass', genres: ['Drum & Bass', 'Liquid DnB', 'Jungle', 'Dubstep', 'Brostep', 'Future Bass', 'Breaks', 'Breakbeat', 'Electro', 'Jersey Club', 'Footwork', 'Juke', 'UK Bass', 'Grime'] },
+  { label: 'UK / Garage', genres: ['UK Garage', '2-Step', 'Speed Garage', 'UK Funky', 'Bassline'] },
+  { label: 'Trance / Hard', genres: ['Trance', 'Progressive Trance', 'Uplifting Trance', 'Psytrance', 'Hardstyle', 'Hardcore', 'Hard Techno', 'Rave'] },
+  { label: 'Hip-Hop / Urban', genres: ['Hip-Hop', 'Old School Hip-Hop', 'Boom Bap', 'Trap', 'Drill', 'UK Drill', 'Phonk', 'R&B', 'Neo Soul', 'Afroswing'] },
+  { label: 'Afro / Global', genres: ['Afrobeats', 'Afro Pop', 'Afro House', 'Amapiano', 'Gqom', 'Kwaito', 'Baile Funk', 'Kuduro', 'Highlife', 'Coupe Décalé', 'Azonto'] },
+  { label: 'Dancehall / Caribbean', genres: ['Dancehall', 'Reggae', 'Reggae Dancehall', 'Soca', 'Kompa', 'Dembow'] },
+  { label: 'Latin', genres: ['Reggaeton', 'Cumbia', 'Salsa', 'Bachata', 'Merengue', 'Moombahton', 'Latin Pop', 'Perreo', 'Latin Trap'] },
+  { label: 'Pop / Other', genres: ['Pop', 'Disco', 'Funk', 'Soul', 'Jazz', 'Ballroom', 'Synthwave', 'K-Pop', 'Indie', 'Electronic Pop', 'Ambient', 'Chillout', 'Lo-Fi'] },
+];
+
+export const GENRES = GENRE_GROUPS.flatMap(g => g.genres);
 export const CROWD_TYPES = ['Club','Lounge','Wedding','Festival','House Party','Radio','Corporate'] as const;
 export const LINEUP_SLOTS = ['Opener','Middle','Headliner','Closing'] as const;
 export const DURATION_OPTS = ['30 min','60 min','90 min','120 min'] as const;

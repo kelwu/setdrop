@@ -597,7 +597,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
   );
 }
 
-// ─── GenrePillSelector ─────────────────────────────────────────────────────
+// ─── GenrePillSelector (legacy, kept for compat) ───────────────────────────
 interface GenrePillSelectorProps {
   selected: string | string[];
   onChange: (g: string) => void;
@@ -620,6 +620,175 @@ export function GenrePillSelector({ selected, onChange, genres }: GenrePillSelec
           }}>{g}</button>
         );
       })}
+    </div>
+  );
+}
+
+// ─── GenreCombobox ──────────────────────────────────────────────────────────
+import { GENRE_GROUPS } from '@/lib/setdrop/constants';
+
+interface GenreComboboxProps {
+  value: string;
+  onChange: (g: string) => void;
+  placeholder?: string;
+}
+
+export function GenreCombobox({ value, onChange, placeholder = 'Search or type a genre…' }: GenreComboboxProps) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+  const [activeIdx, setActiveIdx] = React.useState(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+        setActiveIdx(-1);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const q = query.toLowerCase().trim();
+
+  // Build filtered list: [{sectionLabel, genres}]
+  const filtered = GENRE_GROUPS
+    .map(g => ({ label: g.label, genres: q ? g.genres.filter(n => n.toLowerCase().includes(q)) : g.genres }))
+    .filter(g => g.genres.length > 0);
+
+  // Flat list for keyboard nav
+  const flatOptions: string[] = filtered.flatMap(g => g.genres);
+  const exactMatch = flatOptions.some(g => g.toLowerCase() === q);
+  const showCustom = q.length > 0 && !exactMatch;
+  const allOptions = showCustom ? [query, ...flatOptions] : flatOptions;
+
+  function select(g: string) {
+    onChange(g);
+    setOpen(false);
+    setQuery('');
+    setActiveIdx(-1);
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (!open) { if (e.key === 'ArrowDown' || e.key === 'Enter') setOpen(true); return; }
+    if (e.key === 'Escape') { setOpen(false); setQuery(''); setActiveIdx(-1); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx(i => Math.min(i + 1, allOptions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx(i => Math.max(i - 1, showCustom ? 0 : 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIdx >= 0) select(allOptions[activeIdx]);
+      else if (q) select(query);
+    }
+  }
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIdx < 0 || !listRef.current) return;
+    const el = listRef.current.querySelector(`[data-idx="${activeIdx}"]`) as HTMLElement | null;
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [activeIdx]);
+
+  const inputDisplay = open ? query : value;
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: SD.surface2, border: `1px solid ${open ? SD.borderMid : SD.border}`,
+        borderRadius: SD.r3, padding: `10px 12px`,
+        transition: 'border-color 0.15s', cursor: 'text',
+      }} onClick={() => { setOpen(true); inputRef.current?.focus(); }}>
+        <input
+          ref={inputRef}
+          value={inputDisplay}
+          onChange={e => { setQuery(e.target.value); setActiveIdx(-1); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKey}
+          placeholder={value ? '' : placeholder}
+          style={{
+            flex: 1, background: 'none', border: 'none', outline: 'none',
+            fontFamily: SD.mono, fontSize: SD.t13, color: value && !open ? SD.accent : SD.text,
+            cursor: 'text',
+          }}
+        />
+        {value && !open && (
+          <button
+            onClick={e => { e.stopPropagation(); onChange(''); setQuery(''); }}
+            style={{ background: 'none', border: 'none', color: SD.textMuted, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 0 0 8px' }}
+          >×</button>
+        )}
+        {!value && (
+          <span style={{ color: SD.textMuted, fontSize: 12, pointerEvents: 'none' }}>▾</span>
+        )}
+      </div>
+
+      {open && (
+        <div ref={listRef} style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100,
+          background: SD.surface, border: `1px solid ${SD.borderMid}`,
+          borderRadius: SD.r3, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          maxHeight: 300, overflowY: 'auto',
+        }}>
+          {showCustom && (
+            <div
+              data-idx={0}
+              onClick={() => select(query)}
+              style={{
+                padding: '10px 14px', fontFamily: SD.mono, fontSize: SD.t12,
+                color: SD.accent, cursor: 'pointer', borderBottom: `1px solid ${SD.border}`,
+                background: activeIdx === 0 ? SD.surface2 : 'transparent',
+              }}
+            >
+              Use &ldquo;{query}&rdquo;
+            </div>
+          )}
+          {filtered.map(group => (
+            <div key={group.label}>
+              <div style={{
+                padding: '8px 14px 4px',
+                fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2,
+                textTransform: 'uppercase', color: SD.textMuted,
+                borderTop: `1px solid ${SD.border}`,
+              }}>
+                {group.label}
+              </div>
+              {group.genres.map(g => {
+                const flatIdx = allOptions.indexOf(g);
+                return (
+                  <div
+                    key={g}
+                    data-idx={flatIdx}
+                    onClick={() => select(g)}
+                    style={{
+                      padding: '8px 14px 8px 20px', fontFamily: SD.mono, fontSize: SD.t12,
+                      color: g === value ? SD.accent : SD.textSec,
+                      background: activeIdx === flatIdx ? SD.surface2 : 'transparent',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={() => setActiveIdx(flatIdx)}
+                  >
+                    {g}{g === value && ' ✓'}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {filtered.length === 0 && !showCustom && (
+            <div style={{ padding: '16px 14px', fontFamily: SD.mono, fontSize: SD.t12, color: SD.textMuted }}>
+              No matches — press Enter to use your genre.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

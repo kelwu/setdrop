@@ -3,9 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { SD, GENRES, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
+import { SD, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
-import { SDButton, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
+import { SDButton, GenreCombobox, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 import { trackEvent } from '@/lib/analytics';
 
 export function SetlistBuilder() {
@@ -484,13 +484,11 @@ export function SetlistBuilder() {
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Primary Genre <span style={{ color:SD.accent }}>*</span></label>
-              <GenrePillSelector selected={primaryGenre}
-                onChange={g => setPrimaryGenre(g === primaryGenre ? '' : g)} genres={GENRES} />
+              <GenreCombobox value={primaryGenre} onChange={setPrimaryGenre} />
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Secondary Genre (optional)</label>
-              <GenrePillSelector selected={secondaryGenre}
-                onChange={g => setSecondaryGenre(g === secondaryGenre ? '' : g)} genres={GENRES} />
+              <GenreCombobox value={secondaryGenre} onChange={setSecondaryGenre} placeholder="Search or type a genre (optional)…" />
             </div>
             <SDInput label="Vibe / Mood (optional)" value={vibe} onChange={setVibe}
               placeholder={`e.g. "dark and introspective" or "feel-good summer energy"`} />

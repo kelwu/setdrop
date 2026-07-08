@@ -71,7 +71,10 @@
       "mcp__plugin_playwright_playwright__browser_console_messages",
       "mcp__plugin_playwright_playwright__browser_close",
       "PowerShell(Start-Sleep -Seconds 8; $null)",
-      "mcp__plugin_playwright_playwright__browser_network_request"
+      "mcp__plugin_playwright_playwright__browser_network_request",
+      "PowerShell(Set-Location *)",
+      "PowerShell($gitPaths = @\\(\"C:\\\\Program Files\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Program Files \\(x86\\)\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Users\\\\wuazn\\\\AppData\\\\Local\\\\Programs\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Windows\\\\System32\\\\git.exe\"\\); foreach \\($p in $gitPaths\\) { if \\(Test-Path $p\\) { Write-Output \"Found: $p\" } })",
+      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -ne \"\" } | Select-Object -First 30)"
     ]
   }
 }
