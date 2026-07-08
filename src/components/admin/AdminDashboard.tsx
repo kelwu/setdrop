@@ -302,23 +302,19 @@ function SetRow({ set }: { set: AdminSetlistRow }) {
         <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#4A4A4A' }}>
           {shortDate(set.createdAt)}
         </span>
-        {set.isPublic && set.shareUrl ? (
-          <a
-            href={`/set/${set.shareUrl}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              fontFamily: 'var(--font-mono), monospace', fontSize: 10, letterSpacing: 0.5,
-              color: '#F5A623', textDecoration: 'none',
-              border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '2px 7px',
-            }}
-          >
-            VIEW →
-          </a>
-        ) : (
-          <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#3A3A3A' }}>private</span>
-        )}
+        <a
+          href={`/admin/sets/${set.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            fontFamily: 'var(--font-mono), monospace', fontSize: 10, letterSpacing: 0.5,
+            color: '#F5A623', textDecoration: 'none',
+            border: '1px solid rgba(245,166,35,0.3)', borderRadius: 3, padding: '2px 7px',
+          }}
+        >
+          VIEW →
+        </a>
       </div>
     </div>
   );
