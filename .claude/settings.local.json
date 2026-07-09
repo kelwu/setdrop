@@ -74,7 +74,13 @@
       "mcp__plugin_playwright_playwright__browser_network_request",
       "PowerShell(Set-Location *)",
       "PowerShell($gitPaths = @\\(\"C:\\\\Program Files\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Program Files \\(x86\\)\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Users\\\\wuazn\\\\AppData\\\\Local\\\\Programs\\\\Git\\\\cmd\\\\git.exe\",\"C:\\\\Windows\\\\System32\\\\git.exe\"\\); foreach \\($p in $gitPaths\\) { if \\(Test-Path $p\\) { Write-Output \"Found: $p\" } })",
-      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -ne \"\" } | Select-Object -First 30)"
+      "PowerShell($env:PATH -split \";\" | Where-Object { $_ -ne \"\" } | Select-Object -First 30)",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; $env_content = Get-Content .env.local | Where-Object { $_ -match \"STRIPE\" }; $env_content | ForEach-Object { $_.Split\\('='\\)[0] })",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; Get-Content .env.local | Select-String \"STRIPE\" | ForEach-Object { \\($_ -split '='\\)[0] })",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.local\\) -match \"STRIPE|stripe\" | ForEach-Object { \\($_ -split '='\\)[0] })",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.local\\).Count; \\(Get-Content .env.local\\) | Select-Object -First 5)",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.production\\) -match \"^STRIPE\" | ForEach-Object { \\($_ -split '='\\)[0] })",
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; Get-Content .env.production | Select-Object -First 3; Write-Output \"---\"; \\(Get-Content .env.production\\).Count)"
     ]
   }
 }

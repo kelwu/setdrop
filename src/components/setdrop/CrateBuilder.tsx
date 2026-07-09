@@ -190,7 +190,16 @@ export function CrateBuilder() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json() as { crate?: ActiveCrate; error?: string };
+      const json = await res.json() as { crate?: ActiveCrate; error?: string; tier?: string; limit?: number };
+      if (res.status === 429) {
+        const isPro = json.tier === 'pro';
+        setError(
+          isPro
+            ? `You've used all ${json.limit} crate builds this month. Resets in 30 days.`
+            : `Free plan includes ${json.limit} crate builds/month. Upgrade to Pro for 30/month.`
+        );
+        return;
+      }
       if (!res.ok || !json.crate) {
         setError(json.error ?? 'Generation failed');
         return;
@@ -466,11 +475,25 @@ export function CrateBuilder() {
 
         {error && (
           <div style={{
-            marginTop: 12, padding: '10px 14px', background: SD.dangerDim,
-            border: `1px solid ${SD.danger}44`, borderRadius: SD.r2,
-            fontFamily: SD.mono, fontSize: SD.t11, color: SD.danger,
+            marginTop: 12, padding: '10px 14px',
+            background: error.includes('Upgrade') ? SD.accentDim : SD.dangerDim,
+            border: `1px solid ${error.includes('Upgrade') ? SD.accent + '44' : SD.danger + '44'}`,
+            borderRadius: SD.r2,
+            fontFamily: SD.mono, fontSize: SD.t11,
+            color: error.includes('Upgrade') ? SD.accent : SD.danger,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
           }}>
-            {error}
+            <span>{error}</span>
+            {error.includes('Upgrade') && (
+              <a href="/account" style={{
+                fontFamily: SD.mono, fontSize: SD.t11, letterSpacing: 1.5,
+                textTransform: 'uppercase', color: SD.accent,
+                textDecoration: 'none', whiteSpace: 'nowrap',
+                border: `1px solid ${SD.accent}66`, borderRadius: SD.r1, padding: '3px 8px',
+              }}>
+                Go Pro →
+              </a>
+            )}
           </div>
         )}
 

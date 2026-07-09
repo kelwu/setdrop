@@ -46,3 +46,4 @@ certificates
 
 # Claude Code session data
 .playwright-mcp/
+.env*

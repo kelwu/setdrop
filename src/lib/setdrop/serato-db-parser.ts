@@ -54,6 +54,12 @@ function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist
   const pathCandidates = ['tpth', 'ptrk', 'pfil'].flatMap(tag => [str16(tag), str8(tag)]);
   const filePath = pathCandidates.find(c => c && looksLikePath(c));
 
+  // Serato's year tag has varied across DB versions; try known candidates and
+  // pick the first value that contains a 4-digit year (rather than betting on one).
+  const yearCandidates = ['ttyr', 'tyer', 'tyr', 'ttyer']
+    .flatMap(tag => [str16(tag), str8(tag)]);
+  const yearStr = yearCandidates.find(c => c && /\d{4}/.test(c));
+
   return {
     filePath,
     title:   str16('tsng') ?? str8('tsng'),
@@ -61,7 +67,7 @@ function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist
     bpmStr:  str16('tbpm') ?? str8('tbpm'),
     key:     str16('tkey') ?? str8('tkey'),
     genre:   str16('tgen') ?? str8('tgen'),
-    yearStr: str16('tyer') ?? str8('tyer'),
+    yearStr,
   };
 }
 
@@ -86,7 +92,7 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
   for (let i = 0; i < otrkList.length; i++) {
     const { filePath, title, artist, bpmStr, key, genre, yearStr } = parseOtrk(otrkList[i]);
     if (!artist && !title) continue;
-    const yearParsed = yearStr ? parseInt(yearStr.slice(0, 4), 10) : undefined;
+    const yearParsed = yearStr ? parseInt(yearStr.match(/\d{4}/)?.[0] ?? '', 10) : undefined;
     tracks.push({
       id: `db-${i}`,
       artist: artist ?? '',

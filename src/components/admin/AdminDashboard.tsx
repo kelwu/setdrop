@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from '@/components/setdrop/shared';
@@ -161,7 +161,9 @@ export function AdminDashboard({
           </div>
         )}
 
-        <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: SD.r3, overflow: 'hidden' }}>
+        <AnnouncementsPanel />
+
+        <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: SD.r3, overflow: 'hidden', marginTop: 32 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${SD.border}` }}>
@@ -329,5 +331,160 @@ function Tag({ children, color }: { children: React.ReactNode; color: string }) 
     }}>
       {children}
     </span>
+  );
+}
+
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  body: string | null;
+  link_url: string | null;
+  link_label: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+function AnnouncementsPanel() {
+  const [list, setList] = useState<AnnouncementRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkLabel, setLinkLabel] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch('/api/admin/announcements');
+    const d = await res.json() as { announcements?: AnnouncementRow[] };
+    setList(d.announcements ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!title.trim()) { setErr('Title is required'); return; }
+    setSaving(true); setErr(null);
+    const res = await fetch('/api/admin/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, link_url: linkUrl, link_label: linkLabel }),
+    });
+    if (res.ok) {
+      setTitle(''); setBody(''); setLinkUrl(''); setLinkLabel('');
+      await load();
+    } else {
+      const d = await res.json() as { error?: string };
+      setErr(d.error ?? 'Failed');
+    }
+    setSaving(false);
+  };
+
+  const handleToggle = async (id: string, active: boolean) => {
+    await fetch(`/api/admin/announcements/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: !active }),
+    });
+    await load();
+  };
+
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+    await load();
+  };
+
+  const inputStyle: React.CSSProperties = {
+    background: SD.surface2, border: `1px solid ${SD.border}`, borderRadius: SD.r2,
+    color: SD.text, fontFamily: SD.mono, fontSize: SD.t12,
+    padding: '8px 10px', width: '100%', boxSizing: 'border-box',
+  };
+
+  return (
+    <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: SD.r3, padding: '20px 24px', marginBottom: 28 }}>
+      <div style={{ fontFamily: SD.mono, fontSize: SD.t13, letterSpacing: 1, textTransform: 'uppercase', color: SD.text, marginBottom: 20 }}>
+        Announcements
+      </div>
+
+      {/* Create form */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div>
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 4 }}>Title *</div>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="New: Crate Builder" style={inputStyle} />
+        </div>
+        <div>
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 4 }}>Body (optional)</div>
+          <input value={body} onChange={e => setBody(e.target.value)} placeholder="Build crates from your library with filters." style={inputStyle} />
+        </div>
+        <div>
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 4 }}>Link URL (optional)</div>
+          <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="/crates" style={inputStyle} />
+        </div>
+        <div>
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 4 }}>Link Label (optional)</div>
+          <input value={linkLabel} onChange={e => setLinkLabel(e.target.value)} placeholder="Try it →" style={inputStyle} />
+        </div>
+      </div>
+
+      {err && <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.danger, marginBottom: 8 }}>{err}</div>}
+
+      <SDButton onClick={handleCreate} style={{ opacity: saving ? 0.5 : 1 }}>
+        {saving ? 'Posting…' : 'Post Announcement'}
+      </SDButton>
+
+      {/* List */}
+      {!loading && list.length > 0 && (
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {list.map(a => (
+            <div key={a.id} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 14px', background: SD.surface2,
+              border: `1px solid ${a.active ? SD.accent + '44' : SD.border}`,
+              borderRadius: SD.r2,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: SD.mono, fontSize: SD.t12, color: a.active ? SD.text : SD.textMuted }}>
+                  {a.title}
+                  {a.body && <span style={{ color: SD.textMuted }}> — {a.body}</span>}
+                </div>
+                {a.link_url && (
+                  <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 2 }}>
+                    {a.link_url} · {a.link_label}
+                  </div>
+                )}
+              </div>
+              <span style={{
+                fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: a.active ? SD.success : SD.textMuted,
+                background: a.active ? SD.successDim : SD.surface3,
+                border: `1px solid ${a.active ? SD.success + '44' : SD.border}`,
+                borderRadius: SD.r1, padding: '2px 7px', whiteSpace: 'nowrap',
+              }}>
+                {a.active ? 'Live' : 'Off'}
+              </span>
+              <button
+                onClick={() => handleToggle(a.id, a.active)}
+                style={{ fontFamily: SD.mono, fontSize: SD.t11, background: 'none', border: `1px solid ${SD.borderMid}`, borderRadius: SD.r1, color: SD.textSec, cursor: 'pointer', padding: '3px 8px' }}
+              >
+                {a.active ? 'Deactivate' : 'Activate'}
+              </button>
+              <button
+                onClick={() => handleDelete(a.id)}
+                style={{ fontFamily: SD.mono, fontSize: SD.t11, background: 'none', border: 'none', color: SD.textMuted, cursor: 'pointer', padding: '3px 6px' }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!loading && list.length === 0 && (
+        <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted, marginTop: 16 }}>
+          No announcements yet.
+        </div>
+      )}
+    </div>
   );
 }

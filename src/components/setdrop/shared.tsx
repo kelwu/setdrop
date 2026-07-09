@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { SD, ConfidenceStatus, SampleTrack, TrackStores, orderedStores } from '@/lib/setdrop/constants';
 import { BRAND } from '@/lib/brand';
+import { AnnouncementBanner } from '@/components/setdrop/AnnouncementBanner';
 
 // ─── Nav ───────────────────────────────────────────────────────────────────
 export function Nav() {
@@ -64,6 +65,7 @@ export function Nav() {
 
   return (
     <>
+      <AnnouncementBanner />
       <nav className="sd-pad-x" style={{
         position:'fixed', top:0, left:0, right:0, zIndex:200,
         height:56, display:'flex', alignItems:'center', justifyContent:'space-between',

@@ -19,10 +19,14 @@ export const PLANS = {
   pro: {
     name: `${BRAND.name} Pro`,
     priceId: process.env.STRIPE_PRO_PRICE_ID ?? '',
-    limit: 50,
+    setLimit: 50,
+    crateLimit: 30,
+    trackIdLimit: 500,
   },
   free: {
     name: `${BRAND.name} Free`,
-    limit: 5,
+    setLimit: 5,
+    crateLimit: 3,
+    trackIdLimit: 10,
   },
 } as const;

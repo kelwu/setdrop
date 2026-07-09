@@ -200,10 +200,31 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { banned } = await recordUsage(user.id, 'crates-generate');
+    const { banned, isBeta } = await recordUsage(user.id, 'crates-generate');
     if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
-    const body = await req.json() as { prompt?: string; name?: string; genre?: string; bpmMin?: number; bpmMax?: number; yearMin?: number; yearMax?: number; excludeArtists?: string[]; cleanOnly?: boolean };
+    if (!isBeta) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+      const tier = (userRow?.subscription_tier ?? 'free') as 'free' | 'pro';
+      const crateLimit = tier === 'pro' ? 30 : 3;
+
+      const { count } = await supabase
+        .from('themed_crates')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', thirtyDaysAgo);
+
+      if ((count ?? 0) >= crateLimit) {
+        return NextResponse.json({ error: 'quota_exhausted', tier, limit: crateLimit }, { status: 429 });
+      }
+    }
+
+    const body = await req.json() as { prompt?: string; name?: string; genre?: string; bpmMin?: number; bpmMax?: number; yearMin?: number; yearMax?: number; excludeArtists?: string[]; cleanOnly?: boolean; targetCount?: number };
     const prompt = (body.prompt ?? '').trim();
     if (!prompt) return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
 
@@ -270,16 +291,24 @@ export async function POST(req: NextRequest) {
       cleanOnly: body.cleanOnly,
     };
 
-    // Filter and sort library tracks (no cap — crates can be arbitrarily large)
+    // Filter and sort library tracks. No cap by default (crates can be arbitrarily
+    // large); the Library quick-crate tab passes targetCount for a small capped crate.
     const filtered = filterTracks(rawTracks as RawTrack[], profile, extra);
     const sorted = sortTracks(filtered, profile.sortOrder);
-    const selected = sorted.map(toStoredTrack);
+    const capped = body.targetCount && body.targetCount > 0
+      ? sorted.slice(0, body.targetCount)
+      : sorted;
+    const selected = capped.map(toStoredTrack);
 
     if (!selected.length) {
-      return NextResponse.json({
-        error: 'No tracks matched this prompt — try a different genre or BPM range',
-        profile,
-      }, { status: 422 });
+      // A year filter is the most common cause of an empty result: tracks synced
+      // before year support have no year and are excluded. Point the user there.
+      const yearActive = body.yearMin !== undefined || body.yearMax !== undefined;
+      const withYear = (rawTracks as RawTrack[]).filter(t => t.year != null).length;
+      const error = yearActive && withYear === 0
+        ? 'No tracks matched — your library has no year data yet. Re-sync your library in Library to enable year filtering, or remove the year range.'
+        : 'No tracks matched these filters — try widening the genre, BPM, or year range.';
+      return NextResponse.json({ error, profile }, { status: 422 });
     }
 
     // Persist the crate

@@ -6,8 +6,8 @@ export const KNOWLEDGE_CHUNKS = [
   {
     category: 'pricing',
     content: `SetLab pricing:
-- Free: $0/month — 5 AI-generated sets per month, 10 Track IDs per month
-- Pro: $12/month — 50 AI-generated sets per month, 500 Track IDs per month
+- Free: $0/month — 5 AI-generated sets/month, 3 crate builds/month, 10 Track IDs/month
+- Pro: $12/month — 50 AI-generated sets/month, 30 crate builds/month, 500 Track IDs/month, all export formats
 Sign up at setlab.ai. No credit card required for the free tier. Cancel Pro anytime from account settings.`,
   },
   {
