@@ -24,6 +24,7 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
     const key = toCamelot(el.getAttribute('Tonality') || '');
     const genre = el.getAttribute('Genre') || '';
     const location = el.getAttribute('Location') || '';
+    const yearRaw = el.getAttribute('Year') || '';
 
     let filePath: string | undefined;
     if (location) {
@@ -40,6 +41,7 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
       }
     }
 
+    const yearParsed = yearRaw ? parseInt(yearRaw.slice(0, 4), 10) : undefined;
     tracks.push({
       id: `rkb-${i}`,
       artist,
@@ -47,6 +49,7 @@ export function parseRekordboxXML(text: string): LibraryTrack[] {
       bpm: parseFloat(bpmRaw) || 0,
       key,
       genre: genre || undefined,
+      year: yearParsed && yearParsed > 1900 && yearParsed < 2100 ? yearParsed : undefined,
       filePath,
       isWishlist: false,
       lastfmTags: [],

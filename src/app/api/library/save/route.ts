@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
           library_id: libraryId,
           artist: t.artist || null, title: t.title || null,
           bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
+          year: t.year || null,
           file_path: t.filePath || null, play_count: 0, in_library: true,
         }));
         const { error: insertError } = await admin.from('serato_tracks').insert(rows);
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
           library_id: libraryId,
           artist: t.artist || null, title: t.title || null,
           bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
+          year: t.year || null,
           file_path: t.filePath || null, play_count: 0, in_library: true,
         }));
 

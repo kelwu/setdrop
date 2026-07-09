@@ -48,6 +48,7 @@ export function Nav() {
   const links = [
     { id:'dashboard', label:'Dashboard' },
     { id:'builder', label:'Build Set' },
+    { id:'crates', label:'Crates' },
     { id:'id', label:'Track ID' },
     { id:'explore', label:'Explore' },
     { id:'library', label:'Library' },
@@ -55,6 +56,7 @@ export function Nav() {
   const mobileNavItems = [
     { id:'dashboard', label:'Dash',     icon:'⊞' },
     { id:'builder',   label:'Build',    icon:'+' },
+    { id:'crates',    label:'Crates',   icon:'▦' },
     { id:'id',        label:'Track ID', icon:'◎' },
     { id:'explore',   label:'Explore',  icon:'◉' },
     { id:'library',   label:'Library',  icon:'♬' },

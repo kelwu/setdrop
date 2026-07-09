@@ -16,6 +16,7 @@ interface RawTrack {
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  year: number | null;
   file_path: string | null;
   lastfm_tags: string[] | null;
 }
@@ -27,6 +28,7 @@ export interface CrateTrack {
   bpm: number | null;
   key: string | null;
   genre: string | null;
+  year: number | null;
   filePath: string | null;
 }
 
@@ -108,19 +110,49 @@ Call parse_crate_prompt with the structured profile.`;
 
 // ─── Track filtering & sorting ────────────────────────────────────────────────
 
-function filterTracks(raw: RawTrack[], profile: CrateProfile): RawTrack[] {
-  const { bpmMin, bpmMax, genreKeywords } = profile;
+interface ExtraFilters {
+  yearMin?: number;
+  yearMax?: number;
+  excludeArtists?: string[];
+  cleanOnly?: boolean;
+}
 
-  const byBpm = raw.filter(t => {
+function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilters = {}): RawTrack[] {
+  const { bpmMin, bpmMax, genreKeywords } = profile;
+  const { yearMin, yearMax, excludeArtists, cleanOnly } = extra;
+
+  const excludeLower = (excludeArtists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
+  const cleanPattern = /\(clean\)|\[clean\]|clean edit|radio edit/i;
+
+  let pool = raw.filter(t => {
     const bpm = t.bpm ?? 0;
-    return bpm >= bpmMin && bpm <= bpmMax;
+    if (bpm < bpmMin || bpm > bpmMax) return false;
+
+    // Year range
+    if (yearMin !== undefined && (t.year == null || t.year < yearMin)) return false;
+    if (yearMax !== undefined && (t.year == null || t.year > yearMax)) return false;
+
+    // Exclude artists
+    if (excludeLower.length) {
+      const artist = (t.artist ?? '').toLowerCase();
+      if (excludeLower.some(ex => artist.includes(ex))) return false;
+    }
+
+    // Clean only — keep explicitly-labeled clean tracks, block explicitly-labeled dirty ones
+    if (cleanOnly) {
+      const titleLower = (t.title ?? '').toLowerCase();
+      const isDirtyVersion = /\(dirty\)|\[dirty\]|dirty version|dirty edit|dirty mix/i.test(titleLower);
+      if (isDirtyVersion || !cleanPattern.test(titleLower)) return false;
+    }
+
+    return true;
   });
 
-  if (!genreKeywords.length) return byBpm;
+  if (!genreKeywords.length) return pool;
 
   const keywords = genreKeywords.map(k => k.toLowerCase());
 
-  const matched = byBpm.filter(t => {
+  const matched = pool.filter(t => {
     const genre = (t.genre ?? '').toLowerCase();
     const tags = (t.lastfm_tags ?? []).map(s => s.toLowerCase());
     return keywords.some(kw =>
@@ -129,8 +161,8 @@ function filterTracks(raw: RawTrack[], profile: CrateProfile): RawTrack[] {
     );
   });
 
-  // If genre filter is too restrictive, fall back to BPM-only
-  return matched.length >= 5 ? matched : byBpm;
+  // If genre filter is too restrictive, fall back to full pool (still respects year/artist/clean)
+  return matched.length >= 5 ? matched : pool;
 }
 
 function sortTracks(tracks: RawTrack[], sortOrder: CrateProfile['sortOrder']): RawTrack[] {
@@ -155,6 +187,7 @@ function toStoredTrack(t: RawTrack): CrateTrack {
     bpm: t.bpm,
     key: t.key,
     genre: t.genre,
+    year: t.year,
     filePath: t.file_path,
   };
 }
@@ -170,11 +203,9 @@ export async function POST(req: NextRequest) {
     const { banned } = await recordUsage(user.id, 'crates-generate');
     if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
-    const body = await req.json() as { prompt?: string; targetCount?: number };
+    const body = await req.json() as { prompt?: string; name?: string; genre?: string; bpmMin?: number; bpmMax?: number; yearMin?: number; yearMax?: number; excludeArtists?: string[]; cleanOnly?: boolean };
     const prompt = (body.prompt ?? '').trim();
     if (!prompt) return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
-
-    const targetCount = Math.min(Math.max(body.targetCount ?? 20, 5), 50);
 
     const admin = createAdminClient();
 
@@ -188,9 +219,10 @@ export async function POST(req: NextRequest) {
 
     const { data: rawTracks } = await admin
       .from('serato_tracks')
-      .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+      .select('id, artist, title, bpm, key, genre, year, file_path, lastfm_tags')
       .eq('library_id', library.id)
-      .eq('in_library', true);
+      .eq('in_library', true)
+      .limit(100000);
 
     if (!rawTracks?.length) return NextResponse.json({ error: 'Library is empty' }, { status: 404 });
 
@@ -225,10 +257,23 @@ export async function POST(req: NextRequest) {
 
     const profile = block.input as CrateProfile;
 
-    // Filter and sort library tracks
-    const filtered = filterTracks(rawTracks as RawTrack[], profile);
+    // Apply explicit overrides from request body
+    if (body.name) profile.crateName = body.name;
+    if (body.genre) profile.genreKeywords = [body.genre];
+    if (body.bpmMin !== undefined) profile.bpmMin = body.bpmMin;
+    if (body.bpmMax !== undefined) profile.bpmMax = body.bpmMax;
+
+    const extra: ExtraFilters = {
+      yearMin: body.yearMin,
+      yearMax: body.yearMax,
+      excludeArtists: body.excludeArtists,
+      cleanOnly: body.cleanOnly,
+    };
+
+    // Filter and sort library tracks (no cap — crates can be arbitrarily large)
+    const filtered = filterTracks(rawTracks as RawTrack[], profile, extra);
     const sorted = sortTracks(filtered, profile.sortOrder);
-    const selected = sorted.slice(0, targetCount).map(toStoredTrack);
+    const selected = sorted.map(toStoredTrack);
 
     if (!selected.length) {
       return NextResponse.json({

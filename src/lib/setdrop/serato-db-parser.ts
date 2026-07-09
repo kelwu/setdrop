@@ -32,7 +32,7 @@ function looksLikePath(s: string): boolean {
   return s.length > 3 && s.length < 2000 && (s.includes('/') || s.includes('\\'));
 }
 
-function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist?: string; bpmStr?: string; key?: string; genre?: string } {
+function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist?: string; bpmStr?: string; key?: string; genre?: string; yearStr?: string } {
   const tags = walkTags(payload);
 
   const str16 = (name: string): string | undefined => {
@@ -56,11 +56,12 @@ function parseOtrk(payload: Buffer): { filePath?: string; title?: string; artist
 
   return {
     filePath,
-    title:  str16('tsng') ?? str8('tsng'),
-    artist: str16('tart') ?? str8('tart'),
-    bpmStr: str16('tbpm') ?? str8('tbpm'),
-    key:    str16('tkey') ?? str8('tkey'),
-    genre:  str16('tgen') ?? str8('tgen'),
+    title:   str16('tsng') ?? str8('tsng'),
+    artist:  str16('tart') ?? str8('tart'),
+    bpmStr:  str16('tbpm') ?? str8('tbpm'),
+    key:     str16('tkey') ?? str8('tkey'),
+    genre:   str16('tgen') ?? str8('tgen'),
+    yearStr: str16('tyer') ?? str8('tyer'),
   };
 }
 
@@ -83,8 +84,9 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
 
   const tracks: LibraryTrack[] = [];
   for (let i = 0; i < otrkList.length; i++) {
-    const { filePath, title, artist, bpmStr, key, genre } = parseOtrk(otrkList[i]);
+    const { filePath, title, artist, bpmStr, key, genre, yearStr } = parseOtrk(otrkList[i]);
     if (!artist && !title) continue;
+    const yearParsed = yearStr ? parseInt(yearStr.slice(0, 4), 10) : undefined;
     tracks.push({
       id: `db-${i}`,
       artist: artist ?? '',
@@ -92,6 +94,7 @@ export function parseSeratoDatabase(buffer: Buffer): ParseSeratoDatabaseResult {
       bpm:    parseFloat(bpmStr ?? '0') || 0,
       key:    toCamelot(key ?? ''),
       genre:  genre  ?? undefined,
+      year:   yearParsed && yearParsed > 1900 && yearParsed < 2100 ? yearParsed : undefined,
       filePath: filePath ?? undefined,
       isWishlist: false,
       lastfmTags: [],

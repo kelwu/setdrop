@@ -1,0 +1,674 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { SD } from '@/lib/setdrop/constants';
+import { GenreCombobox } from '@/components/setdrop/shared';
+import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
+import {
+  buildRekordboxXml,
+  buildM3u,
+  downloadRekordboxXml,
+  downloadM3u,
+} from '@/lib/setdrop/rekordbox-export';
+import type { SetlistTrack, LibraryTrack } from '@/lib/agents/types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface CrateTrack {
+  id: string;
+  artist: string;
+  title: string;
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  year: number | null;
+  filePath: string | null;
+}
+
+interface SavedCrate {
+  id: string;
+  name: string;
+  prompt: string;
+  trackCount: number;
+  tracks: CrateTrack[];
+  createdAt: string;
+}
+
+interface ActiveCrate {
+  id: string;
+  name: string;
+  prompt: string;
+  tracks: CrateTrack[];
+  moodNotes: string;
+  createdAt: string;
+}
+
+// ─── Export helpers ──────────────────────────────────────────────────────────
+
+function toSetlistTrack(t: CrateTrack, i: number): SetlistTrack {
+  return {
+    position: i + 1,
+    artist: t.artist,
+    title: t.title,
+    bpm: t.bpm ?? 0,
+    key: t.key ?? '',
+    energyLevel: 5,
+    whyThisTrack: '',
+    transitionNotes: '',
+    harmonicMixingNotes: '',
+    isWishlistTrack: false,
+  };
+}
+
+function toLibraryTrack(t: CrateTrack): LibraryTrack {
+  return {
+    id: t.id,
+    artist: t.artist,
+    title: t.title,
+    bpm: t.bpm ?? 0,
+    key: t.key ?? '',
+    genre: t.genre ?? undefined,
+    filePath: t.filePath ?? undefined,
+    isWishlist: false,
+  };
+}
+
+// ─── Reusable UI ─────────────────────────────────────────────────────────────
+
+function Btn({
+  children, onClick, disabled, small, variant = 'primary',
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  small?: boolean;
+  variant?: 'primary' | 'ghost' | 'outline';
+}) {
+  const bg = variant === 'primary' ? (disabled ? '#2A2A2A' : SD.accent) : 'transparent';
+  const color = variant === 'primary' ? (disabled ? SD.textMuted : '#000') : SD.textSec;
+  const border = variant === 'outline' ? `1px solid ${SD.borderMid}` : 'none';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        fontFamily: SD.mono, fontSize: small ? SD.t11 : SD.t12,
+        letterSpacing: 1.5, textTransform: 'uppercase', cursor: disabled ? 'not-allowed' : 'pointer',
+        background: bg, color, border, borderRadius: SD.r2,
+        padding: small ? '6px 12px' : '10px 20px',
+        transition: 'background .15s, color .15s',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2,
+      textTransform: 'uppercase', color: SD.textMuted, marginBottom: 6,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+const PAGE_SIZE = 50;
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
+export function CrateBuilder() {
+  const [crateName, setCrateName] = useState('');
+  const [genre, setGenre] = useState('');
+  const [bpmMin, setBpmMin] = useState('');
+  const [bpmMax, setBpmMax] = useState('');
+  const [yearMin, setYearMin] = useState('');
+  const [yearMax, setYearMax] = useState('');
+  const [excludeArtistInput, setExcludeArtistInput] = useState('');
+  const [excludeArtists, setExcludeArtists] = useState<string[]>([]);
+  const [cleanOnly, setCleanOnly] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeCrate, setActiveCrate] = useState<ActiveCrate | null>(null);
+  const [savedCrates, setSavedCrates] = useState<SavedCrate[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [page, setPage] = useState(0);
+
+  const loadCrates = useCallback(async () => {
+    setListLoading(true);
+    try {
+      const res = await fetch('/api/crates');
+      const json = await res.json() as { crates?: SavedCrate[] };
+      setSavedCrates(json.crates ?? []);
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCrates(); }, [loadCrates]);
+
+  const buildFinalPrompt = () => {
+    const parts: string[] = [];
+    if (genre) parts.push(genre);
+    if (bpmMin && bpmMax) parts.push(`${bpmMin}-${bpmMax} BPM`);
+    else if (bpmMin) parts.push(`above ${bpmMin} BPM`);
+    else if (bpmMax) parts.push(`below ${bpmMax} BPM`);
+    if (prompt.trim()) parts.push(prompt.trim());
+    return parts.length ? parts.join(', ') : '';
+  };
+
+  const handleGenerate = async () => {
+    if (!crateName.trim()) {
+      setError('Give your crate a name — it becomes the crate name in Serato and the playlist name in Rekordbox.');
+      return;
+    }
+    const finalPrompt = buildFinalPrompt();
+    if (!finalPrompt) {
+      setError('Add a genre, BPM range, or describe what you want.');
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    setPage(0);
+    try {
+      const body: Record<string, unknown> = { prompt: finalPrompt };
+      if (crateName.trim()) body.name = crateName.trim();
+      if (genre) body.genre = genre;
+      if (bpmMin) body.bpmMin = Number(bpmMin);
+      if (bpmMax) body.bpmMax = Number(bpmMax);
+      if (yearMin) body.yearMin = Number(yearMin);
+      if (yearMax) body.yearMax = Number(yearMax);
+      if (excludeArtists.length) body.excludeArtists = excludeArtists;
+      if (cleanOnly) body.cleanOnly = true;
+
+      const res = await fetch('/api/crates/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json() as { crate?: ActiveCrate; error?: string };
+      if (!res.ok || !json.crate) {
+        setError(json.error ?? 'Generation failed');
+        return;
+      }
+      setActiveCrate(json.crate);
+      await loadCrates();
+    } catch {
+      setError('Network error — check your connection');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleLoadSaved = (c: SavedCrate) => {
+    setActiveCrate({
+      id: c.id,
+      name: c.name,
+      prompt: c.prompt,
+      tracks: c.tracks,
+      moodNotes: '',
+      createdAt: c.createdAt,
+    });
+    setPage(0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: string) => {
+    await fetch('/api/crates', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    if (activeCrate?.id === id) setActiveCrate(null);
+    await loadCrates();
+  };
+
+  // Export handlers
+  const handleExportSerato = () => {
+    if (!activeCrate) return;
+    const paths = activeCrate.tracks.map(t => t.filePath).filter((p): p is string => Boolean(p));
+    if (!paths.length) { setError('No file paths available — library may need re-sync'); return; }
+    const data = buildCrate(paths);
+    downloadCrate(data, activeCrate.name);
+  };
+
+  const handleExportRekordbox = () => {
+    if (!activeCrate) return;
+    const setlist = activeCrate.tracks.map(toSetlistTrack);
+    const library = activeCrate.tracks.map(toLibraryTrack);
+    const { xml, matched } = buildRekordboxXml(activeCrate.name, setlist, library);
+    if (!matched) { setError('No file paths — library may need re-sync'); return; }
+    downloadRekordboxXml(xml, activeCrate.name);
+  };
+
+  const handleExportM3u = () => {
+    if (!activeCrate) return;
+    const setlist = activeCrate.tracks.map(toSetlistTrack);
+    const library = activeCrate.tracks.map(toLibraryTrack);
+    const { m3u, matched } = buildM3u(activeCrate.name, setlist, library);
+    if (!matched) { setError('No file paths — library may need re-sync'); return; }
+    downloadM3u(m3u, activeCrate.name);
+  };
+
+  // Pagination
+  const tracks = activeCrate?.tracks ?? [];
+  const totalPages = Math.ceil(tracks.length / PAGE_SIZE);
+  const pageTracks = tracks.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  return (
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 24px 80px' }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{
+          fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 3,
+          textTransform: 'uppercase', color: SD.textMuted, marginBottom: 8,
+        }}>
+          SetLab AI
+        </div>
+        <h1 style={{
+          fontFamily: SD.mono, fontSize: SD.t28, letterSpacing: 2,
+          color: SD.text, margin: 0, textTransform: 'uppercase',
+        }}>
+          Crate Builder
+        </h1>
+        <p style={{
+          fontFamily: SD.mono, fontSize: SD.t12, color: SD.textSec,
+          margin: '8px 0 0', lineHeight: 1.6,
+        }}>
+          Describe the crate you want. AI scans your entire library with no track limit.
+        </p>
+      </div>
+
+      {/* Generator form */}
+      <div style={{
+        background: SD.surface, border: `1px solid ${SD.border}`,
+        borderRadius: SD.r3, padding: 28, marginBottom: 32,
+      }}>
+        {/* Crate name */}
+        <div style={{ marginBottom: 16 }}>
+          <Label>Crate Name *</Label>
+          <input
+            type="text"
+            value={crateName}
+            onChange={e => setCrateName(e.target.value)}
+            placeholder="e.g. 'Friday Peak', 'Summer Afrobeats', 'Tech House Toolkit'…"
+            style={{
+              width: '100%', background: SD.surface2,
+              border: `1px solid ${!crateName.trim() && error ? SD.danger : SD.border}`,
+              borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+              fontSize: SD.t12, padding: '8px 12px', boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 5 }}>
+            Used as the crate name in Serato and the playlist name in Rekordbox.
+          </div>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto auto',
+          gap: 16, alignItems: 'end',
+          flexWrap: 'wrap',
+        }}>
+          {/* Genre */}
+          <div>
+            <Label>Genre (optional)</Label>
+            <GenreCombobox value={genre} onChange={setGenre} placeholder="Any genre…" />
+          </div>
+
+          {/* BPM min */}
+          <div style={{ width: 100 }}>
+            <Label>BPM Min</Label>
+            <input
+              type="number"
+              value={bpmMin}
+              onChange={e => setBpmMin(e.target.value)}
+              placeholder="60"
+              style={{
+                width: '100%', background: SD.surface2, border: `1px solid ${SD.border}`,
+                borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                fontSize: SD.t12, padding: '8px 10px', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* BPM max */}
+          <div style={{ width: 100 }}>
+            <Label>BPM Max</Label>
+            <input
+              type="number"
+              value={bpmMax}
+              onChange={e => setBpmMax(e.target.value)}
+              placeholder="180"
+              style={{
+                width: '100%', background: SD.surface2, border: `1px solid ${SD.border}`,
+                borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                fontSize: SD.t12, padding: '8px 10px', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Year range + Clean toggle */}
+        <div style={{ display: 'grid', gridTemplateColumns: '100px 100px 1fr auto', gap: 16, alignItems: 'end', marginTop: 16 }}>
+          <div>
+            <Label>Year From</Label>
+            <input
+              type="number"
+              value={yearMin}
+              onChange={e => setYearMin(e.target.value)}
+              placeholder="1990"
+              style={{
+                width: '100%', background: SD.surface2, border: `1px solid ${SD.border}`,
+                borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                fontSize: SD.t12, padding: '8px 10px', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div>
+            <Label>Year To</Label>
+            <input
+              type="number"
+              value={yearMax}
+              onChange={e => setYearMax(e.target.value)}
+              placeholder="2025"
+              style={{
+                width: '100%', background: SD.surface2, border: `1px solid ${SD.border}`,
+                borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                fontSize: SD.t12, padding: '8px 10px', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* Exclude artists */}
+          <div>
+            <Label>Exclude Artists</Label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {excludeArtists.map(a => (
+                <span key={a} style={{
+                  fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 1,
+                  background: SD.surface3, border: `1px solid ${SD.borderMid}`,
+                  borderRadius: SD.r1, padding: '3px 8px', color: SD.textSec,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  {a}
+                  <button onClick={() => setExcludeArtists(prev => prev.filter(x => x !== a))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: SD.textMuted, padding: 0, lineHeight: 1 }}>
+                    ✕
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                value={excludeArtistInput}
+                onChange={e => setExcludeArtistInput(e.target.value)}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ',') && excludeArtistInput.trim()) {
+                    e.preventDefault();
+                    const name = excludeArtistInput.trim().replace(/,$/, '');
+                    if (name && !excludeArtists.includes(name)) {
+                      setExcludeArtists(prev => [...prev, name]);
+                    }
+                    setExcludeArtistInput('');
+                  }
+                }}
+                placeholder="Type artist, press Enter…"
+                style={{
+                  flex: 1, minWidth: 160, background: SD.surface2, border: `1px solid ${SD.border}`,
+                  borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                  fontSize: SD.t12, padding: '8px 10px',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Clean only toggle */}
+          <div style={{ paddingBottom: 2 }}>
+            <Label>Clean Only</Label>
+            <button
+              onClick={() => setCleanOnly(v => !v)}
+              style={{
+                fontFamily: SD.mono, fontSize: SD.t11, letterSpacing: 1.5,
+                textTransform: 'uppercase', cursor: 'pointer',
+                background: cleanOnly ? SD.accentDim : SD.surface2,
+                color: cleanOnly ? SD.accent : SD.textMuted,
+                border: `1px solid ${cleanOnly ? SD.accent + '66' : SD.border}`,
+                borderRadius: SD.r2, padding: '8px 14px', whiteSpace: 'nowrap',
+                transition: 'all .15s',
+              }}
+            >
+              {cleanOnly ? '✓ Clean' : 'Any'}
+            </button>
+          </div>
+        </div>
+
+        {/* Prompt */}
+        <div style={{ marginTop: 16 }}>
+          <Label>Additional context (optional)</Label>
+          <textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            placeholder="e.g. 'peak hour 2am', 'wedding cocktail hour', 'warmup melodic vibes', 'anything from 2018-2022'…"
+            rows={2}
+            style={{
+              width: '100%', background: SD.surface2, border: `1px solid ${SD.border}`,
+              borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+              fontSize: SD.t12, padding: '10px 12px', resize: 'vertical',
+              boxSizing: 'border-box', lineHeight: 1.6,
+            }}
+          />
+        </div>
+
+        {error && (
+          <div style={{
+            marginTop: 12, padding: '10px 14px', background: SD.dangerDim,
+            border: `1px solid ${SD.danger}44`, borderRadius: SD.r2,
+            fontFamily: SD.mono, fontSize: SD.t11, color: SD.danger,
+          }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Btn onClick={handleGenerate} disabled={generating}>
+            {generating ? 'Building…' : 'Build Crate'}
+          </Btn>
+          {generating && (
+            <span style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>
+              Scanning your library…
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Active crate results */}
+      {activeCrate && (
+        <div style={{ marginBottom: 48 }}>
+          {/* Crate header */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: 16, marginBottom: 20,
+          }}>
+            <div>
+              <div style={{
+                fontFamily: SD.mono, fontSize: SD.t20, letterSpacing: 2,
+                color: SD.text, textTransform: 'uppercase', marginBottom: 4,
+              }}>
+                {activeCrate.name}
+              </div>
+              <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>
+                {tracks.length} tracks
+                {activeCrate.moodNotes && ` · ${activeCrate.moodNotes}`}
+              </div>
+            </div>
+
+            {/* Export buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <Btn small variant="outline" onClick={handleExportSerato}>
+                  ↓ Serato .crate
+                </Btn>
+                <Btn small variant="outline" onClick={handleExportRekordbox}>
+                  ↓ Rekordbox XML
+                </Btn>
+                <Btn small variant="outline" onClick={handleExportM3u}>
+                  ↓ M3U
+                </Btn>
+              </div>
+              <div style={{
+                fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted,
+                textAlign: 'right', lineHeight: 1.6,
+              }}>
+                Serato: drop .crate into Music/_Serato_/Subcrates/
+                <br />
+                Rekordbox: File → Import → rekordbox xml / m3u playlist
+              </div>
+            </div>
+          </div>
+
+          {/* Track list */}
+          <div style={{
+            background: SD.surface, border: `1px solid ${SD.border}`,
+            borderRadius: SD.r3, overflow: 'hidden',
+          }}>
+            {/* Column headers */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '36px 1fr 1fr 60px 50px 50px',
+              gap: 0, padding: '8px 16px',
+              background: SD.surface2, borderBottom: `1px solid ${SD.border}`,
+              fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2,
+              textTransform: 'uppercase', color: SD.textMuted,
+            }}>
+              <span>#</span>
+              <span>Artist</span>
+              <span>Title</span>
+              <span>BPM</span>
+              <span>Key</span>
+              <span>Year</span>
+            </div>
+
+            {pageTracks.map((t, i) => (
+              <div
+                key={t.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px 1fr 1fr 60px 50px 50px',
+                  gap: 0, padding: '9px 16px',
+                  borderBottom: `1px solid ${SD.border}`,
+                  fontFamily: SD.mono, fontSize: SD.t12, color: SD.text,
+                  background: i % 2 === 0 ? 'transparent' : SD.surface2,
+                }}
+              >
+                <span style={{ color: SD.textMuted }}>
+                  {page * PAGE_SIZE + i + 1}
+                </span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
+                  {t.artist}
+                </span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
+                  {t.title}
+                </span>
+                <span style={{ color: SD.textSec }}>
+                  {t.bpm ?? '—'}
+                </span>
+                <span style={{ color: SD.textSec }}>
+                  {t.key ?? '—'}
+                </span>
+                <span style={{ color: SD.textMuted }}>
+                  {t.year ?? '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              justifyContent: 'center', marginTop: 16,
+            }}>
+              <Btn small variant="outline" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                ← Prev
+              </Btn>
+              <span style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>
+                {page + 1} / {totalPages}
+              </span>
+              <Btn small variant="outline" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}>
+                Next →
+              </Btn>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Saved crates history */}
+      <div>
+        <div style={{
+          fontFamily: SD.mono, fontSize: SD.t13, letterSpacing: 2,
+          textTransform: 'uppercase', color: SD.text, marginBottom: 16,
+          paddingBottom: 12, borderBottom: `1px solid ${SD.border}`,
+        }}>
+          Saved Crates
+        </div>
+
+        {listLoading ? (
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t12, color: SD.textMuted, padding: '16px 0' }}>
+            Loading…
+          </div>
+        ) : savedCrates.length === 0 ? (
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t12, color: SD.textMuted, padding: '16px 0' }}>
+            No saved crates yet. Build one above.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {savedCrates.map(c => (
+              <div
+                key={c.id}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px', background: SD.surface,
+                  border: `1px solid ${activeCrate?.id === c.id ? SD.accent + '66' : SD.border}`,
+                  borderRadius: SD.r2, gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: SD.mono, fontSize: SD.t12, color: SD.text,
+                    textTransform: 'uppercase', letterSpacing: 1,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {c.name}
+                  </div>
+                  <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 2 }}>
+                    {c.trackCount} tracks · {c.prompt}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <Btn small variant="outline" onClick={() => handleLoadSaved(c)}>
+                    Load
+                  </Btn>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    style={{
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: SD.textMuted, fontFamily: SD.mono, fontSize: SD.t12,
+                      padding: '4px 8px', borderRadius: SD.r1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

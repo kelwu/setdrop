@@ -1210,8 +1210,14 @@ export function Library() {
           <div>
             {/* Generate form */}
             <div style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:SD.r3, padding:'20px 24px', marginBottom:24 }}>
-              <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2, color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>
-                Generate a Crate
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+                <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2, color:SD.textMuted, textTransform:'uppercase' }}>
+                  Generate a Crate
+                </div>
+                <a href="/crates" style={{
+                  fontFamily:SD.mono, fontSize:11, letterSpacing:1.5, textTransform:'uppercase',
+                  color:SD.accent, textDecoration:'none',
+                }}>Open Crate Builder →</a>
               </div>
               <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, lineHeight:1.7, marginBottom:16 }}>
                 Describe the vibe — {BRAND.name} rounds up matching tracks from your library. You decide what to play.
