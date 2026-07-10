@@ -55,8 +55,8 @@ interface TrendingTrack {
   artist: string;
   title: string;
   bpm?: number;
-  chartSource: string;
-  chartUrl: string;
+  inLibrary: boolean;
+  artworkUrl?: string;
   beatportSearchUrl: string;
 }
 
