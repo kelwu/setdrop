@@ -289,6 +289,14 @@ export function Dashboard() {
     return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
   }
 
+  const trendingFlat = trendingData
+    ? trendingData
+        .flatMap(r => r.tracks.map(t => ({ ...t, genre: r.genre })))
+        .sort((a, b) => Number(!!a.inLibrary) - Number(!!b.inLibrary))
+        .slice(0, 6)
+    : [];
+  const trendingMissingCount = trendingFlat.filter(t => !t.inLibrary).length;
+
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
@@ -495,21 +503,15 @@ export function Dashboard() {
                 <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
                   {libraryStats ? 'No chart data available for your genres yet.' : 'Upload your library to see trending tracks in your genres.'}
                 </div>
-              ) : (() => {
-                const flat = trendingData
-                  .flatMap(r => r.tracks.map(t => ({ ...t, genre: r.genre })))
-                  .sort((a, b) => Number(!!a.inLibrary) - Number(!!b.inLibrary))
-                  .slice(0, 6);
-                const missingCount = flat.filter(t => !t.inLibrary).length;
-                return (
+              ) : (
                   <>
                     <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:12, letterSpacing:1 }}>
-                      {missingCount > 0
-                        ? `${missingCount} track${missingCount > 1 ? 's' : ''} trending in your genres not in your library`
+                      {trendingMissingCount > 0
+                        ? `${trendingMissingCount} track${trendingMissingCount > 1 ? 's' : ''} trending in your genres not in your library`
                         : 'You have all the top trending tracks in your library'}
                     </div>
                     <div className="sd-no-scrollbar" style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, alignItems:'stretch' }}>
-                      {flat.map((track, ti) => {
+                      {trendingFlat.map((track, ti) => {
                         const wKey = `${track.artist}|${track.title}`;
                         const added = addedToWishlist.has(wKey);
                         const grad = genreGradient(track.genre);
@@ -561,8 +563,7 @@ export function Dashboard() {
                       })}
                     </div>
                   </>
-                );
-              })())
+                )
             )}
 
             {discoverTab === 'gaps' && (
