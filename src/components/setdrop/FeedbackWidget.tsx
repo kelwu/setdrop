@@ -185,7 +185,7 @@ export function FeedbackWidget() {
       )}
 
       {open && (
-        <div style={{
+        <div className="sd-fab-panel" style={{
           position: 'fixed', bottom: 80, right: 20, zIndex: 999,
           width: 340, display: 'flex', flexDirection: 'column',
           background: SD.surface, border: `1px solid ${SD.borderMid}`,
@@ -402,6 +402,7 @@ export function FeedbackWidget() {
       <button
         onClick={() => setOpen(o => !o)}
         title={open ? 'Close' : 'Ask SetLab anything'}
+        className="sd-fab"
         style={{
           position: 'fixed', bottom: 20, right: 20, zIndex: 1000,
           width: 52, height: 52, borderRadius: '50%',

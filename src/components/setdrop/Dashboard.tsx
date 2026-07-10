@@ -493,44 +493,60 @@ export function Dashboard() {
                 </div>
               ) : !trendingData || trendingData.length === 0 ? (
                 <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted }}>
-                  {libraryStats ? 'Fetching chart data for your top genres...' : 'Upload your library to see trending tracks in your genres.'}
+                  {libraryStats ? 'No chart data available for your genres yet.' : 'Upload your library to see trending tracks in your genres.'}
                 </div>
-              ) : (
-                <div className="sd-no-scrollbar" style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, alignItems:'stretch' }}>
-                  {trendingData.map((genreResult, gi) => {
-                    const grad = genreGradient(genreResult.genre);
-                    return (
-                      <React.Fragment key={gi}>
-                        <div style={{ flexShrink:0, width:28, display:'flex', flexDirection:'column',
-                          alignItems:'center', borderRight:`1px solid ${SD.border}`, paddingRight:2, marginRight:2 }}>
-                          <div style={{ height:3, width:'100%', background:grad, borderRadius:1, marginBottom:8 }}/>
-                          <span style={{ writingMode:'vertical-rl', transform:'rotate(180deg)',
-                            fontFamily:SD.mono, fontSize:9, color:SD.textMuted,
-                            letterSpacing:1.5, textTransform:'uppercase', whiteSpace:'nowrap' }}>
-                            {genreResult.genre}
-                          </span>
-                        </div>
-                        {genreResult.tracks.slice(0, 5).map((track, ti) => {
-                          const wKey = `${track.artist}|${track.title}`;
-                          const added = addedToWishlist.has(wKey);
-                          return (
-                            <div key={ti} style={{ width:152, flexShrink:0, background:SD.surface,
-                              border:`1px solid ${SD.border}`, borderRadius:4, overflow:'hidden' }}>
-                              <div style={{ height:72, background:grad, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                <span style={{ fontFamily:SD.display, fontSize:30, fontWeight:700,
-                                  color:'rgba(255,255,255,0.3)', letterSpacing:2 }}>{ti + 1}</span>
+              ) : (() => {
+                const flat = trendingData
+                  .flatMap(r => r.tracks.map(t => ({ ...t, genre: r.genre })))
+                  .sort((a, b) => Number(!!a.inLibrary) - Number(!!b.inLibrary))
+                  .slice(0, 6);
+                const missingCount = flat.filter(t => !t.inLibrary).length;
+                return (
+                  <>
+                    <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textMuted, marginBottom:12, letterSpacing:1 }}>
+                      {missingCount > 0
+                        ? `${missingCount} track${missingCount > 1 ? 's' : ''} trending in your genres not in your library`
+                        : 'You have all the top trending tracks in your library'}
+                    </div>
+                    <div className="sd-no-scrollbar" style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:4, alignItems:'stretch' }}>
+                      {flat.map((track, ti) => {
+                        const wKey = `${track.artist}|${track.title}`;
+                        const added = addedToWishlist.has(wKey);
+                        const grad = genreGradient(track.genre);
+                        return (
+                          <div key={ti} style={{ width:152, flexShrink:0, background:SD.surface,
+                            border:`1px solid ${track.inLibrary ? SD.green + '33' : SD.border}`, borderRadius:4, overflow:'hidden' }}>
+                            <div style={{ height:72, background:grad, position:'relative', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+                              {track.artworkUrl && (
+                                <img src={track.artworkUrl} alt={track.title}
+                                  style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
+                              )}
+                              <span style={{ position:'relative', zIndex:1, fontFamily:SD.display, fontSize:30, fontWeight:700,
+                                color:'rgba(255,255,255,0.3)', letterSpacing:2 }}>{ti + 1}</span>
+                              {track.inLibrary && (
+                                <span style={{ position:'absolute', top:6, right:6, zIndex:2, fontFamily:SD.mono, fontSize:9,
+                                  letterSpacing:1, padding:'2px 5px', borderRadius:2,
+                                  background:SD.greenDim, border:`1px solid ${SD.green}33`, color:SD.green }}>IN LIB</span>
+                              )}
+                            </div>
+                            <div style={{ padding:'9px 9px 7px' }}>
+                              <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:3, letterSpacing:1, textTransform:'uppercase' }}>{track.genre}</div>
+                              <div style={{ fontFamily:SD.mono, fontSize:11, fontWeight:600, color:SD.text,
+                                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:2 }}>
+                                {track.title}
                               </div>
-                              <div style={{ padding:'9px 9px 7px' }}>
-                                <div style={{ fontFamily:SD.mono, fontSize:11, fontWeight:600, color:SD.text,
-                                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:2 }}>
-                                  {track.title}
+                              <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
+                                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:6 }}>
+                                {track.artist}
+                              </div>
+                              {track.inLibrary ? (
+                                <div style={{ width:'100%', background:SD.greenDim, border:`1px solid ${SD.green}33`,
+                                  borderRadius:2, fontFamily:SD.mono, fontSize:10, color:SD.green, padding:'4px 0', textAlign:'center' }}>
+                                  ✓ In Library
                                 </div>
-                                <div style={{ fontFamily:SD.mono, fontSize:11, color:SD.textSec,
-                                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:4 }}>
-                                  {track.artist}
-                                </div>
-                                {track.bpm && <div style={{ fontFamily:SD.mono, fontSize:10, color:SD.textMuted, marginBottom:6 }}>{track.bpm} BPM</div>}
-                                <button onClick={() => addToWishlist({ artist:track.artist, title:track.title, bpm:track.bpm ?? null, beatportSearchUrl:track.beatportSearchUrl })}
+                              ) : (
+                                <button
+                                  onClick={() => addToWishlist({ artist:track.artist, title:track.title, bpm:track.bpm ?? null, beatportSearchUrl:track.beatportSearchUrl })}
                                   disabled={added}
                                   style={{ width:'100%', background:added ? SD.surface2 : SD.accentDim,
                                     border:`1px solid ${added ? SD.border : SD.accent+'44'}`,
@@ -538,15 +554,15 @@ export function Dashboard() {
                                     color:added ? SD.textMuted : SD.accent, padding:'4px 0', cursor:added ? 'default' : 'pointer' }}>
                                   {added ? '✓ Added' : '+ Wishlist'}
                                 </button>
-                              </div>
+                              )}
                             </div>
-                          );
-                        })}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              )
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })())
             )}
 
             {discoverTab === 'gaps' && (
