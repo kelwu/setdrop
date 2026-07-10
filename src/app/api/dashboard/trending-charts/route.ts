@@ -6,38 +6,55 @@ export const maxDuration = 30;
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-function normalizeGenreKey(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
+type BeatportSource = { source: 'beatport'; slug: string; id: number };
+type AppleSource   = { source: 'apple'; genreId: number };
+type GenreSource   = BeatportSource | AppleSource;
 
-function toLastFmTag(genre: string): string {
-  const map: Record<string, string> = {
-    'tech house':    'tech house',
-    'deep house':    'deep house',
-    'afro house':    'afro house',
-    'house':         'house',
-    'techno':        'techno',
-    'hip hop':       'hip-hop',
-    'hip-hop':       'hip-hop',
-    'trap':          'trap',
-    'drill':         'uk drill',
-    'r&b':           'rnb',
-    'r and b':       'rnb',
-    'soul':          'soul',
-    'afrobeats':     'afrobeats',
-    'afropop':       'afropop',
-    'dancehall':     'dancehall',
-    'drum and bass': 'drum and bass',
-    'dnb':           'drum and bass',
-    'trance':        'trance',
-    'pop':           'pop',
-    'latin':         'latin',
-    'reggaeton':     'reggaeton',
-    'edm':           'electronic',
-    'electronic':    'electronic',
-  };
-  return map[genre.toLowerCase()] ?? genre.toLowerCase();
-}
+// Maps user library genre labels → chart source
+const GENRE_MAP: Record<string, GenreSource> = {
+  'tech house':             { source: 'beatport', slug: 'tech-house',             id: 11 },
+  'deep house':             { source: 'beatport', slug: 'deep-house',             id: 12 },
+  'afro house':             { source: 'beatport', slug: 'afro-house',             id: 89 },
+  'house':                  { source: 'beatport', slug: 'house',                  id: 5  },
+  'techno':                 { source: 'beatport', slug: 'techno-peak-time-driving', id: 6 },
+  'hard techno':            { source: 'beatport', slug: 'hard-techno',            id: 2  },
+  'melodic house':          { source: 'beatport', slug: 'melodic-house-techno',   id: 90 },
+  'melodic house & techno': { source: 'beatport', slug: 'melodic-house-techno',   id: 90 },
+  'melodic techno':         { source: 'beatport', slug: 'melodic-house-techno',   id: 90 },
+  'drum and bass':          { source: 'beatport', slug: 'drum-bass',              id: 1  },
+  'drum & bass':            { source: 'beatport', slug: 'drum-bass',              id: 1  },
+  'dnb':                    { source: 'beatport', slug: 'drum-bass',              id: 1  },
+  'amapiano':               { source: 'beatport', slug: 'amapiano',              id: 98 },
+  'trance':                 { source: 'beatport', slug: 'trance-main-floor',      id: 7  },
+  'progressive house':      { source: 'beatport', slug: 'progressive-house',      id: 15 },
+  'bass house':             { source: 'beatport', slug: 'bass-house',             id: 91 },
+  'minimal':                { source: 'beatport', slug: 'minimal-deep-tech',      id: 14 },
+  'minimal / deep tech':    { source: 'beatport', slug: 'minimal-deep-tech',      id: 14 },
+  'nu disco':               { source: 'beatport', slug: 'nu-disco-disco',         id: 50 },
+  'disco':                  { source: 'beatport', slug: 'nu-disco-disco',         id: 50 },
+  'indie dance':            { source: 'beatport', slug: 'indie-dance',            id: 37 },
+  'funky house':            { source: 'beatport', slug: 'funky-house',            id: 81 },
+  'jackin house':           { source: 'beatport', slug: 'jackin-house',           id: 97 },
+  'organic house':          { source: 'beatport', slug: 'organic-house',          id: 93 },
+  'hip hop':                { source: 'apple',    genreId: 18 },
+  'hip-hop':                { source: 'apple',    genreId: 18 },
+  'hip hop/rap':            { source: 'apple',    genreId: 18 },
+  'trap':                   { source: 'apple',    genreId: 18 },
+  'drill':                  { source: 'apple',    genreId: 18 },
+  'afrobeats':              { source: 'apple',    genreId: 18 },
+  'afropop':                { source: 'apple',    genreId: 18 },
+  'dancehall':              { source: 'apple',    genreId: 18 },
+  'r&b':                    { source: 'apple',    genreId: 15 },
+  'r and b':                { source: 'apple',    genreId: 15 },
+  'rnb':                    { source: 'apple',    genreId: 15 },
+  'soul':                   { source: 'apple',    genreId: 15 },
+  'latin':                  { source: 'apple',    genreId: 27 },
+  'reggaeton':              { source: 'apple',    genreId: 27 },
+  'pop':                    { source: 'apple',    genreId: 14 },
+  'dance pop':              { source: 'apple',    genreId: 14 },
+  'edm':                    { source: 'beatport', slug: 'mainstage',              id: 96 },
+  'electronic':             { source: 'beatport', slug: 'melodic-house-techno',   id: 90 },
+};
 
 function normalize(s: string): string {
   return (s ?? '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -58,71 +75,132 @@ export interface TrendingGenreResult {
   fetchedAt: string;
 }
 
-async function fetchArtwork(artist: string, title: string): Promise<string | undefined> {
+// Beatport: scrape SSR HTML and extract __NEXT_DATA__ JSON
+async function fetchFromBeatport(
+  genre: string,
+  src: BeatportSource,
+  libSet: Set<string>,
+): Promise<{ genre: string; tracks: TrendingTrack[] }> {
   try {
-    const term = encodeURIComponent(`${artist} ${title}`);
     const res = await fetch(
-      `https://itunes.apple.com/search?term=${term}&entity=musicTrack&limit=1&media=music`,
-      { signal: AbortSignal.timeout(4000) },
+      `https://www.beatport.com/genre/${src.slug}/${src.id}/top-100`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: AbortSignal.timeout(12000),
+      },
     );
-    if (!res.ok) return undefined;
-    const data = await res.json() as { results?: { artworkUrl100?: string }[] };
-    const url = data.results?.[0]?.artworkUrl100;
-    return url ? url.replace('100x100bb', '300x300bb') : undefined;
+    if (!res.ok) return { genre, tracks: [] };
+
+    const html = await res.text();
+    const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
+    if (!match) return { genre, tracks: [] };
+
+    const nd = JSON.parse(match[1]) as {
+      props?: {
+        pageProps?: {
+          dehydratedState?: {
+            queries?: Array<{
+              state?: {
+                data?: {
+                  results?: Array<{
+                    name: string;
+                    artists: Array<{ name: string }>;
+                    bpm?: number;
+                    release?: { image?: { dynamic_uri?: string } };
+                  }>;
+                };
+              };
+            }>;
+          };
+        };
+      };
+    };
+
+    const results = nd?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.results ?? [];
+    const top10 = results.slice(0, 10);
+
+    const tracks: TrendingTrack[] = top10.map(t => {
+      const artist = t.artists?.map(a => a.name).join(', ') ?? '';
+      const title  = t.name ?? '';
+      const libKey = normalize(artist) + '||' + normalize(title);
+      const artworkUrl = t.release?.image?.dynamic_uri?.replace('{w}x{h}', '300x300');
+      return {
+        artist,
+        title,
+        bpm: t.bpm,
+        inLibrary: libSet.has(libKey),
+        artworkUrl,
+        beatportSearchUrl: `https://www.beatport.com/search?q=${encodeURIComponent(`${artist} ${title}`).replace(/%20/g, '+')}`,
+      };
+    });
+
+    return { genre, tracks };
   } catch {
-    return undefined;
+    return { genre, tracks: [] };
   }
 }
 
-async function fetchFromLastFm(
-  genres: string[],
+// Apple Music RSS: current charts by genre ID
+async function fetchFromApple(
+  genre: string,
+  src: AppleSource,
   libSet: Set<string>,
-  apiKey: string,
-): Promise<Array<{ genre: string; tracks: TrendingTrack[] }>> {
-  return Promise.all(
-    genres.map(async (genre) => {
-      const tag = toLastFmTag(genre);
-      const params = new URLSearchParams({
-        method: 'tag.getTopTracks',
-        tag,
-        api_key: apiKey,
-        format: 'json',
-        limit: '20',
-      });
-      try {
-        const res = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`, {
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) return { genre, tracks: [] };
-        const data = await res.json() as { tracks?: { track?: unknown } };
-        const raw = data.tracks?.track;
-        if (!raw) return { genre, tracks: [] };
-        const list = (Array.isArray(raw) ? raw : [raw]) as Array<{ name: string; artist: { name: string } }>;
-        const top10 = list.slice(0, 10);
+): Promise<{ genre: string; tracks: TrendingTrack[] }> {
+  try {
+    const res = await fetch(
+      `https://rss.marketingtools.apple.com/api/v2/us/music/most-played/25/songs.json?genreId=${src.genreId}`,
+      {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) return { genre, tracks: [] };
 
-        const artworks = await Promise.all(
-          top10.map(t => fetchArtwork(t.artist?.name ?? '', t.name ?? '')),
-        );
+    const data = await res.json() as {
+      feed?: {
+        results?: Array<{
+          name: string;
+          artistName: string;
+          artworkUrl100?: string;
+        }>;
+      };
+    };
 
-        const tracks: TrendingTrack[] = top10.map((t, i) => {
-          const artist = t.artist?.name ?? '';
-          const title = t.name ?? '';
-          const libKey = normalize(artist) + '||' + normalize(title);
-          return {
-            artist,
-            title,
-            inLibrary: libSet.has(libKey),
-            artworkUrl: artworks[i],
-            beatportSearchUrl: `https://www.beatport.com/search?q=${encodeURIComponent(`${artist} ${title}`).replace(/%20/g, '+')}`,
-          };
-        });
+    const top10 = (data?.feed?.results ?? []).slice(0, 10);
 
-        return { genre, tracks };
-      } catch {
-        return { genre, tracks: [] };
-      }
-    }),
-  );
+    const tracks: TrendingTrack[] = top10.map(t => {
+      const artist = t.artistName ?? '';
+      const title  = t.name ?? '';
+      const libKey = normalize(artist) + '||' + normalize(title);
+      const artworkUrl = t.artworkUrl100?.replace('100x100bb', '300x300bb');
+      return {
+        artist,
+        title,
+        inLibrary: libSet.has(libKey),
+        artworkUrl,
+        beatportSearchUrl: `https://www.beatport.com/search?q=${encodeURIComponent(`${artist} ${title}`).replace(/%20/g, '+')}`,
+      };
+    });
+
+    return { genre, tracks };
+  } catch {
+    return { genre, tracks: [] };
+  }
+}
+
+async function fetchGenreTracks(
+  genre: string,
+  libSet: Set<string>,
+): Promise<{ genre: string; tracks: TrendingTrack[] }> {
+  const src = GENRE_MAP[normalize(genre)];
+  if (!src) return { genre, tracks: [] };
+  return src.source === 'beatport'
+    ? fetchFromBeatport(genre, src, libSet)
+    : fetchFromApple(genre, src, libSet);
 }
 
 export async function GET() {
@@ -130,9 +208,6 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const apiKey = process.env.LASTFM_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'LASTFM_API_KEY not configured' }, { status: 500 });
 
     const admin = createAdminClient();
 
@@ -166,15 +241,15 @@ export async function GET() {
 
     const cutoff = new Date(Date.now() - CACHE_TTL_MS).toISOString();
     const missingGenres = topGenres.filter((g: string) => !cachedMap.has(g));
-    const staleGenres = topGenres.filter((g: string) => {
+    const staleGenres   = topGenres.filter((g: string) => {
       const row = cachedMap.get(g);
       return row && row.fetched_at < cutoff;
     });
 
     if (missingGenres.length > 0) {
-      const results = await fetchFromLastFm(missingGenres, libSet, apiKey);
+      const fetched = await Promise.all(missingGenres.map((g: string) => fetchGenreTracks(g, libSet)));
       const now = new Date().toISOString();
-      for (const { genre, tracks } of results) {
+      for (const { genre, tracks } of fetched) {
         await admin.from('trending_cache').upsert({ genre, tracks, fetched_at: now });
         cachedMap.set(genre, { genre, tracks, fetched_at: now });
       }
@@ -183,9 +258,9 @@ export async function GET() {
     if (staleGenres.length > 0) {
       after(async () => {
         try {
-          const results = await fetchFromLastFm(staleGenres, libSet, apiKey);
+          const fetched = await Promise.all(staleGenres.map((g: string) => fetchGenreTracks(g, libSet)));
           const now = new Date().toISOString();
-          for (const { genre, tracks } of results) {
+          for (const { genre, tracks } of fetched) {
             const existing = cachedMap.get(genre);
             const finalTracks = tracks.length ? tracks : (existing?.tracks ?? []);
             await admin.from('trending_cache').upsert({ genre, tracks: finalTracks, fetched_at: now });
