@@ -80,7 +80,24 @@
       "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.local\\) -match \"STRIPE|stripe\" | ForEach-Object { \\($_ -split '='\\)[0] })",
       "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.local\\).Count; \\(Get-Content .env.local\\) | Select-Object -First 5)",
       "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; \\(Get-Content .env.production\\) -match \"^STRIPE\" | ForEach-Object { \\($_ -split '='\\)[0] })",
-      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; Get-Content .env.production | Select-Object -First 3; Write-Output \"---\"; \\(Get-Content .env.production\\).Count)"
+      "PowerShell(cd \"C:\\\\Users\\\\wuazn\\\\Desktop\\\\Product by Kel\\\\Projects\\\\setdrop\"; Get-Content .env.production | Select-Object -First 3; Write-Output \"---\"; \\(Get-Content .env.production\\).Count)",
+      "WebFetch(domain:github.com)"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:\\\\Users\\\\wuazn\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: runs after Edit/Write/MultiEdit on UI files and surfaces findings as system reminders."
 }

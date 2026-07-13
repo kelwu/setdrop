@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { SD } from '@/lib/setdrop/constants';
-import { GenreCombobox } from '@/components/setdrop/shared';
+import { GenreCombobox, PageHeader } from '@/components/setdrop/shared';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
 import {
   buildRekordboxXml,
@@ -272,26 +272,11 @@ export function CrateBuilder() {
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 24px 80px' }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 40 }}>
-        <div style={{
-          fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 3,
-          textTransform: 'uppercase', color: SD.textMuted, marginBottom: 8,
-        }}>
-          SetLab AI
-        </div>
-        <h1 style={{
-          fontFamily: SD.mono, fontSize: SD.t28, letterSpacing: 2,
-          color: SD.text, margin: 0, textTransform: 'uppercase',
-        }}>
-          Crate Builder
-        </h1>
-        <p style={{
-          fontFamily: SD.mono, fontSize: SD.t12, color: SD.textSec,
-          margin: '8px 0 0', lineHeight: 1.6,
-        }}>
-          Describe the crate you want. AI scans your entire library with no track limit.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="SetLab AI"
+        title="CRATE BUILDER"
+        subtitle="Describe the crate you want. AI scans your entire library with no track limit."
+      />
 
       {/* Generator form */}
       <div style={{
