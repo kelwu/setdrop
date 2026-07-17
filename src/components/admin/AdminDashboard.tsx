@@ -60,6 +60,26 @@ export function AdminDashboard({
   const proPct = metrics.totalUsers ? ((metrics.proCount / metrics.totalUsers) * 100).toFixed(1) : '0';
   const maxSignup = Math.max(1, ...metrics.signups14d.map((d) => d.count));
 
+  function exportCsv() {
+    const header = ['email', 'subscriptionTier', 'signedUpAt', 'libraryImported', 'setlistsGenerated'];
+    const rows = users
+      .filter((u) => u.email)
+      .map((u) => [
+        u.email!,
+        u.tier,
+        u.createdAt.slice(0, 10),
+        u.libraryTracks > 0 ? 'true' : 'false',
+        String(u.setlistCount),
+      ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `setlab-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   async function act(id: string, action: string) {
     setBusyId(id); setError(null);
     try {
@@ -109,7 +129,20 @@ export function AdminDashboard({
               CONTROL ROOM
             </h1>
           </div>
-          <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>{adminEmail}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              onClick={exportCsv}
+              style={{
+                fontFamily: SD.mono, fontSize: SD.t11, letterSpacing: 1,
+                color: SD.textSec, background: SD.surface2,
+                border: `1px solid ${SD.border}`, borderRadius: SD.r2,
+                padding: '6px 14px', cursor: 'pointer',
+              }}
+            >
+              Export CSV
+            </button>
+            <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>{adminEmail}</div>
+          </div>
         </div>
 
         {/* Metric cards */}
