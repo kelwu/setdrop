@@ -42,18 +42,28 @@ export function SetlistBuilder() {
   const [libraryCount, setLibraryCount] = useState<number | null>(null);
   const [libraryTracks, setLibraryTracks] = useState<{ artist: string; title: string; bpm: number; key: string }[]>([]);
   useEffect(() => {
+    // Try localStorage first (legacy — may not be populated after new upload flow)
     try {
       const raw = localStorage.getItem('sd_library');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length) {
           setLibraryCount(parsed.length);
           setLibraryTracks(parsed.map((t: { artist: string; title: string; bpm: number; key: string }) => ({
             artist: t.artist, title: t.title, bpm: t.bpm, key: t.key,
           })));
+          return;
         }
       }
     } catch { /* ignore */ }
+
+    // Fallback: fetch real count from Supabase (populated by the new upload flow)
+    const supabase = createClient();
+    void Promise.resolve(
+      supabase.from('serato_libraries').select('total_tracks').single()
+    ).then(({ data }) => {
+      if (data?.total_tracks) setLibraryCount(data.total_tracks);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -214,6 +224,12 @@ export function SetlistBuilder() {
     if (!finalSetlist) {
       setGenerating(false);
       setGenError('Generation completed but no setlist was returned.');
+      return;
+    }
+
+    if (!finalSetlist.tracks?.length) {
+      setGenerating(false);
+      setGenError('No tracks were selected — the AI response may have been truncated. Please try again.');
       return;
     }
 
@@ -420,11 +436,13 @@ export function SetlistBuilder() {
             </div>
           </div>
           <AgentProgress steps={GEN_STEPS} currentStep={genStep} />
-          <div style={{ marginTop:48, height:2, background:SD.surface2, borderRadius:2 }}>
+          <div style={{ marginTop:48, height:2, background:SD.surface2, borderRadius:2, overflow:'hidden' }}>
             <div style={{
               height:'100%', background:SD.accent, borderRadius:2,
-              width:`${(genStep / GEN_STEPS.length) * 100}%`,
-              transition:'width 4s ease',
+              width:'100%',
+              transform:`scaleX(${genStep / GEN_STEPS.length})`,
+              transformOrigin:'left',
+              transition:'transform 4s ease',
             }}/>
           </div>
           <div style={{ marginTop:20, fontFamily:SD.mono, fontSize:SD.t11, color:SD.textMuted, textAlign:'center', lineHeight:1.7 }}>

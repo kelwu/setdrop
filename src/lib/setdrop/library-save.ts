@@ -69,41 +69,27 @@ export async function saveTracksToDatabase(
     }
     added = deduped.length;
   } else {
-    const { data: existingTracks } = await admin
+    // Delete all existing tracks then re-insert the full deduped set.
+    // Simpler than diffing and avoids the Supabase 1000-row default page cap
+    // that would corrupt the diff when libraries exceed 1000 tracks.
+    const { error: delError } = await admin
       .from('serato_tracks')
-      .select('id, file_path')
+      .delete()
       .eq('library_id', libraryId);
+    if (delError) throw new Error(delError.message);
 
-    const existingByPath = new Map(
-      (existingTracks ?? []).filter(t => t.file_path).map(t => [t.file_path as string, t.id as string]),
-    );
-    const newPaths = new Set(deduped.filter(t => t.filePath).map(t => t.filePath!));
-
-    const toDeleteIds = (existingTracks ?? [])
-      .filter(t => t.file_path && !newPaths.has(t.file_path as string))
-      .map(t => t.id as string);
-
-    const toInsert = deduped
-      .filter(t => !t.filePath || !existingByPath.has(t.filePath))
-      .map(t => ({
-        library_id: libraryId,
-        artist: t.artist || null, title: t.title || null,
-        bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
-        year: t.year || null, file_path: t.filePath || null,
-        play_count: 0, in_library: true,
-      }));
-
-    for (let i = 0; i < toInsert.length; i += BATCH) {
-      const { error } = await admin.from('serato_tracks').insert(toInsert.slice(i, i + BATCH));
+    const rows = deduped.map(t => ({
+      library_id: libraryId,
+      artist: t.artist || null, title: t.title || null,
+      bpm: t.bpm || null, key: t.key || null, genre: t.genre || null,
+      year: t.year || null, file_path: t.filePath || null,
+      play_count: 0, in_library: true,
+    }));
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const { error } = await admin.from('serato_tracks').insert(rows.slice(i, i + BATCH));
       if (error) throw new Error(error.message);
     }
-    added = toInsert.length;
-    unchanged = deduped.length - toInsert.length;
-
-    for (let i = 0; i < toDeleteIds.length; i += BATCH) {
-      await admin.from('serato_tracks').delete().in('id', toDeleteIds.slice(i, i + BATCH));
-    }
-    removed = toDeleteIds.length;
+    added = deduped.length;
   }
 
   return { libraryId, trackCount: deduped.length, added, removed, unchanged };

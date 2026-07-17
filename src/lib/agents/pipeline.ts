@@ -272,7 +272,7 @@ async function runSelectorReviewer(
   intel: GigIntelReport,
   recentlyPlayed: string[],
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
-  return callWithTool(
+  const result = await callWithTool<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }>(
     SELECTOR_REVIEWER_SYSTEM,
     `Set blueprint:
 ${JSON.stringify(blueprint, null, 2)}
@@ -295,8 +295,12 @@ ${JSON.stringify(tracks.map(t => ({
   lastfmTags: t.lastfmTags ?? [], isWishlist: t.isWishlist,
 })), null, 2)}`,
     SELECTOR_TOOL,
-    8192,
+    16384,
   );
+  if (!result?.tracks?.length) {
+    throw new Error('Selector returned no tracks — the model response may have been truncated. Please try again.');
+  }
+  return result;
 }
 
 function generateSlug(name: string): string {
