@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
 import { BRAND } from '@/lib/brand';
+import { loopsSendEvent } from '@/lib/email/loops';
 
 export async function POST(req: NextRequest) {
   const { setlistId } = await req.json() as { setlistId?: string };
@@ -19,6 +20,22 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!set) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Milestone + quota emails (non-blocking)
+  const [{ count: allTimeCount }, { count: monthCount }, { data: userRow }] = await Promise.all([
+    supabase.from('setlists').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('setlists').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 3_600_000).toISOString()),
+    supabase.from('users').select('subscription_tier').eq('id', user.id).single(),
+  ]);
+
+  const tier = userRow?.subscription_tier ?? 'free';
+
+  if ((allTimeCount ?? 0) === 1) {
+    loopsSendEvent(user.email, 'first_setlist', { setName: set.name });
+  } else if (tier === 'free' && (monthCount ?? 0) === 2) {
+    loopsSendEvent(user.email, 'setlist_quota_warning', { used: 2, limit: 3 });
+  }
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ ok: true }); // silently skip if Resend not configured

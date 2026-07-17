@@ -155,7 +155,7 @@ export function SetlistBuilder() {
     }
 
     if (res.status === 429) {
-      const data = await res.json().catch(() => ({ tier: 'free', limit: 5 })) as { tier: string; limit: number };
+      const data = await res.json().catch(() => ({ tier: 'free', limit: 3 })) as { tier: string; limit: number };
       setGenerating(false);
       setRateLimited({ tier: data.tier, limit: data.limit });
       return;

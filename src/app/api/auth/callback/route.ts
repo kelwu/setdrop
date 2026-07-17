@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { loopsCreateContact, loopsSendEvent } from '@/lib/email/loops'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -29,6 +30,12 @@ export async function GET(request: Request) {
       const isNewUser = createdAt
         ? Date.now() - new Date(createdAt).getTime() < 60_000
         : false;
+
+      if (isNewUser && data.user?.email) {
+        loopsCreateContact(data.user.email);  // non-blocking
+        loopsSendEvent(data.user.email, 'signup');
+      }
+
       const dest = isNewUser ? `${origin}/dashboard?new_user=1` : `${origin}/dashboard`;
       return NextResponse.redirect(dest);
     }

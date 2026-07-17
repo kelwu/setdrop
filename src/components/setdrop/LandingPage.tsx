@@ -453,7 +453,7 @@ export function LandingPage() {
 
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 40px', display:'flex', flexDirection:'column', gap:14 }}>
                 {[
-                  '5 AI-generated sets / month',
+                  '3 AI-generated sets / month',
                   'Full library upload (Serato DB / CSV)',
                   'BPM & key enrichment',
                   'Serato crate export',
