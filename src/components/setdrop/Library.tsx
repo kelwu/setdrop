@@ -616,7 +616,7 @@ export function Library() {
           .uploadToSignedUrl(storagePath, token, file, { contentType: 'application/octet-stream' });
         if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-        // Step 3: parse from storage path (tiny JSON payload, no size limit concern)
+        // Step 3: parse + save server-side (returns only {count, stats} — no large JSON payload)
         return fetch('/api/library/parse-db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -627,19 +627,14 @@ export function Library() {
           if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
           return res.json();
         })
-        .then(async (data: { tracks?: LibraryTrack[]; error?: string; count?: number }) => {
+        .then(async (data: { error?: string; count?: number; stats?: { added: number; removed: number; unchanged: number } }) => {
           if (data.error) throw new Error(`Parse error: ${data.error}`);
-          const tracks = data.tracks!;
-          setParsedCount(tracks.length);
-          localStorage.setItem('sd_library', JSON.stringify(tracks));
-          setUploadedTracks(tracks);
+          setParsedCount(data.count ?? 0);
+          setSyncStats(data.stats ?? { added: 0, removed: 0, unchanged: 0 });
+          // Reload from Supabase for display — avoids storing a huge array in memory or localStorage
           setUploadStage('save');
-          try {
-            const stats = await saveLibraryToSupabase(tracks, 'serato');
-            setSyncStats(stats);
-          } catch (saveErr) {
-            throw new Error(`Save error: ${saveErr instanceof Error ? saveErr.message : 'unknown'}`);
-          }
+          const loaded = await loadLibraryFromSupabase();
+          if (loaded) setUploadedTracks(loaded);
           finishUpload();
         })
         .catch(err => {
