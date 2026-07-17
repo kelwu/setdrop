@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { parseSeratoDatabase } from '@/lib/setdrop/serato-db-parser';
 
 export const runtime = 'nodejs';
@@ -13,20 +13,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const form = await request.formData();
-    const file = form.get('file');
-    if (!file || typeof file === 'string') {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    const { storagePath } = await request.json() as { storagePath?: string };
+    if (!storagePath) {
+      return NextResponse.json({ error: 'storagePath required' }, { status: 400 });
     }
 
-    const fileObj = file as File;
-    if (fileObj.size > 50 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File too large (max 50MB)' }, { status: 400 });
+    // Ensure the path belongs to this user (format: userId/uuid.db)
+    if (!storagePath.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const arrayBuffer = await fileObj.arrayBuffer();
+    const admin = createAdminClient();
+    const { data: blob, error: dlError } = await admin.storage
+      .from('library-uploads')
+      .download(storagePath);
+
+    if (dlError || !blob) {
+      return NextResponse.json(
+        { error: dlError?.message ?? 'Failed to download file from storage' },
+        { status: 500 },
+      );
+    }
+
+    const arrayBuffer = await blob.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const { tracks, count } = parseSeratoDatabase(buffer);
+
+    // Clean up the temporary file after successful parse
+    admin.storage.from('library-uploads').remove([storagePath]).catch(() => {});
 
     return NextResponse.json({ tracks, count });
   } catch (err) {

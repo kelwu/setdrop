@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     resend.emails.send({
       from: `${BRAND.name} Chat <${fromEmail}>`,
       to: 'kelcwu@gmail.com',
+      replyTo: user?.email ?? undefined,
       subject: `Chat question${user?.email ? ` from ${user.email}` : ' from visitor'}`,
       html: `
         <div style="font-family:monospace;max-width:600px">

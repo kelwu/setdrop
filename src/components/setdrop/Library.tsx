@@ -602,9 +602,27 @@ export function Library() {
     setParsedCount(null);
     if (uploadMode === 'db') {
       setUploadStage('parse');
-      const form = new FormData();
-      form.append('file', file);
-      fetch('/api/library/parse-db', { method: 'POST', body: form })
+      // Upload file directly to Supabase Storage to bypass Vercel's 4.5MB function payload limit,
+      // then pass only the storage path to parse-db for server-side processing.
+      (async () => {
+        // Step 1: get a signed upload token from the server
+        const urlRes = await fetch('/api/library/upload-url', { method: 'POST' });
+        if (!urlRes.ok) throw new Error(`Upload init failed (HTTP ${urlRes.status})`);
+        const { token, path: storagePath } = await urlRes.json() as { token: string; path: string };
+
+        // Step 2: upload file directly to Supabase Storage (no Vercel function payload involved)
+        const { error: uploadError } = await createClient().storage
+          .from('library-uploads')
+          .uploadToSignedUrl(storagePath, token, file, { contentType: 'application/octet-stream' });
+        if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+
+        // Step 3: parse from storage path (tiny JSON payload, no size limit concern)
+        return fetch('/api/library/parse-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePath }),
+        });
+      })()
         .then(res => {
           if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
           return res.json();
