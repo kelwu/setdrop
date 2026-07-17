@@ -610,9 +610,10 @@ export function Library() {
           body: JSON.stringify({ storagePath }),
         });
       })()
-        .then(res => {
-          if (!res.ok) throw new Error(`Parse step failed (HTTP ${res.status})`);
-          return res.json();
+        .then(async res => {
+          const body = await res.json().catch(() => ({})) as { error?: string };
+          if (!res.ok) throw new Error(body.error ?? `Parse step failed (HTTP ${res.status})`);
+          return body;
         })
         .then(async (data: { error?: string; count?: number; stats?: { added: number; removed: number; unchanged: number } }) => {
           if (data.error) throw new Error(`Parse error: ${data.error}`);
