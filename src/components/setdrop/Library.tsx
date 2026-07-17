@@ -428,19 +428,6 @@ function StageTracker({ stage, parsedCount, uploadMode, syncStats }: {
 
 // ─── Library Screen ───────────────────────────────────────────────────────────
 
-async function saveLibraryToSupabase(tracks: LibraryTrack[], source: 'serato' | 'rekordbox'): Promise<{ added: number; removed: number; unchanged: number }> {
-  const res = await fetch('/api/library/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tracks, source }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `Library save failed (${res.status})`);
-  }
-  const data = await res.json() as { added?: number; removed?: number; unchanged?: number };
-  return { added: data.added ?? 0, removed: data.removed ?? 0, unchanged: data.unchanged ?? 0 };
-}
 
 async function loadLibraryFromSupabase(): Promise<LibraryTrack[] | null> {
   const supabase = createClient();
@@ -649,11 +636,33 @@ export function Library() {
           const text = e.target?.result as string;
           const tracks = parseRekordboxXML(text);
           setParsedCount(tracks.length);
-          localStorage.setItem('sd_library', JSON.stringify(tracks));
-          setUploadedTracks(tracks);
           setUploadStage('save');
-          const stats = await saveLibraryToSupabase(tracks, 'rekordbox');
-          setSyncStats(stats);
+
+          // Upload tracks JSON to Supabase Storage to bypass Vercel 4.5MB payload limit
+          const urlRes = await fetch('/api/library/upload-url', { method: 'POST' });
+          if (!urlRes.ok) throw new Error(`Upload init failed (HTTP ${urlRes.status})`);
+          const { token, path: storagePath } = await urlRes.json() as { token: string; path: string };
+
+          const jsonBlob = new Blob([JSON.stringify(tracks)], { type: 'application/octet-stream' });
+          const { error: uploadError } = await createClient().storage
+            .from('library-uploads')
+            .uploadToSignedUrl(storagePath, token, jsonBlob, { contentType: 'application/octet-stream' });
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+          const res = await fetch('/api/library/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storagePath, source: 'rekordbox' }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({})) as { error?: string };
+            throw new Error(err.error ?? `Library save failed (${res.status})`);
+          }
+          const data = await res.json() as { added?: number; removed?: number; unchanged?: number };
+          setSyncStats({ added: data.added ?? 0, removed: data.removed ?? 0, unchanged: data.unchanged ?? 0 });
+
+          const loaded = await loadLibraryFromSupabase();
+          if (loaded) setUploadedTracks(loaded);
           finishUpload();
         } catch (err) {
           setUploadStage('idle');
