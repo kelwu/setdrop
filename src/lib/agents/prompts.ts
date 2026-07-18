@@ -7,7 +7,7 @@ If the venue is not specified, skip the venue search and do the genre trends sea
 Limit yourself to 2 searches. Always end by calling generate_gig_blueprint with your full analysis.
 
 Rules:
-- totalTracks = durationMinutes / 4
+- totalTracks = min(durationMinutes / 4, libraryProfile.totalTracks) — never exceed the number of unique tracks available in the library
 - Opener: start energy 2-4, peak at 7 max. Headliner: start 5+, peak 9-10
 - Match BPM range to crowd context and lineup slot
 - trendingGenres: weight toward genres in the library that fit this gig
