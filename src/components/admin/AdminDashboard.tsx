@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from '@/components/setdrop/shared';
-import type { AdminMetrics, AdminUserRow, AdminSetlistRow } from '@/lib/admin-data';
+import type { AdminMetrics, AdminUserRow, AdminSetlistRow, AdminActivityRow, AdminCrateRow } from '@/lib/admin-data';
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never';
@@ -39,10 +39,11 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
 }
 
 export function AdminDashboard({
-  metrics, users, adminEmail,
+  metrics, users, recentActivity, adminEmail,
 }: {
   metrics: AdminMetrics;
   users: AdminUserRow[];
+  recentActivity: AdminActivityRow[];
   adminEmail: string;
 }) {
   const router = useRouter();
@@ -59,6 +60,26 @@ export function AdminDashboard({
 
   const proPct = metrics.totalUsers ? ((metrics.proCount / metrics.totalUsers) * 100).toFixed(1) : '0';
   const maxSignup = Math.max(1, ...metrics.signups14d.map((d) => d.count));
+
+  function exportCsv() {
+    const header = ['email', 'subscriptionTier', 'signedUpAt', 'libraryImported', 'setlistsGenerated'];
+    const rows = users
+      .filter((u) => u.email)
+      .map((u) => [
+        u.email!,
+        u.tier,
+        u.createdAt.slice(0, 10),
+        u.libraryTracks > 0 ? 'true' : 'false',
+        String(u.setlistCount),
+      ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `setlab-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   async function act(id: string, action: string) {
     setBusyId(id); setError(null);
@@ -109,7 +130,20 @@ export function AdminDashboard({
               CONTROL ROOM
             </h1>
           </div>
-          <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>{adminEmail}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              onClick={exportCsv}
+              style={{
+                fontFamily: SD.mono, fontSize: SD.t11, letterSpacing: 1,
+                color: SD.textSec, background: SD.surface2,
+                border: `1px solid ${SD.border}`, borderRadius: SD.r2,
+                padding: '6px 14px', cursor: 'pointer',
+              }}
+            >
+              Export CSV
+            </button>
+            <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textMuted }}>{adminEmail}</div>
+          </div>
         </div>
 
         {/* Metric cards */}
@@ -137,6 +171,9 @@ export function AdminDashboard({
             ))}
           </div>
         </div>
+
+        {/* Recent activity */}
+        <RecentActivity items={recentActivity} />
 
         {/* Users */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 16, flexWrap: 'wrap' }}>
@@ -172,8 +209,9 @@ export function AdminDashboard({
                 <th style={th}>Joined</th>
                 <th style={{ ...th, textAlign: 'right' }}>Lib</th>
                 <th style={{ ...th, textAlign: 'right' }}>Sets</th>
+                <th style={{ ...th, textAlign: 'right' }}>Crates</th>
                 <th style={{ ...th, textAlign: 'right' }}>IDs/mo</th>
-                <th style={{ ...th, textAlign: 'right' }}>Last</th>
+                <th style={{ ...th, textAlign: 'right' }}>Active</th>
               </tr>
             </thead>
             <tbody>
@@ -201,14 +239,15 @@ export function AdminDashboard({
                       <td style={td}>{shortDate(u.createdAt)}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{u.libraryTracks.toLocaleString()}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{u.setlistCount}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{u.crateCount}</td>
                       <td style={{ ...td, textAlign: 'right', color: u.trackIdsThisMonth >= 10 ? SD.warning : SD.textSec }}>
                         {u.trackIdsThisMonth}
                       </td>
-                      <td style={{ ...td, textAlign: 'right', color: SD.textMuted }}>{timeAgo(u.lastSignInAt)}</td>
+                      <td style={{ ...td, textAlign: 'right', color: SD.textMuted }} title={u.lastActiveAt ? `Last active ${new Date(u.lastActiveAt).toLocaleString()}` : 'No activity yet'}>{timeAgo(u.lastActiveAt)}</td>
                     </tr>
                     {open && (
                       <tr style={{ background: SD.surface2 }}>
-                        <td colSpan={7} style={{ padding: '4px 12px 16px' }}>
+                        <td colSpan={8} style={{ padding: '4px 12px 16px' }}>
                           {/* Actions */}
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                             <SDButton small ghost disabled={busy} onClick={() => act(u.id, u.tier === 'pro' ? 'revoke_pro' : 'grant_pro')}>
@@ -242,6 +281,8 @@ export function AdminDashboard({
                               ? <Tag color={u.librarySource === 'rekordbox' ? SD.info : SD.accent}>{u.librarySource.toUpperCase()}</Tag>
                               : <span style={{ color: SD.textMuted }}>—</span>}
                             {u.libraryTracks > 0 && <span style={{ color: SD.textMuted }}>{u.libraryTracks.toLocaleString()} tracks</span>}
+                            {u.librarySyncedAt && <span style={{ color: SD.textMuted }}>· synced {timeAgo(u.librarySyncedAt)} ago</span>}
+                            <span style={{ color: SD.textMuted }}>· signed in {timeAgo(u.lastSignInAt)} ago</span>
                           </div>
 
                           {/* Sets */}
@@ -256,6 +297,18 @@ export function AdminDashboard({
                             </div>
                           )}
 
+                          {/* Crates */}
+                          {u.crates.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 1, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 6 }}>
+                                Crates ({u.crates.length})
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {u.crates.map((c) => <CrateRowItem key={c.id} crate={c} />)}
+                              </div>
+                            </div>
+                          )}
+
                           <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 10, opacity: 0.5 }}>
                             {u.id}
                           </div>
@@ -266,11 +319,67 @@ export function AdminDashboard({
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ ...td, textAlign: 'center', color: SD.textMuted, padding: '32px' }}>No users match.</td></tr>
+                <tr><td colSpan={8} style={{ ...td, textAlign: 'center', color: SD.textMuted, padding: '32px' }}>No users match.</td></tr>
               )}
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const ACTIVITY_META: Record<AdminActivityRow['kind'], { label: string; color: string }> = {
+  set: { label: 'SET', color: SD.accent },
+  library: { label: 'IMPORT', color: SD.info },
+  crate: { label: 'CRATE', color: SD.success },
+};
+
+function RecentActivity({ items }: { items: AdminActivityRow[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: SD.r3, padding: '16px 20px', marginBottom: 28 }}>
+      <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 12 }}>
+        Recent activity
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {items.map((a, i) => {
+          const m = ACTIVITY_META[a.kind];
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: SD.mono, fontSize: SD.t12 }}>
+              <span style={{ flexShrink: 0, width: 52 }}><Tag color={m.color}>{m.label}</Tag></span>
+              <span style={{ color: SD.text, flexShrink: 0, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.email ?? '—'}
+              </span>
+              <span style={{ color: SD.textMuted, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.detail}
+              </span>
+              <span style={{ color: SD.textMuted, flexShrink: 0 }} title={new Date(a.at).toLocaleString()}>
+                {timeAgo(a.at)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CrateRowItem({ crate }: { crate: AdminCrateRow }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 4, padding: '6px 10px', gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-mono), monospace', fontSize: 12, color: '#F0F0F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {crate.name}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {crate.trackCount > 0 && (
+          <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#6A6A6A' }}>{crate.trackCount} tracks</span>
+        )}
+        <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#4A4A4A' }}>{shortDate(crate.createdAt)}</span>
       </div>
     </div>
   );

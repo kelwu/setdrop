@@ -21,7 +21,7 @@ export default async function AccountPage({
   ]);
 
   const tier = userRowRes.data?.subscription_tier ?? 'free';
-  const limit = tier === 'pro' ? 50 : 5;
+  const limit = tier === 'pro' ? 50 : 3;
 
   return (
     <Account

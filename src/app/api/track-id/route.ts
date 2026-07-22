@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import { identifyAudio } from '@/lib/setdrop/acrcloud';
+import { loopsSendEvent } from '@/lib/email/loops';
 
 export const maxDuration = 30;
 
@@ -101,6 +102,11 @@ export async function POST(req: NextRequest) {
         .ilike('title', `%${titleLower}%`)
         .ilike('artist', `%${artistLower}%`);
       alreadyInWishlist = (wishCount ?? 0) > 0;
+    }
+
+    // Warn free users at 8/10 used (2 remaining)
+    if (!isBeta && tier === 'free' && used + 1 === 8 && user.email) {
+      loopsSendEvent(user.email, 'trackid_quota_warning', { used: 8, limit: FREE_LIMIT });
     }
 
     return NextResponse.json({

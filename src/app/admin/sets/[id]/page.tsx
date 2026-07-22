@@ -34,6 +34,30 @@ export default async function AdminSetPage({ params }: Props) {
   const { data: userRes } = await supabase.auth.admin.getUserById(data.user_id);
   const ownerEmail = userRes?.user?.email ?? data.user_id;
 
+  // Load user's library for context
+  const { data: library } = await supabase
+    .from('serato_libraries')
+    .select('id, total_tracks, source, last_synced')
+    .eq('user_id', data.user_id)
+    .single();
+
+  const { data: libraryTracks } = library
+    ? await supabase
+        .from('serato_tracks')
+        .select('artist, title, bpm, key, genre, file_path')
+        .eq('library_id', library.id)
+        .order('artist', { ascending: true })
+        .limit(2000)
+    : { data: null };
+
+  // Genre breakdown
+  const genreCounts: Record<string, number> = {};
+  for (const t of (libraryTracks ?? [])) {
+    const g = t.genre ?? 'Unknown';
+    genreCounts[g] = (genreCounts[g] ?? 0) + 1;
+  }
+  const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
   const tracks: SetlistTrack[] = Array.isArray(data.tracks_json) ? (data.tracks_json as SetlistTrack[]) : [];
   const date = new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const genre = [data.primary_genre, data.secondary_genre].filter(Boolean).join(' / ') || 'Mixed';
@@ -156,6 +180,65 @@ export default async function AdminSetPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* User Library */}
+        <div style={{ marginBottom: 48, border: `1px solid ${S.border}`, borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', background: S.surface2, borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2, color: S.textSec, textTransform: 'uppercase' }}>
+              User Library
+            </div>
+            {library ? (
+              <div style={{ display: 'flex', gap: 16 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                  {(libraryTracks?.length ?? 0).toLocaleString()} tracks{(libraryTracks?.length ?? 0) >= 2000 ? ' (capped at 2000)' : ''}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                  {library.source ?? 'serato'}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                  synced {new Date(library.last_synced).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            ) : (
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>No library uploaded</span>
+            )}
+          </div>
+          {topGenres.length > 0 && (
+            <div style={{ padding: '12px 20px', borderBottom: `1px solid ${S.border}`, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {topGenres.map(([genre, count]) => (
+                <span key={genre} style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted, background: S.surface2, border: `1px solid ${S.border}`, borderRadius: 2, padding: '2px 8px' }}>
+                  {genre} <span style={{ color: S.textSec }}>{count}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {libraryTracks && libraryTracks.length > 0 ? (
+            <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: S.mono, fontSize: 12 }}>
+                <thead style={{ position: 'sticky', top: 0, background: S.surface2, zIndex: 1 }}>
+                  <tr>
+                    {['Artist', 'Title', 'BPM', 'Key', 'Genre'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: S.textMuted, fontWeight: 400, borderBottom: `1px solid ${S.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {libraryTracks.map((t, i) => (
+                    <tr key={i} style={{ borderBottom: `1px solid ${S.border}` }}>
+                      <td style={{ padding: '7px 12px', color: S.text, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</td>
+                      <td style={{ padding: '7px 12px', color: S.textSec, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</td>
+                      <td style={{ padding: '7px 12px', color: S.accent, whiteSpace: 'nowrap' }}>{t.bpm ?? '—'}</td>
+                      <td style={{ padding: '7px 12px', color: S.textSec, whiteSpace: 'nowrap' }}>{t.key ?? '—'}</td>
+                      <td style={{ padding: '7px 12px', color: S.textMuted, whiteSpace: 'nowrap' }}>{t.genre ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : library ? (
+            <div style={{ padding: '20px', fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>Library exists but no tracks found.</div>
+          ) : null}
+        </div>
 
         <div>
           <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2, color: S.textSec, textTransform: 'uppercase', marginBottom: 12 }}>

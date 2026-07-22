@@ -25,7 +25,7 @@ export const PLANS = {
   },
   free: {
     name: `${BRAND.name} Free`,
-    setLimit: 5,
+    setLimit: 3,
     crateLimit: 3,
     trackIdLimit: 10,
   },

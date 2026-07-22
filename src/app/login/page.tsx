@@ -42,6 +42,7 @@ export default function LoginPage() {
     setMessage('');
 
     if (mode === 'signup') {
+      trackEvent.signupStarted('email');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -50,7 +51,11 @@ export default function LoginPage() {
       if (error) setError(error.message);
       // If email confirmation is disabled, signUp returns a live session — log in
       // immediately instead of telling the user to check an email that never comes.
-      else if (data.session) { trackEvent.signUp('email'); router.push('/dashboard'); }
+      else if (data.session) {
+        trackEvent.signUp('email');
+        fetch('/api/auth/welcome', { method: 'POST' }).catch(() => {});
+        router.push('/dashboard');
+      }
       else { trackEvent.signUp('email'); setMessage('Check your email for a confirmation link.'); }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });

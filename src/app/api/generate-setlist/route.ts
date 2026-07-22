@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single();
     const tier = userRow?.subscription_tier ?? 'free';
-    const limit = tier === 'pro' ? 50 : 5;
+    const limit = tier === 'pro' ? 50 : 3;
 
     if ((count ?? 0) >= limit) {
       return NextResponse.json({ error: 'rate_limit', tier, limit }, { status: 429 });
