@@ -15,6 +15,13 @@ export interface AdminSetlistRow {
   trackCount: number;
 }
 
+export interface AdminCrateRow {
+  id: string;
+  name: string;
+  createdAt: string;
+  trackCount: number;
+}
+
 export interface AdminUserRow {
   id: string;
   email: string | null;
@@ -29,8 +36,10 @@ export interface AdminUserRow {
   librarySource: 'serato' | 'rekordbox' | null;
   librarySyncedAt: string | null;
   setlistCount: number;
+  crateCount: number;
   trackIdsThisMonth: number;
   sets: AdminSetlistRow[];
+  crates: AdminCrateRow[];
 }
 
 export interface AdminActivityRow {
@@ -102,7 +111,7 @@ export async function getAdminData(): Promise<AdminData> {
     admin.from('serato_libraries').select('user_id, total_tracks, source, last_synced'),
     admin.from('setlists').select('id, user_id, name, primary_genre, crowd_context, duration_minutes, lineup_slot, is_public, share_url, created_at, tracks_json'),
     admin.from('track_id_requests').select('user_id, created_at'),
-    admin.from('themed_crates').select('user_id, name, created_at'),
+    admin.from('themed_crates').select('id, user_id, name, created_at, tracks_json'),
     // Bounded — PostgREST caps at 1000 anyway; most-recent rows are all we need for "last active".
     admin.from('api_usage').select('user_id, created_at').order('created_at', { ascending: false }).limit(1000),
     admin.from('api_usage').select('id', { count: 'exact', head: true }).gte('created_at', dayAgoIso),
@@ -164,14 +173,18 @@ export async function getAdminData(): Promise<AdminData> {
     tidTimesByUser.set(t.user_id, list);
   }
 
-  // Themed crates — latest per user (for last-active) + rows for the recent feed.
-  type CrateRow = { user_id: string | null; name: string; created_at: string };
+  // Themed crates — per-user list + latest (for last-active) + rows for the recent feed.
+  type CrateRow = { id: string; user_id: string | null; name: string; created_at: string; tracks_json: unknown };
   const crateRows = (cratesRes.data as CrateRow[] ?? []);
   const crateLatestByUser = new Map<string, string>();
+  const cratesByUser = new Map<string, AdminCrateRow[]>();
   for (const c of crateRows) {
     if (!c.user_id) continue;
     const prev = crateLatestByUser.get(c.user_id);
     if (!prev || c.created_at > prev) crateLatestByUser.set(c.user_id, c.created_at);
+    const list = cratesByUser.get(c.user_id) ?? [];
+    list.push({ id: c.id, name: c.name, createdAt: c.created_at, trackCount: Array.isArray(c.tracks_json) ? c.tracks_json.length : 0 });
+    cratesByUser.set(c.user_id, list);
   }
 
   // api_usage — max timestamp per user (the truest "did something" signal).
@@ -188,6 +201,7 @@ export async function getAdminData(): Promise<AdminData> {
       const f = flagsById.get(u.id);
       const lib = libByUser.get(u.id);
       const userSets = (setsByUser.get(u.id) ?? []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const userCrates = (cratesByUser.get(u.id) ?? []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const tidTimes = tidTimesByUser.get(u.id) ?? [];
       const trackIdsThisMonth = tidTimes.filter((ts) => new Date(ts).getTime() >= monthStart).length;
       const latestTid = tidTimes.reduce<string | null>((m, ts) => (!m || ts > m ? ts : m), null);
@@ -211,8 +225,10 @@ export async function getAdminData(): Promise<AdminData> {
         librarySource: (lib?.source === 'rekordbox' ? 'rekordbox' : lib ? 'serato' : null),
         librarySyncedAt: lib?.syncedAt ?? null,
         setlistCount: userSets.length,
+        crateCount: userCrates.length,
         trackIdsThisMonth,
         sets: userSets,
+        crates: userCrates,
       } as AdminUserRow;
     })
     .sort((a, b) => {

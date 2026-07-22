@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from '@/components/setdrop/shared';
-import type { AdminMetrics, AdminUserRow, AdminSetlistRow, AdminActivityRow } from '@/lib/admin-data';
+import type { AdminMetrics, AdminUserRow, AdminSetlistRow, AdminActivityRow, AdminCrateRow } from '@/lib/admin-data';
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never';
@@ -209,6 +209,7 @@ export function AdminDashboard({
                 <th style={th}>Joined</th>
                 <th style={{ ...th, textAlign: 'right' }}>Lib</th>
                 <th style={{ ...th, textAlign: 'right' }}>Sets</th>
+                <th style={{ ...th, textAlign: 'right' }}>Crates</th>
                 <th style={{ ...th, textAlign: 'right' }}>IDs/mo</th>
                 <th style={{ ...th, textAlign: 'right' }}>Active</th>
               </tr>
@@ -238,6 +239,7 @@ export function AdminDashboard({
                       <td style={td}>{shortDate(u.createdAt)}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{u.libraryTracks.toLocaleString()}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{u.setlistCount}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{u.crateCount}</td>
                       <td style={{ ...td, textAlign: 'right', color: u.trackIdsThisMonth >= 10 ? SD.warning : SD.textSec }}>
                         {u.trackIdsThisMonth}
                       </td>
@@ -245,7 +247,7 @@ export function AdminDashboard({
                     </tr>
                     {open && (
                       <tr style={{ background: SD.surface2 }}>
-                        <td colSpan={7} style={{ padding: '4px 12px 16px' }}>
+                        <td colSpan={8} style={{ padding: '4px 12px 16px' }}>
                           {/* Actions */}
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                             <SDButton small ghost disabled={busy} onClick={() => act(u.id, u.tier === 'pro' ? 'revoke_pro' : 'grant_pro')}>
@@ -295,6 +297,18 @@ export function AdminDashboard({
                             </div>
                           )}
 
+                          {/* Crates */}
+                          {u.crates.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 1, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 6 }}>
+                                Crates ({u.crates.length})
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {u.crates.map((c) => <CrateRowItem key={c.id} crate={c} />)}
+                              </div>
+                            </div>
+                          )}
+
                           <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 10, opacity: 0.5 }}>
                             {u.id}
                           </div>
@@ -305,7 +319,7 @@ export function AdminDashboard({
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ ...td, textAlign: 'center', color: SD.textMuted, padding: '32px' }}>No users match.</td></tr>
+                <tr><td colSpan={8} style={{ ...td, textAlign: 'center', color: SD.textMuted, padding: '32px' }}>No users match.</td></tr>
               )}
             </tbody>
           </table>
@@ -346,6 +360,26 @@ function RecentActivity({ items }: { items: AdminActivityRow[] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function CrateRowItem({ crate }: { crate: AdminCrateRow }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 4, padding: '6px 10px', gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-mono), monospace', fontSize: 12, color: '#F0F0F0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {crate.name}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {crate.trackCount > 0 && (
+          <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#6A6A6A' }}>{crate.trackCount} tracks</span>
+        )}
+        <span style={{ fontFamily: 'var(--font-mono), monospace', fontSize: 10, color: '#4A4A4A' }}>{shortDate(crate.createdAt)}</span>
       </div>
     </div>
   );
