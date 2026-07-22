@@ -133,6 +133,7 @@ export function SetlistBuilder() {
     setRateLimited(null);
 
     const durationMinutes = parseInt(duration) || 60;
+    trackEvent.setGenerationStarted(primaryGenre || 'unknown', durationMinutes);
 
     let res: Response;
     try {
@@ -161,6 +162,7 @@ export function SetlistBuilder() {
     } catch {
       setGenerating(false);
       setGenError('Network error — check your connection.');
+      trackEvent.setGenerationFailed('network', primaryGenre || undefined);
       return;
     }
 
@@ -168,6 +170,7 @@ export function SetlistBuilder() {
       const data = await res.json().catch(() => ({ tier: 'free', limit: 3 })) as { tier: string; limit: number };
       setGenerating(false);
       setRateLimited({ tier: data.tier, limit: data.limit });
+      trackEvent.setGenerationFailed('rate_limited', primaryGenre || undefined);
       return;
     }
 
@@ -175,6 +178,7 @@ export function SetlistBuilder() {
       const data = await res.json().catch(() => ({})) as { error?: string };
       setGenerating(false);
       setGenError(data.error || `HTTP ${res.status}`);
+      trackEvent.setGenerationFailed('http_error', primaryGenre || undefined);
       return;
     }
 
@@ -218,18 +222,21 @@ export function SetlistBuilder() {
     } catch (err) {
       setGenerating(false);
       setGenError(err instanceof Error ? err.message : 'Generation failed. Check your ANTHROPIC_API_KEY.');
+      trackEvent.setGenerationFailed('stream_error', primaryGenre || undefined);
       return;
     }
 
     if (!finalSetlist) {
       setGenerating(false);
       setGenError('Generation completed but no setlist was returned.');
+      trackEvent.setGenerationFailed('empty_response', primaryGenre || undefined);
       return;
     }
 
     if (!finalSetlist.tracks?.length) {
       setGenerating(false);
       setGenError('No tracks were selected — the AI response may have been truncated. Please try again.');
+      trackEvent.setGenerationFailed('truncated', primaryGenre || undefined);
       return;
     }
 

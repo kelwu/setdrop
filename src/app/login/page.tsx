@@ -42,6 +42,7 @@ export default function LoginPage() {
     setMessage('');
 
     if (mode === 'signup') {
+      trackEvent.signupStarted('email');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

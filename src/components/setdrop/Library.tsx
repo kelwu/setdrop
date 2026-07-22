@@ -587,6 +587,8 @@ export function Library() {
   const handleFile = (file: File) => {
     setParseError(null);
     setParsedCount(null);
+    const software = uploadMode === 'db' ? 'serato' : 'rekordbox';
+    trackEvent.libraryUploadStarted(software);
     if (uploadMode === 'db') {
       setUploadStage('parse');
       // Upload file directly to Supabase Storage to bypass Vercel's 4.5MB function payload limit,
@@ -628,6 +630,7 @@ export function Library() {
         .catch(err => {
           setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to upload library');
+          trackEvent.libraryUploadFailed('serato', 'parse_or_upload_error');
         });
     } else {
       setUploadStage('parse');
@@ -668,6 +671,7 @@ export function Library() {
         } catch (err) {
           setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to parse Rekordbox XML');
+          trackEvent.libraryUploadFailed('rekordbox', 'parse_or_upload_error');
         }
       };
       reader.readAsText(file);

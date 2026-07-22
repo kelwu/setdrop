@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from '@/components/setdrop/shared';
-import type { AdminMetrics, AdminUserRow, AdminSetlistRow } from '@/lib/admin-data';
+import type { AdminMetrics, AdminUserRow, AdminSetlistRow, AdminActivityRow } from '@/lib/admin-data';
 
 function timeAgo(iso: string | null): string {
   if (!iso) return 'never';
@@ -39,10 +39,11 @@ function MetricCard({ label, value, sub }: { label: string; value: string; sub?:
 }
 
 export function AdminDashboard({
-  metrics, users, adminEmail,
+  metrics, users, recentActivity, adminEmail,
 }: {
   metrics: AdminMetrics;
   users: AdminUserRow[];
+  recentActivity: AdminActivityRow[];
   adminEmail: string;
 }) {
   const router = useRouter();
@@ -171,6 +172,9 @@ export function AdminDashboard({
           </div>
         </div>
 
+        {/* Recent activity */}
+        <RecentActivity items={recentActivity} />
+
         {/* Users */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 16, flexWrap: 'wrap' }}>
           <div style={{ fontFamily: SD.mono, fontSize: SD.t13, color: SD.text, letterSpacing: 1 }}>
@@ -206,7 +210,7 @@ export function AdminDashboard({
                 <th style={{ ...th, textAlign: 'right' }}>Lib</th>
                 <th style={{ ...th, textAlign: 'right' }}>Sets</th>
                 <th style={{ ...th, textAlign: 'right' }}>IDs/mo</th>
-                <th style={{ ...th, textAlign: 'right' }}>Last</th>
+                <th style={{ ...th, textAlign: 'right' }}>Active</th>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +241,7 @@ export function AdminDashboard({
                       <td style={{ ...td, textAlign: 'right', color: u.trackIdsThisMonth >= 10 ? SD.warning : SD.textSec }}>
                         {u.trackIdsThisMonth}
                       </td>
-                      <td style={{ ...td, textAlign: 'right', color: SD.textMuted }}>{timeAgo(u.lastSignInAt)}</td>
+                      <td style={{ ...td, textAlign: 'right', color: SD.textMuted }} title={u.lastActiveAt ? `Last active ${new Date(u.lastActiveAt).toLocaleString()}` : 'No activity yet'}>{timeAgo(u.lastActiveAt)}</td>
                     </tr>
                     {open && (
                       <tr style={{ background: SD.surface2 }}>
@@ -275,6 +279,8 @@ export function AdminDashboard({
                               ? <Tag color={u.librarySource === 'rekordbox' ? SD.info : SD.accent}>{u.librarySource.toUpperCase()}</Tag>
                               : <span style={{ color: SD.textMuted }}>—</span>}
                             {u.libraryTracks > 0 && <span style={{ color: SD.textMuted }}>{u.libraryTracks.toLocaleString()} tracks</span>}
+                            {u.librarySyncedAt && <span style={{ color: SD.textMuted }}>· synced {timeAgo(u.librarySyncedAt)} ago</span>}
+                            <span style={{ color: SD.textMuted }}>· signed in {timeAgo(u.lastSignInAt)} ago</span>
                           </div>
 
                           {/* Sets */}
@@ -304,6 +310,42 @@ export function AdminDashboard({
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const ACTIVITY_META: Record<AdminActivityRow['kind'], { label: string; color: string }> = {
+  set: { label: 'SET', color: SD.accent },
+  library: { label: 'IMPORT', color: SD.info },
+  crate: { label: 'CRATE', color: SD.success },
+};
+
+function RecentActivity({ items }: { items: AdminActivityRow[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: SD.r3, padding: '16px 20px', marginBottom: 28 }}>
+      <div style={{ fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2, textTransform: 'uppercase', color: SD.textMuted, marginBottom: 12 }}>
+        Recent activity
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {items.map((a, i) => {
+          const m = ACTIVITY_META[a.kind];
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: SD.mono, fontSize: SD.t12 }}>
+              <span style={{ flexShrink: 0, width: 52 }}><Tag color={m.color}>{m.label}</Tag></span>
+              <span style={{ color: SD.text, flexShrink: 0, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.email ?? '—'}
+              </span>
+              <span style={{ color: SD.textMuted, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.detail}
+              </span>
+              <span style={{ color: SD.textMuted, flexShrink: 0 }} title={new Date(a.at).toLocaleString()}>
+                {timeAgo(a.at)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
