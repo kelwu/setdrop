@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 
 export const maxDuration = 300;
 
@@ -342,7 +343,7 @@ const EMERGING_SYSTEM = `You are a DJ trend scout. Find emerging artists gaining
 // ─── AI fetch functions ───────────────────────────────────────────────────────
 
 async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = getAnthropic();
   const userMsg = `Library gaps:\n${JSON.stringify(rawGaps, null, 2)}\n\nRecommend 3 tracks per gap and call report_library_gaps.`;
 
   const msg = await anthropic.messages.create({
@@ -352,7 +353,7 @@ async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
     messages: [{ role: 'user', content: userMsg }],
     tools: [GAP_TOOL],
     tool_choice: { type: 'tool', name: 'report_library_gaps' },
-  });
+  }, { timeout: 120_000 });
 
   const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
@@ -367,7 +368,7 @@ async function fetchEmergingArtists(
 ): Promise<Map<string, EmergingArtist[]>> {
   if (!genres.length) return new Map();
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = getAnthropic();
   const userMsg = `Find 3 emerging/rising DJ artists in each of these genres gaining traction in 2026: ${genres.join(', ')}. Focus on breakthrough acts with releases in the last 12 months, not established headliners. Call report_emerging_artists with your findings.`;
 
   const msg = await anthropic.messages.create({
@@ -377,7 +378,7 @@ async function fetchEmergingArtists(
     messages: [{ role: 'user', content: userMsg }],
     tools: [EMERGING_TOOL],
     tool_choice: { type: 'tool', name: 'report_emerging_artists' },
-  });
+  }, { timeout: 120_000 });
 
   const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',

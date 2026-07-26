@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 import { jsonrepair } from 'jsonrepair';
 import { createClient } from '@/lib/supabase/server';
 
@@ -10,7 +10,7 @@ const MODEL = 'claude-sonnet-4-6';
 async function lookupBpmKey(
   tracks: Array<{ id: string; artist: string; title: string }>,
 ): Promise<Array<{ id: string; bpm: number | null; key: string | null }>> {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = getAnthropic();
 
   const list = tracks.map((t, i) => `${i + 1}. "${t.title}" by ${t.artist}`).join('\n');
 
@@ -27,7 +27,7 @@ ${list}
 Return ONLY a JSON array with one object per track in order:
 [{"bpm": 128, "key": "8A"}, {"bpm": 95, "key": "2B"}, ...]`,
     }],
-  });
+  }, { timeout: 120_000 });
 
   const text = msg.content.find(b => b.type === 'text')?.text ?? '';
   const match = text.match(/\[[\s\S]*\]/);

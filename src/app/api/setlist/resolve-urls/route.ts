@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 import { createClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 
@@ -24,7 +25,10 @@ interface ResolvedTrack {
 }
 
 function anthropic() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // Shared client carries a default timeout backstop. NOTE: the web-search
+  // fan-out here (up to ~300 calls/request) is still uncapped — see the infra
+  // backlog for the fan-out cap + per-search timeouts.
+  return getAnthropic();
 }
 
 // Beatport's own frontend search API — returns real track page URLs
@@ -96,7 +100,7 @@ async function searchPool(
         allowed_domains: [domain],
       } as Anthropic.Messages.WebSearchTool20260209],
       tool_choice: { type: 'any' },
-    });
+    }, { timeout: 15_000 });
 
     for (const block of msg.content) {
       if (block.type === 'web_search_tool_result') {
