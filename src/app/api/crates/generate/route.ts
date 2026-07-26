@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
+import type { CrateTrack } from '@/lib/crates/types';
 
 export const maxDuration = 60;
 
@@ -19,17 +21,6 @@ interface RawTrack {
   year: number | null;
   file_path: string | null;
   lastfm_tags: string[] | null;
-}
-
-export interface CrateTrack {
-  id: string;
-  artist: string;
-  title: string;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  year: number | null;
-  filePath: string | null;
 }
 
 interface CrateProfile {
@@ -259,7 +250,7 @@ export async function POST(req: NextRequest) {
       .map(([g, n]) => `${g} (${n})`);
 
     // Claude parses the prompt into a selection profile
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const anthropic = getAnthropic();
     const userMsg = `Crate prompt: "${prompt}"\n\nLibrary genres available: ${topGenres.join(', ')}\n\nCall parse_crate_prompt with a selection profile.`;
 
     const msg = await anthropic.messages.create({
@@ -269,7 +260,7 @@ export async function POST(req: NextRequest) {
       messages: [{ role: 'user', content: userMsg }],
       tools: [PROFILE_TOOL],
       tool_choice: { type: 'tool', name: 'parse_crate_prompt' },
-    });
+    }, { timeout: 45_000 });
 
     const block = msg.content.find(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
