@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 import { jsonrepair } from 'jsonrepair';
 import { createClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     // Limit to 150 tracks to keep token count manageable
     const sample = tracks.slice(0, 150);
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const anthropic = getAnthropic();
 
     const prompt = `You are a DJ setlist expert with deep knowledge of popular music.
 
@@ -105,7 +105,7 @@ Only include tracks you are genuinely confident feature this word in their lyric
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
-    });
+    }, { timeout: 50_000 });
 
     const text = msg.content.find(b => b.type === 'text')?.text ?? '';
     const match = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);

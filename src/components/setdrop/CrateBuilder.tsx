@@ -11,19 +11,9 @@ import {
   downloadM3u,
 } from '@/lib/setdrop/rekordbox-export';
 import type { SetlistTrack, LibraryTrack } from '@/lib/agents/types';
+import type { CrateTrack } from '@/lib/crates/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-interface CrateTrack {
-  id: string;
-  artist: string;
-  title: string;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  year: number | null;
-  filePath: string | null;
-}
 
 interface SavedCrate {
   id: string;
@@ -130,9 +120,11 @@ export function CrateBuilder() {
   const [excludeArtistInput, setExcludeArtistInput] = useState('');
   const [excludeArtists, setExcludeArtists] = useState<string[]>([]);
   const [cleanOnly, setCleanOnly] = useState(false);
+  const [crateSize, setCrateSize] = useState<number | 'all'>(50);
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [activeCrate, setActiveCrate] = useState<ActiveCrate | null>(null);
   const [savedCrates, setSavedCrates] = useState<SavedCrate[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -173,6 +165,7 @@ export function CrateBuilder() {
     }
     setGenerating(true);
     setError(null);
+    setWarning(null);
     setPage(0);
     try {
       const body: Record<string, unknown> = { prompt: finalPrompt };
@@ -184,13 +177,14 @@ export function CrateBuilder() {
       if (yearMax) body.yearMax = Number(yearMax);
       if (excludeArtists.length) body.excludeArtists = excludeArtists;
       if (cleanOnly) body.cleanOnly = true;
+      body.targetCount = crateSize === 'all' ? 0 : crateSize; // 0 = no cap
 
       const res = await fetch('/api/crates/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const json = await res.json() as { crate?: ActiveCrate; error?: string; tier?: string; limit?: number };
+      const json = await res.json() as { crate?: ActiveCrate; error?: string; tier?: string; limit?: number; warning?: string };
       if (res.status === 429) {
         const isPro = json.tier === 'pro';
         setError(
@@ -205,6 +199,7 @@ export function CrateBuilder() {
         return;
       }
       setActiveCrate(json.crate);
+      setWarning(json.warning ?? null);
       await loadCrates();
     } catch {
       setError('Network error — check your connection');
@@ -222,6 +217,7 @@ export function CrateBuilder() {
       moodNotes: '',
       createdAt: c.createdAt,
     });
+    setWarning(null);
     setPage(0);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -275,7 +271,7 @@ export function CrateBuilder() {
       <PageHeader
         eyebrow="SetLab AI"
         title="CRATE BUILDER"
-        subtitle="Describe the crate you want. AI scans your entire library with no track limit."
+        subtitle="Describe the crate you want. AI scans your entire library, then curates to the size you choose."
       />
 
       {/* Generator form */}
@@ -441,6 +437,36 @@ export function CrateBuilder() {
           </div>
         </div>
 
+        {/* Crate size */}
+        <div style={{ marginTop: 16 }}>
+          <Label>Crate Size</Label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {([25, 50, 100, 'all'] as const).map(opt => {
+              const active = crateSize === opt;
+              return (
+                <button
+                  key={String(opt)}
+                  onClick={() => setCrateSize(opt)}
+                  style={{
+                    fontFamily: SD.mono, fontSize: SD.t11, letterSpacing: 1.5,
+                    textTransform: 'uppercase', cursor: 'pointer',
+                    background: active ? SD.accentDim : SD.surface2,
+                    color: active ? SD.accent : SD.textMuted,
+                    border: `1px solid ${active ? SD.accent + '66' : SD.border}`,
+                    borderRadius: SD.r2, padding: '8px 16px', whiteSpace: 'nowrap',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {opt === 'all' ? 'All matches' : `${opt} tracks`}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 5 }}>
+            Larger sets sample evenly across the BPM range. Choose &ldquo;All&rdquo; for every match.
+          </div>
+        </div>
+
         {/* Prompt */}
         <div style={{ marginTop: 16 }}>
           <Label>Additional context (optional)</Label>
@@ -538,6 +564,17 @@ export function CrateBuilder() {
               </div>
             </div>
           </div>
+
+          {/* Thin-match warning */}
+          {warning && (
+            <div style={{
+              marginBottom: 16, padding: '10px 14px',
+              background: SD.accentDim, border: `1px solid ${SD.accent}44`,
+              borderRadius: SD.r2, fontFamily: SD.mono, fontSize: SD.t11, color: SD.accent,
+            }}>
+              {warning}
+            </div>
+          )}
 
           {/* Track list */}
           <div style={{

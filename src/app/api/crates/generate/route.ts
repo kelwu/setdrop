@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
+import type { CrateTrack } from '@/lib/crates/types';
 
 export const maxDuration = 60;
 
 const MODEL = 'claude-sonnet-4-6';
+// Default crate size when the client doesn't request a specific count. Keeps a
+// broad prompt (e.g. a genre with hundreds of matches) from producing an
+// unusable, uncurated crate. A client sending targetCount: 0 means "no cap".
+const DEFAULT_CRATE_SIZE = 50;
+// Below this many genre matches we still return the crate but flag it, so the
+// user knows the genre barely matched rather than silently getting a thin/odd set.
+const GENRE_MATCH_WARN_FLOOR = 8;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,17 +28,6 @@ interface RawTrack {
   year: number | null;
   file_path: string | null;
   lastfm_tags: string[] | null;
-}
-
-export interface CrateTrack {
-  id: string;
-  artist: string;
-  title: string;
-  bpm: number | null;
-  key: string | null;
-  genre: string | null;
-  year: number | null;
-  filePath: string | null;
 }
 
 interface CrateProfile {
@@ -117,14 +115,29 @@ interface ExtraFilters {
   cleanOnly?: boolean;
 }
 
-function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilters = {}): RawTrack[] {
+// Normalize a genre/tag for comparison: lowercase and collapse any run of
+// non-alphanumerics (hyphens, slashes, extra spaces) to a single space. This is
+// what makes "Nu-Disco", "nu disco", and "nu disco / disco" all comparable.
+function normGenre(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+interface FilterResult {
+  tracks: RawTrack[];
+  // True when the user asked for a specific genre (so callers can message about it).
+  genreRequested: boolean;
+  // How many tracks actually matched the requested genre.
+  genreMatchCount: number;
+}
+
+function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilters = {}): FilterResult {
   const { bpmMin, bpmMax, genreKeywords } = profile;
   const { yearMin, yearMax, excludeArtists, cleanOnly } = extra;
 
   const excludeLower = (excludeArtists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
   const cleanPattern = /\(clean\)|\[clean\]|clean edit|radio edit/i;
 
-  let pool = raw.filter(t => {
+  const pool = raw.filter(t => {
     const bpm = t.bpm ?? 0;
     if (bpm < bpmMin || bpm > bpmMax) return false;
 
@@ -148,35 +161,72 @@ function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilter
     return true;
   });
 
-  if (!genreKeywords.length) return pool;
-
-  const keywords = genreKeywords.map(k => k.toLowerCase());
+  const kwNorms = genreKeywords.map(normGenre).filter(Boolean);
+  if (!kwNorms.length) {
+    return { tracks: pool, genreRequested: false, genreMatchCount: pool.length };
+  }
 
   const matched = pool.filter(t => {
-    const genre = (t.genre ?? '').toLowerCase();
-    const tags = (t.lastfm_tags ?? []).map(s => s.toLowerCase());
-    return keywords.some(kw =>
-      genre.includes(kw) || kw.includes(genre) ||
+    const g = normGenre(t.genre ?? '');
+    const tags = (t.lastfm_tags ?? []).map(normGenre).filter(Boolean);
+    // Untagged tracks must never match a specific genre. (The old code compared
+    // against '' via kw.includes(genre), which is always true, so untagged junk
+    // matched every genre — the root cause of wrong-genre crates.)
+    if (!g && !tags.length) return false;
+    return kwNorms.some(kw =>
+      (g !== '' && (g.includes(kw) || kw.includes(g))) ||
       tags.some(tag => tag.includes(kw) || kw.includes(tag)),
     );
   });
 
-  // If genre filter is too restrictive, fall back to full pool (still respects year/artist/clean)
-  return matched.length >= 5 ? matched : pool;
+  // Return only the genre-matched tracks — never silently fall back to the full
+  // BPM pool. The caller decides how to message a thin or empty match.
+  return { tracks: matched, genreRequested: true, genreMatchCount: matched.length };
 }
 
-function sortTracks(tracks: RawTrack[], sortOrder: CrateProfile['sortOrder']): RawTrack[] {
-  const withBpm = [...tracks.filter(t => t.bpm != null)];
+// Evenly sample n items across an ascending-sorted list so a capped crate spans
+// the whole BPM range instead of clustering at the low (or high) end.
+function sampleAcross<T>(items: T[], n: number): T[] {
+  if (items.length <= n) return items;
+  const step = items.length / n;
+  const out: T[] = [];
+  for (let i = 0; i < n; i++) out.push(items[Math.floor(i * step)]);
+  return out;
+}
+
+// Build-to-peak-then-cool-down ordering over an ascending-sorted list: climb
+// through the lower body, hit the peak, then ease back down.
+function arcOrder(asc: RawTrack[]): RawTrack[] {
+  if (asc.length < 4) return asc;
+  const peakIdx = Math.floor(asc.length * 0.75);
+  const rising = asc.slice(0, peakIdx);          // low → near-peak
+  const cooldown = asc.slice(peakIdx).reverse();  // peak → descending
+  return [...rising, ...cooldown];
+}
+
+// Select the crate (applying the size cap as a spread across the BPM range) and
+// order it per the requested sort. Cap is applied before arc shaping so the arc
+// spans the final set. `cap === null` means no cap.
+function orderAndCap(
+  tracks: RawTrack[],
+  sortOrder: CrateProfile['sortOrder'],
+  cap: number | null,
+): RawTrack[] {
+  const asc = tracks
+    .filter(t => t.bpm != null)
+    .sort((a, b) => (a.bpm ?? 0) - (b.bpm ?? 0));
   const withoutBpm = tracks.filter(t => t.bpm == null);
 
-  if (sortOrder === 'desc') {
-    withBpm.sort((a, b) => (b.bpm ?? 0) - (a.bpm ?? 0));
-  } else {
-    // asc and energy_arc both sort ascending (low → high builds energy)
-    withBpm.sort((a, b) => (a.bpm ?? 0) - (b.bpm ?? 0));
-  }
+  const selected = cap != null ? sampleAcross(asc, cap) : asc;
 
-  return [...withBpm, ...withoutBpm];
+  let ordered: RawTrack[];
+  if (sortOrder === 'desc') ordered = [...selected].reverse();
+  else if (sortOrder === 'energy_arc') ordered = arcOrder(selected);
+  else ordered = selected; // asc
+
+  // Backfill any remaining slots with BPM-less tracks, kept at the end.
+  const remaining = cap != null ? Math.max(0, cap - ordered.length) : withoutBpm.length;
+  return [...ordered, ...withoutBpm.slice(0, remaining)];
 }
 
 function toStoredTrack(t: RawTrack): CrateTrack {
@@ -259,7 +309,7 @@ export async function POST(req: NextRequest) {
       .map(([g, n]) => `${g} (${n})`);
 
     // Claude parses the prompt into a selection profile
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const anthropic = getAnthropic();
     const userMsg = `Crate prompt: "${prompt}"\n\nLibrary genres available: ${topGenres.join(', ')}\n\nCall parse_crate_prompt with a selection profile.`;
 
     const msg = await anthropic.messages.create({
@@ -269,7 +319,7 @@ export async function POST(req: NextRequest) {
       messages: [{ role: 'user', content: userMsg }],
       tools: [PROFILE_TOOL],
       tool_choice: { type: 'tool', name: 'parse_crate_prompt' },
-    });
+    }, { timeout: 45_000 });
 
     const block = msg.content.find(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
@@ -291,25 +341,40 @@ export async function POST(req: NextRequest) {
       cleanOnly: body.cleanOnly,
     };
 
-    // Filter and sort library tracks. No cap by default (crates can be arbitrarily
-    // large); the Library quick-crate tab passes targetCount for a small capped crate.
-    const filtered = filterTracks(rawTracks as RawTrack[], profile, extra);
-    const sorted = sortTracks(filtered, profile.sortOrder);
-    const capped = body.targetCount && body.targetCount > 0
-      ? sorted.slice(0, body.targetCount)
-      : sorted;
-    const selected = capped.map(toStoredTrack);
+    // Filter, then select + order. targetCount: 0 means "no cap"; omitted falls
+    // back to DEFAULT_CRATE_SIZE so a broad genre can't produce an unusable crate.
+    const { tracks: filtered, genreRequested, genreMatchCount } =
+      filterTracks(rawTracks as RawTrack[], profile, extra);
+    const cap = body.targetCount === 0
+      ? null
+      : (body.targetCount && body.targetCount > 0 ? body.targetCount : DEFAULT_CRATE_SIZE);
+    const ordered = orderAndCap(filtered, profile.sortOrder, cap);
+    const selected = ordered.map(toStoredTrack);
 
     if (!selected.length) {
+      // Genre requested but nothing tagged with it: the honest failure. Previously
+      // this silently returned unrelated BPM-matched tracks.
+      if (genreRequested) {
+        const genreLabel = profile.genreKeywords[0] ?? 'that genre';
+        return NextResponse.json({
+          error: `No tracks tagged "${genreLabel}" in your library — check the spelling or try a broader genre.`,
+          profile,
+        }, { status: 422 });
+      }
       // A year filter is the most common cause of an empty result: tracks synced
       // before year support have no year and are excluded. Point the user there.
       const yearActive = body.yearMin !== undefined || body.yearMax !== undefined;
       const withYear = (rawTracks as RawTrack[]).filter(t => t.year != null).length;
       const error = yearActive && withYear === 0
         ? 'No tracks matched — your library has no year data yet. Re-sync your library in Library to enable year filtering, or remove the year range.'
-        : 'No tracks matched these filters — try widening the genre, BPM, or year range.';
+        : 'No tracks matched these filters — try widening the BPM or year range.';
       return NextResponse.json({ error, profile }, { status: 422 });
     }
+
+    // Thin genre match: still return the crate, but flag it so the UI can say so.
+    const warning = genreRequested && genreMatchCount < GENRE_MATCH_WARN_FLOOR
+      ? `Only ${genreMatchCount} track${genreMatchCount === 1 ? '' : 's'} matched "${profile.genreKeywords[0]}" — try a broader genre or enrich your library.`
+      : undefined;
 
     // Persist the crate
     const { data: crate, error: insertErr } = await admin
@@ -336,6 +401,7 @@ export async function POST(req: NextRequest) {
         moodNotes: profile.moodNotes,
         createdAt: crate.created_at,
       },
+      ...(warning ? { warning } : {}),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

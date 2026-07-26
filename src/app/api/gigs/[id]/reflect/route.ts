@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 
 export const maxDuration = 60;
 
@@ -198,7 +199,7 @@ export async function POST(
     }
   }
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = getAnthropic();
 
   const userMsg = `Planned set (${plannedTracks.length} tracks):
 ${plannedTracks.map(t => `${t.position}. ${t.artist} — ${t.title} (energy: ${t.energyLevel}/10)`).join('\n')}
@@ -215,7 +216,7 @@ Produce a factual diff. Match tracks by artist/title similarity. "matched" = sam
     messages: [{ role: 'user', content: userMsg }],
     tools: [REFLECT_TOOL],
     tool_choice: { type: 'tool', name: 'generate_reflection' },
-  });
+  }, { timeout: 55_000 });
 
   const block = msg.content.find((b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use');
   if (!block) return NextResponse.json({ error: 'Claude did not return reflection' }, { status: 500 });

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { getAnthropic } from '@/lib/anthropic';
 import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, GeneratedSetlist,
@@ -8,8 +9,28 @@ import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 const MODEL = 'claude-sonnet-4-6';
 const MAX_SELECTOR_TRACKS = 200;
 
+// The route runs with maxDuration = 300s. Abort the whole pipeline before that
+// ceiling so we can surface a real error to the client instead of a stream that
+// the platform silently kills mid-flight (which the user sees as a hang).
+const PIPELINE_TIMEOUT_MS = 270_000;
+// Per-call ceilings so a single hung API request fails fast instead of eating the
+// entire budget. The SDK's own default timeout is 10min — longer than our function
+// limit — so without these a stalled call always blows past 300s.
+const BLUEPRINT_TIMEOUT_MS = 120_000;
+const SELECTOR_TIMEOUT_MS = 180_000;
+
+type CallOptions = { signal?: AbortSignal; timeout?: number };
+
+function isTimeoutOrAbort(err: unknown): boolean {
+  if (err instanceof Anthropic.APIUserAbortError) return true;
+  if (err instanceof Anthropic.APIConnectionTimeoutError) return true;
+  const name = (err as { name?: string } | null)?.name;
+  return name === 'AbortError' || name === 'TimeoutError';
+}
+
+// Shared client; per-call { timeout } options below still override its default.
 function client() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return getAnthropic();
 }
 
 const WEB_SEARCH_TOOL: Anthropic.Messages.WebSearchTool20260209 = {
@@ -113,6 +134,7 @@ async function callWithTool<T>(
   userMessage: string,
   tool: Anthropic.Tool,
   maxTokens: number,
+  options: CallOptions = {},
 ): Promise<T> {
   const anthropic = client();
   const msg = await anthropic.messages.create({
@@ -122,7 +144,7 @@ async function callWithTool<T>(
     messages: [{ role: 'user', content: userMessage }],
     tools: [tool],
     tool_choice: { type: 'tool', name: tool.name },
-  });
+  }, { signal: options.signal, timeout: options.timeout });
 
   const block = msg.content.find(b => b.type === 'tool_use');
   if (!block || block.type !== 'tool_use') {
@@ -215,6 +237,7 @@ function filterTracksForGig(
 async function runGigBlueprint(
   profile: LibraryProfile,
   input: SetlistInput,
+  signal?: AbortSignal,
 ): Promise<{ gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
   const anthropic = client();
   const userMessage = `Library profile:
@@ -237,7 +260,7 @@ Gig context:
     messages: [{ role: 'user', content: userMessage }],
     tools: [WEB_SEARCH_TOOL, GIG_BLUEPRINT_TOOL],
     tool_choice: { type: 'auto' },
-  });
+  }, { signal, timeout: BLUEPRINT_TIMEOUT_MS });
 
   const blueprintBlock = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock =>
@@ -257,7 +280,7 @@ Gig context:
     ],
     tools: [GIG_BLUEPRINT_TOOL],
     tool_choice: { type: 'tool', name: 'generate_gig_blueprint' },
-  });
+  }, { signal, timeout: BLUEPRINT_TIMEOUT_MS });
 
   const block = forced.content.find((b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use');
   if (!block) throw new Error('Expected tool_use block from generate_gig_blueprint');
@@ -271,6 +294,7 @@ async function runSelectorReviewer(
   blueprint: SetBlueprint,
   intel: GigIntelReport,
   recentlyPlayed: string[],
+  signal?: AbortSignal,
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
   const result = await callWithTool<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }>(
     SELECTOR_REVIEWER_SYSTEM,
@@ -296,6 +320,7 @@ ${JSON.stringify(tracks.map(t => ({
 })), null, 2)}`,
     SELECTOR_TOOL,
     16384,
+    { signal, timeout: SELECTOR_TIMEOUT_MS },
   );
   if (!result?.tracks?.length) {
     throw new Error('Selector returned no tracks — the model response may have been truncated. Please try again.');
@@ -317,23 +342,38 @@ export async function runSetlistPipeline(
   recentlyPlayed: string[] = [],
   onProgress?: (event: PipelineProgressEvent) => void,
 ): Promise<GeneratedSetlist> {
-  onProgress?.({ type: 'step', step: 1, message: 'Gathering gig intel...' });
-  const profile = computeLibraryProfile(tracks);
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), PIPELINE_TIMEOUT_MS);
+  const { signal } = controller;
 
-  onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
-  const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input);
+  try {
+    onProgress?.({ type: 'step', step: 1, message: 'Gathering gig intel...' });
+    const profile = computeLibraryProfile(tracks);
 
-  onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
-  const filtered = filterTracksForGig(tracks, blueprint, input);
+    onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
+    const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal);
 
-  const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed);
+    onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
+    const filtered = filterTracksForGig(tracks, blueprint, input);
 
-  onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
+    const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed, signal);
 
-  return {
-    name: input.name || 'Untitled Set',
-    tracks: reviewed.tracks,
-    reviewNotes: reviewed.reviewNotes,
-    shareSlug: generateSlug(input.name || 'set'),
-  };
+    onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
+
+    return {
+      name: input.name || 'Untitled Set',
+      tracks: reviewed.tracks,
+      reviewNotes: reviewed.reviewNotes,
+      shareSlug: generateSlug(input.name || 'set'),
+    };
+  } catch (err) {
+    if (isTimeoutOrAbort(err)) {
+      throw new Error(
+        'Setlist generation timed out. Your library may be large or the service is busy — please try again.',
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(deadline);
+  }
 }

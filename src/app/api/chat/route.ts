@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { Resend } from 'resend';
 import { SYSTEM_PROMPT, isMessageBlocked } from '@/lib/setdrop/knowledge';
 import { createClient } from '@/lib/supabase/server';
+import { getAnthropic } from '@/lib/anthropic';
 import { BRAND } from '@/lib/brand';
 
 export const maxDuration = 30;
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const { message, page } = await req.json();
@@ -56,12 +54,24 @@ export async function POST(req: NextRequest) {
     }).catch(err => console.error('[chat] email failed', err));
   }
 
-  const stream = await anthropic.messages.stream({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 400,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: message.trim() }],
-  });
+  // Open the stream before returning so a pre-stream failure surfaces as a real
+  // HTTP error rather than an empty 200. The timeout guards against a hung call
+  // silently eating the 30s function budget.
+  let stream: ReturnType<ReturnType<typeof getAnthropic>['messages']['stream']>;
+  try {
+    stream = getAnthropic().messages.stream({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: message.trim() }],
+    }, { timeout: 25_000 });
+  } catch (err) {
+    console.error('[chat] stream failed to start', err);
+    return new Response('Sorry — chat is unavailable right now. Please try again.', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
@@ -75,6 +85,12 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(chunk.delta.text));
           }
         }
+      } catch (err) {
+        // Mid-stream failure (timeout, aborted connection, etc.). The client has
+        // already received a 200 + partial text, so append a visible notice
+        // instead of closing silently on a truncated reply.
+        console.error('[chat] stream interrupted', err);
+        controller.enqueue(encoder.encode('\n\n_(Got cut off — please try again.)_'));
       } finally {
         controller.close();
       }
