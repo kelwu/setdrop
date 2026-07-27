@@ -6,17 +6,18 @@ import { SD } from '@/lib/setdrop/constants';
 import { SDButton } from './shared';
 import { createClient } from '@/lib/supabase/client';
 import { BRAND } from '@/lib/brand';
+import { trackEvent } from '@/lib/analytics';
 
 interface AccountProps {
   email: string;
   tier: string;
-  setsUsed: number;
+  exportsUsed: number;
   limit: number;
   hasStripeCustomer: boolean;
   upgraded: boolean;
 }
 
-export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgraded }: AccountProps) {
+export function Account({ email, tier, exportsUsed, limit, hasStripeCustomer, upgraded }: AccountProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<'upgrade' | 'billing' | 'signout' | null>(null);
   const [stripeError, setStripeError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
   };
 
   const handleUpgrade = async () => {
+    trackEvent.upgradeClicked('account');
     setLoading('upgrade');
     setStripeError(null);
     try {
@@ -70,7 +72,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
   };
 
   const isPro = tier === 'pro';
-  const usagePct = Math.min((setsUsed / limit) * 100, 100);
+  const usagePct = limit > 0 ? Math.min((exportsUsed / limit) * 100, 100) : 0;
   const usageColor = usagePct >= 100 ? SD.red : usagePct >= 80 ? SD.yellow : SD.accent;
 
   return (
@@ -88,7 +90,7 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
           <div style={{ marginBottom: 24, padding: '16px 20px',
             background: SD.greenDim, border: `1px solid ${SD.green}44`,
             borderRadius: 4, fontFamily: SD.mono, fontSize: 12, color: SD.green }}>
-            ✓ You&apos;re now on {BRAND.name} Pro. Enjoy unlimited generation.
+            ✓ You&apos;re now on {BRAND.name} Pro. Enjoy unlimited exports.
           </div>
         )}
 
@@ -112,33 +114,42 @@ export function Account({ email, tier, setsUsed, limit, hasStripeCustomer, upgra
             </span>
           </div>
 
-          {/* Usage bar */}
-          <div style={{ marginBottom: isPro ? 0 : 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between',
-              alignItems: 'baseline', marginBottom: 10 }}>
-              <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
-                Sets generated this month
-              </span>
-              <span style={{ fontFamily: SD.mono, fontSize: 13,
-                color: usagePct >= 100 ? SD.red : SD.text }}>
-                {setsUsed}<span style={{ color: SD.textMuted, fontSize: 13 }}>/{limit}</span>
-              </span>
+          {/* Usage */}
+          {isPro ? (
+            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
+              Unlimited exports · unlimited set &amp; crate generation
             </div>
-            <div style={{ height: 4, background: SD.surface2, borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 2,
-                width: `${usagePct}%`,
-                background: usageColor,
-                transition: 'width .4s ease',
-              }} />
+          ) : (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between',
+                alignItems: 'baseline', marginBottom: 10 }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
+                  Exports this month
+                </span>
+                <span style={{ fontFamily: SD.mono, fontSize: 13,
+                  color: usagePct >= 100 ? SD.red : SD.text }}>
+                  {exportsUsed}<span style={{ color: SD.textMuted, fontSize: 13 }}>/{limit}</span>
+                </span>
+              </div>
+              <div style={{ height: 4, background: SD.surface2, borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  width: `${usagePct}%`,
+                  background: usageColor,
+                  transition: 'width .4s ease',
+                }} />
+              </div>
+              <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 8 }}>
+                Building sets &amp; crates is unlimited — only exports count. Extra formats of the same set are free.
+              </div>
             </div>
-          </div>
+          )}
 
           {!isPro && (
             <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4 }}>
               <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
                 lineHeight: 1.8, marginBottom: 16 }}>
-                Pro includes 50 sets/month, priority processing, and unlimited crate exports.
+                Pro includes unlimited exports, unlimited set &amp; crate generation, and priority processing. Free includes {limit} exports/month.
               </div>
               <SDButton
                 onClick={handleUpgrade}

@@ -3,7 +3,8 @@ import { runSetlistPipeline } from '@/lib/agents/pipeline';
 import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types';
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { recordUsage, usageToday } from '@/lib/api-usage';
+import { PLANS } from '@/lib/stripe';
 
 export const maxDuration = 300;
 
@@ -62,24 +63,22 @@ export async function POST(req: NextRequest) {
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   const isBeta = dbBeta || (!!user.email && betaEmails.includes(user.email.toLowerCase()));
 
+  // Generation is unlimited for normal use; enforce only a soft daily cap as an
+  // anti-abuse guard (the paywall is on exports, not generation).
   if (!isBeta) {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
-    const { count } = await supabase
-      .from('setlists')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', thirtyDaysAgo);
-
     const { data: userRow } = await supabase
       .from('users')
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
-    const tier = userRow?.subscription_tier ?? 'free';
-    const limit = tier === 'pro' ? 50 : 3;
-
-    if ((count ?? 0) >= limit) {
-      return NextResponse.json({ error: 'rate_limit', tier, limit }, { status: 429 });
+    const tier = (userRow?.subscription_tier ?? 'free') as 'free' | 'pro';
+    const dailyCap = PLANS[tier].dailyGenCap;
+    if (dailyCap != null) {
+      // recordUsage already logged this call, so `used` includes it.
+      const used = await usageToday(user.id, 'generate-setlist');
+      if (used > dailyCap) {
+        return NextResponse.json({ error: 'daily_limit', tier, limit: dailyCap }, { status: 429 });
+      }
     }
   }
 

@@ -34,3 +34,26 @@ export async function recordUsage(
     return { banned: false, isBeta: false };
   }
 }
+
+/**
+ * Counts how many times `endpoint` has been recorded for this user since the
+ * start of the current (server-local) day. Used for the soft daily generation
+ * cap. Uses the service-role client (api_usage is written server-side) and
+ * never throws — a lookup failure returns 0 so it fails open.
+ */
+export async function usageToday(userId: string, endpoint: string): Promise<number> {
+  try {
+    const admin = createAdminClient();
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const { count } = await admin
+      .from('api_usage')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('endpoint', endpoint)
+      .gte('created_at', start.toISOString());
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}

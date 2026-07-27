@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { recordUsage, usageToday } from '@/lib/api-usage';
+import { PLANS } from '@/lib/stripe';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
 import type { CrateTrack } from '@/lib/crates/types';
@@ -261,24 +262,21 @@ export async function POST(req: NextRequest) {
     const { banned, isBeta } = await recordUsage(user.id, 'crates-generate');
     if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
 
+    // Crate generation is unlimited for normal use; enforce only a soft daily cap
+    // as an anti-abuse guard (the paywall is on exports, not generation).
     if (!isBeta) {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
       const { data: userRow } = await supabase
         .from('users')
         .select('subscription_tier')
         .eq('id', user.id)
         .single();
       const tier = (userRow?.subscription_tier ?? 'free') as 'free' | 'pro';
-      const crateLimit = tier === 'pro' ? 30 : 3;
-
-      const { count } = await supabase
-        .from('themed_crates')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgo);
-
-      if ((count ?? 0) >= crateLimit) {
-        return NextResponse.json({ error: 'quota_exhausted', tier, limit: crateLimit }, { status: 429 });
+      const dailyCap = PLANS[tier].dailyGenCap;
+      if (dailyCap != null) {
+        const used = await usageToday(user.id, 'crates-generate');
+        if (used > dailyCap) {
+          return NextResponse.json({ error: 'daily_limit', tier, limit: dailyCap }, { status: 429 });
+        }
       }
     }
 

@@ -46,4 +46,23 @@ export const trackEvent = {
   setGenerationFailed(reason: string, genre?: string) {
     track('set_generation_failed', genre ? { reason, genre } : { reason });
   },
+
+  // — Crate generation —
+  crateGenerated(trackCount: number) {
+    track('crate_generated', { track_count: trackCount });
+  },
+
+  // — Export funnel — export is the paywall; `export_blocked` marks the monthly
+  // wall (the upgrade moment), distinct from a real export.
+  exportStarted(source: 'setlist' | 'crate', format: string) {
+    track('export_started', { source, format });
+  },
+  exportBlocked(source: 'setlist' | 'crate') {
+    track('export_blocked', { source });
+  },
+
+  // — Upgrade funnel —
+  upgradeClicked(source: string) {
+    track('upgrade_clicked', { source });
+  },
 };
