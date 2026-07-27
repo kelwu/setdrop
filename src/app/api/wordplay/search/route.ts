@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAnthropic } from '@/lib/anthropic';
 import { jsonrepair } from 'jsonrepair';
 import { createClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { recordUsage, recordCost, usageFrom } from '@/lib/api-usage';
 
 export const maxDuration = 60;
 
@@ -106,6 +106,7 @@ Only include tracks you are genuinely confident feature this word in their lyric
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     }, { timeout: 50_000 });
+    await recordCost(user.id, 'wordplay-search', usageFrom('claude-sonnet-4-6', msg));
 
     const text = msg.content.find(b => b.type === 'text')?.text ?? '';
     const match = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);

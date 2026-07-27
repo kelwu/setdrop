@@ -12,6 +12,8 @@ import {
 } from '@/lib/setdrop/rekordbox-export';
 import type { SetlistTrack, LibraryTrack } from '@/lib/agents/types';
 import type { CrateTrack } from '@/lib/crates/types';
+import { gateExport } from '@/lib/setdrop/export-gate';
+import { trackEvent } from '@/lib/analytics';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -193,11 +195,10 @@ export function CrateBuilder() {
       });
       const json = await res.json() as { crate?: ActiveCrate; error?: string; tier?: string; limit?: number; warning?: string };
       if (res.status === 429) {
-        const isPro = json.tier === 'pro';
         setError(
-          isPro
-            ? `You've used all ${json.limit} crate builds this month. Resets in 30 days.`
-            : `Free plan includes ${json.limit} crate builds/month. Upgrade to Pro for 30/month.`
+          json.error === 'cost_limit'
+            ? "You've hit today's usage limit — it resets tomorrow. Upgrade to Pro for no daily limits."
+            : `You've hit today's generation limit${json.limit ? ` (${json.limit}/day)` : ''} — it resets tomorrow. Upgrade to Pro for no daily limits.`
         );
         return;
       }
@@ -207,6 +208,7 @@ export function CrateBuilder() {
       }
       setActiveCrate(json.crate);
       setWarning(json.warning ?? null);
+      trackEvent.crateGenerated(json.crate.tracks.length);
       await loadCrates();
     } catch {
       setError('Network error — check your connection');
@@ -239,30 +241,36 @@ export function CrateBuilder() {
     await loadCrates();
   };
 
-  // Export handlers
-  const handleExportSerato = () => {
+  // Export handlers — gate against the monthly export limit before downloading.
+  const handleExportSerato = async () => {
     if (!activeCrate) return;
     const paths = activeCrate.tracks.map(t => t.filePath).filter((p): p is string => Boolean(p));
     if (!paths.length) { setError('No file paths available — library may need re-sync'); return; }
+    const gate = await gateExport('crate', activeCrate.id, 'serato-crate');
+    if (!gate.ok) { setError(gate.message ?? 'Export limit reached'); return; }
     const data = buildCrate(paths);
     downloadCrate(data, activeCrate.name);
   };
 
-  const handleExportRekordbox = () => {
+  const handleExportRekordbox = async () => {
     if (!activeCrate) return;
     const setlist = activeCrate.tracks.map(toSetlistTrack);
     const library = activeCrate.tracks.map(toLibraryTrack);
     const { xml, matched } = buildRekordboxXml(activeCrate.name, setlist, library);
     if (!matched) { setError('No file paths — library may need re-sync'); return; }
+    const gate = await gateExport('crate', activeCrate.id, 'rekordbox-xml');
+    if (!gate.ok) { setError(gate.message ?? 'Export limit reached'); return; }
     downloadRekordboxXml(xml, activeCrate.name);
   };
 
-  const handleExportM3u = () => {
+  const handleExportM3u = async () => {
     if (!activeCrate) return;
     const setlist = activeCrate.tracks.map(toSetlistTrack);
     const library = activeCrate.tracks.map(toLibraryTrack);
     const { m3u, matched } = buildM3u(activeCrate.name, setlist, library);
     if (!matched) { setError('No file paths — library may need re-sync'); return; }
+    const gate = await gateExport('crate', activeCrate.id, 'm3u');
+    if (!gate.ok) { setError(gate.message ?? 'Export limit reached'); return; }
     downloadM3u(m3u, activeCrate.name);
   };
 

@@ -9,6 +9,7 @@ import { buildRekordboxXml, downloadRekordboxXml, buildM3u, downloadM3u } from '
 import { createClient } from '@/lib/supabase/client';
 import { SDButton, TrackRow, EnergyArcChart } from './shared';
 import { BRAND } from '@/lib/brand';
+import { gateExport } from '@/lib/setdrop/export-gate';
 
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -262,6 +263,8 @@ export function SetlistOutput() {
         : 'No tracks matched. Re-upload your Serato DB V2 file.');
       return;
     }
+    const gate = await gateExport('setlist', setlist.dbId ?? setlist.shareSlug, 'serato-crate');
+    if (!gate.ok) { setCrateStatus(gate.message ?? 'Export limit reached'); return; }
     const data = buildCrate(paths);
     downloadCrate(data, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${tracks.length} tracks — copy the .crate file into your Serato Subcrates folder.`);
@@ -312,6 +315,8 @@ export function SetlistOutput() {
     const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
     const { xml, matched } = buildRekordboxXml(setlist.name, tracks, library);
     if (!matched) { setCrateStatus('No tracks matched. Re-upload your library file in the Library tab.'); return; }
+    const gate = await gateExport('setlist', setlist.dbId ?? setlist.shareSlug, 'rekordbox-xml');
+    if (!gate.ok) { setCrateStatus(gate.message ?? 'Export limit reached'); return; }
     downloadRekordboxXml(xml, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox, click "rekordbox xml" in the left panel, expand Playlists, then drag the playlist into your Playlists.`);
     setTimeout(() => setCrateStatus(null), 12000);
@@ -360,6 +365,8 @@ export function SetlistOutput() {
     const tracks = libraryOnly ? setlist.tracks.filter(t => !t.isWishlistTrack) : setlist.tracks;
     const { m3u, matched } = buildM3u(setlist.name, tracks, library);
     if (!matched) { setCrateStatus('No tracks matched. Re-upload your library file in the Library tab.'); return; }
+    const gate = await gateExport('setlist', setlist.dbId ?? setlist.shareSlug, 'm3u');
+    if (!gate.ok) { setCrateStatus(gate.message ?? 'Export limit reached'); return; }
     downloadM3u(m3u, setlist.name);
     setCrateStatus(`Downloaded ${matched}/${setlist.tracks.length} tracks — in Rekordbox go to File → Import → Import Playlist and select the .m3u file.`);
     setTimeout(() => setCrateStatus(null), 10000);

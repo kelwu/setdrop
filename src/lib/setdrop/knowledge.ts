@@ -6,9 +6,9 @@ export const KNOWLEDGE_CHUNKS = [
   {
     category: 'pricing',
     content: `SetLab pricing:
-- Free: $0/month — 3 AI-generated sets/month, 3 crate builds/month, 10 Track IDs/month
-- Pro: $12/month — 50 AI-generated sets/month, 30 crate builds/month, 500 Track IDs/month, all export formats
-Sign up at setlab.ai. No credit card required for the free tier. Cancel Pro anytime from account settings.`,
+- Free: $0/month — unlimited AI set & crate generation, 3 exports/month, 10 Track IDs/month
+- Pro: $12/month — unlimited exports (Serato, Rekordbox, M3U), unlimited generation, 500 Track IDs/month
+Generating sets and crates is unlimited on both plans; exports are what the free plan caps at 3/month (re-exporting the same set, or exporting it in multiple formats, counts as one). Sign up at setlab.ai. No credit card required for the free tier. Cancel Pro anytime from account settings.`,
   },
   {
     category: 'getting_started',
@@ -22,7 +22,7 @@ SetLab never modifies your original Serato or Rekordbox files.`,
   },
   {
     category: 'set_builder',
-    content: `The Set Builder generates a starting setlist from your actual library. You describe the gig — venue, crowd type, duration, lineup slot — and AI builds a structured draft. Each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it. The AI gives you a draft; you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Free: 3 sets/month. Pro: 50 sets/month.`,
+    content: `The Set Builder generates a starting setlist from your actual library. You describe the gig — venue, crowd type, duration, lineup slot — and AI builds a structured draft. Each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it. The AI gives you a draft; you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Generating sets is unlimited on both Free and Pro — the free plan only caps exports at 3/month.`,
   },
   {
     category: 'track_id',

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
+import { usageFrom, type CallUsage } from '@/lib/api-usage';
 import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, GeneratedSetlist,
@@ -19,7 +20,7 @@ const PIPELINE_TIMEOUT_MS = 270_000;
 const BLUEPRINT_TIMEOUT_MS = 120_000;
 const SELECTOR_TIMEOUT_MS = 180_000;
 
-type CallOptions = { signal?: AbortSignal; timeout?: number };
+type CallOptions = { signal?: AbortSignal; timeout?: number; onUsage?: (u: CallUsage) => void };
 
 function isTimeoutOrAbort(err: unknown): boolean {
   if (err instanceof Anthropic.APIUserAbortError) return true;
@@ -145,6 +146,7 @@ async function callWithTool<T>(
     tools: [tool],
     tool_choice: { type: 'tool', name: tool.name },
   }, { signal: options.signal, timeout: options.timeout });
+  options.onUsage?.(usageFrom(MODEL, msg));
 
   const block = msg.content.find(b => b.type === 'tool_use');
   if (!block || block.type !== 'tool_use') {
@@ -238,6 +240,7 @@ async function runGigBlueprint(
   profile: LibraryProfile,
   input: SetlistInput,
   signal?: AbortSignal,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<{ gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
   const anthropic = client();
   const userMessage = `Library profile:
@@ -261,6 +264,7 @@ Gig context:
     tools: [WEB_SEARCH_TOOL, GIG_BLUEPRINT_TOOL],
     tool_choice: { type: 'auto' },
   }, { signal, timeout: BLUEPRINT_TIMEOUT_MS });
+  onUsage?.(usageFrom(MODEL, msg));
 
   const blueprintBlock = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock =>
@@ -281,6 +285,7 @@ Gig context:
     tools: [GIG_BLUEPRINT_TOOL],
     tool_choice: { type: 'tool', name: 'generate_gig_blueprint' },
   }, { signal, timeout: BLUEPRINT_TIMEOUT_MS });
+  onUsage?.(usageFrom(MODEL, forced));
 
   const block = forced.content.find((b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use');
   if (!block) throw new Error('Expected tool_use block from generate_gig_blueprint');
@@ -295,6 +300,7 @@ async function runSelectorReviewer(
   intel: GigIntelReport,
   recentlyPlayed: string[],
   signal?: AbortSignal,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
   const result = await callWithTool<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }>(
     SELECTOR_REVIEWER_SYSTEM,
@@ -320,7 +326,7 @@ ${JSON.stringify(tracks.map(t => ({
 })), null, 2)}`,
     SELECTOR_TOOL,
     16384,
-    { signal, timeout: SELECTOR_TIMEOUT_MS },
+    { signal, timeout: SELECTOR_TIMEOUT_MS, onUsage },
   );
   if (!result?.tracks?.length) {
     throw new Error('Selector returned no tracks — the model response may have been truncated. Please try again.');
@@ -341,6 +347,7 @@ export async function runSetlistPipeline(
   tracks: LibraryTrack[],
   recentlyPlayed: string[] = [],
   onProgress?: (event: PipelineProgressEvent) => void,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<GeneratedSetlist> {
   const controller = new AbortController();
   const deadline = setTimeout(() => controller.abort(), PIPELINE_TIMEOUT_MS);
@@ -351,12 +358,12 @@ export async function runSetlistPipeline(
     const profile = computeLibraryProfile(tracks);
 
     onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
-    const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal);
+    const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal, onUsage);
 
     onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
     const filtered = filterTracksForGig(tracks, blueprint, input);
 
-    const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed, signal);
+    const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed, signal, onUsage);
 
     onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
 

@@ -14,7 +14,7 @@ export function SetlistBuilder() {
   const [generating, setGenerating] = useState(false);
   const [genStep, setGenStep] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
-  const [rateLimited, setRateLimited] = useState<{ tier: string; limit: number } | null>(null);
+  const [rateLimited, setRateLimited] = useState<{ tier: string; reason: string; limit?: number } | null>(null);
 
   const [mixName, setMixName] = useState('');
   const [primaryGenre, setPrimaryGenre] = useState('');
@@ -167,9 +167,9 @@ export function SetlistBuilder() {
     }
 
     if (res.status === 429) {
-      const data = await res.json().catch(() => ({ tier: 'free', limit: 3 })) as { tier: string; limit: number };
+      const data = await res.json().catch(() => ({ tier: 'free', error: 'daily_limit' })) as { tier: string; error?: string; limit?: number };
       setGenerating(false);
-      setRateLimited({ tier: data.tier, limit: data.limit });
+      setRateLimited({ tier: data.tier, reason: data.error ?? 'daily_limit', limit: data.limit });
       trackEvent.setGenerationFailed('rate_limited', primaryGenre || undefined);
       return;
     }
@@ -409,11 +409,13 @@ export function SetlistBuilder() {
         display:'flex', alignItems:'center', justifyContent:'center' }}>
         <div className="sd-pad-x" style={{ maxWidth:480, width:'100%', padding:'0 40px', textAlign:'center', animation:'sdFadeUp 0.5s ease both' }}>
           <div style={{ fontFamily:SD.display, fontSize:40, letterSpacing:4, color:SD.accent, marginBottom:8 }}>
-            LIMIT REACHED
+            DAILY LIMIT REACHED
           </div>
           <div style={{ fontFamily:SD.body, fontSize:15, color:SD.textSec, lineHeight:1.8, marginBottom:32 }}>
-            Free plan includes {rateLimited.limit} sets per month.{' '}
-            Upgrade to Pro for unlimited generation, priority processing, and more.
+            {rateLimited.reason === 'cost_limit'
+              ? "You've hit today's usage limit — it resets tomorrow."
+              : `You've hit today's generation limit${rateLimited.limit ? ` (${rateLimited.limit}/day)` : ''} — it resets tomorrow.`}{' '}
+            Generating sets is free and unlimited on Pro, with no daily limits.
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <SDButton onClick={() => router.push('/account')} style={{ fontSize:13, padding:'14px 40px' }}>

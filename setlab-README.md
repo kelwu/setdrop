@@ -35,8 +35,8 @@ SetLab handles the grunt work of DJ prep so the creative decisions stay with you
 
 | Tier | Price | Limits |
 |------|-------|--------|
-| Free | $0 | 5 AI sets/month · 10 Track IDs/month |
-| Pro | $12/month | 50 AI sets/month · 500 Track IDs/month |
+| Free | $0 | Unlimited set & crate generation · 3 exports/month · 10 Track IDs/month |
+| Pro | $12/month | Unlimited exports · unlimited generation · 500 Track IDs/month |
 
 ---
 

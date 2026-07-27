@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { recordUsage, recordCost, usageFrom, type CallUsage } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
 
@@ -342,7 +342,7 @@ const EMERGING_SYSTEM = `You are a DJ trend scout. Find emerging artists gaining
 
 // ─── AI fetch functions ───────────────────────────────────────────────────────
 
-async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
+async function fetchBpmGapRecs(rawGaps: RawGap[], onUsage?: (u: CallUsage) => void): Promise<LibraryGap[]> {
   const anthropic = getAnthropic();
   const userMsg = `Library gaps:\n${JSON.stringify(rawGaps, null, 2)}\n\nRecommend 3 tracks per gap and call report_library_gaps.`;
 
@@ -354,6 +354,7 @@ async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
     tools: [GAP_TOOL],
     tool_choice: { type: 'tool', name: 'report_library_gaps' },
   }, { timeout: 120_000 });
+  onUsage?.(usageFrom(MODEL, msg));
 
   const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
@@ -365,6 +366,7 @@ async function fetchBpmGapRecs(rawGaps: RawGap[]): Promise<LibraryGap[]> {
 async function fetchEmergingArtists(
   genres: string[],
   libraryArtists: Set<string>,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<Map<string, EmergingArtist[]>> {
   if (!genres.length) return new Map();
 
@@ -379,6 +381,7 @@ async function fetchEmergingArtists(
     tools: [EMERGING_TOOL],
     tool_choice: { type: 'tool', name: 'report_emerging_artists' },
   }, { timeout: 120_000 });
+  onUsage?.(usageFrom(MODEL, msg));
 
   const block = msg.content.find(
     (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',
@@ -462,13 +465,16 @@ export async function GET() {
 
     const gapGenres = [...new Set(rawGaps.map(g => g.genre))].slice(0, 3);
 
+    const usages: CallUsage[] = [];
+    const pushUsage = (u: CallUsage) => usages.push(u);
     const [gapsWithRecs, emergingMap] = await Promise.all([
-      fetchBpmGapRecs(rawGaps).catch(err => {
+      fetchBpmGapRecs(rawGaps, pushUsage).catch(err => {
         console.error('[analyze-gaps] fetchBpmGapRecs failed:', err instanceof Error ? err.message : err);
         return rawGaps.map(g => ({ ...g, recommendations: [] as GapRecommendation[] }));
       }),
-      fetchEmergingArtists(gapGenres, libraryArtists).catch(() => new Map<string, EmergingArtist[]>()),
+      fetchEmergingArtists(gapGenres, libraryArtists, pushUsage).catch(() => new Map<string, EmergingArtist[]>()),
     ]);
+    await recordCost(user.id, 'analyze-gaps', usages);
 
     const enrichedGaps = (gapsWithRecs ?? []).map(gap => ({
       ...gap,
