@@ -120,7 +120,8 @@ export function CrateBuilder() {
   const [excludeArtistInput, setExcludeArtistInput] = useState('');
   const [excludeArtists, setExcludeArtists] = useState<string[]>([]);
   const [cleanOnly, setCleanOnly] = useState(false);
-  const [crateSize, setCrateSize] = useState<number | 'all'>(50);
+  const [crateSize, setCrateSize] = useState<'auto' | 'custom' | 'all' | 25 | 50 | 100>('auto');
+  const [customSize, setCustomSize] = useState('');
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +178,13 @@ export function CrateBuilder() {
       if (yearMax) body.yearMax = Number(yearMax);
       if (excludeArtists.length) body.excludeArtists = excludeArtists;
       if (cleanOnly) body.cleanOnly = true;
-      body.targetCount = crateSize === 'all' ? 0 : crateSize; // 0 = no cap
+      // Size: 'auto' omits targetCount (server reads the prompt / picks a default);
+      // 'all' sends 0 (no cap); a preset or custom number sends that count.
+      if (crateSize === 'all') body.targetCount = 0;
+      else if (crateSize === 'custom') {
+        const n = parseInt(customSize, 10);
+        if (n > 0) body.targetCount = n;
+      } else if (typeof crateSize === 'number') body.targetCount = crateSize;
 
       const res = await fetch('/api/crates/generate', {
         method: 'POST',
@@ -440,9 +447,13 @@ export function CrateBuilder() {
         {/* Crate size */}
         <div style={{ marginTop: 16 }}>
           <Label>Crate Size</Label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {([25, 50, 100, 'all'] as const).map(opt => {
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {(['auto', 25, 50, 100, 'custom', 'all'] as const).map(opt => {
               const active = crateSize === opt;
+              const label = opt === 'auto' ? 'Auto'
+                : opt === 'custom' ? 'Custom'
+                : opt === 'all' ? 'All matches'
+                : String(opt);
               return (
                 <button
                   key={String(opt)}
@@ -457,13 +468,27 @@ export function CrateBuilder() {
                     transition: 'all .15s',
                   }}
                 >
-                  {opt === 'all' ? 'All matches' : `${opt} tracks`}
+                  {label}
                 </button>
               );
             })}
+            {crateSize === 'custom' && (
+              <input
+                type="number"
+                min={1}
+                value={customSize}
+                onChange={e => setCustomSize(e.target.value)}
+                placeholder="e.g. 32"
+                style={{
+                  width: 90, background: SD.surface2, border: `1px solid ${SD.border}`,
+                  borderRadius: SD.r2, color: SD.text, fontFamily: SD.mono,
+                  fontSize: SD.t12, padding: '8px 10px', boxSizing: 'border-box',
+                }}
+              />
+            )}
           </div>
           <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 5 }}>
-            Larger sets sample evenly across the BPM range. Choose &ldquo;All&rdquo; for every match.
+            Auto reads a count from your prompt (e.g. &ldquo;30-track warmup&rdquo;) or picks a sensible size. Larger sets sample evenly across the BPM range.
           </div>
         </div>
 

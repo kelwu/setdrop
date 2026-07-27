@@ -38,6 +38,9 @@ interface CrateProfile {
   targetEnergy: 'warmup' | 'build' | 'peak' | 'mixed';
   sortOrder: 'asc' | 'desc' | 'energy_arc';
   moodNotes: string;
+  // Set only when the prompt names a track count (e.g. "30-track warmup"). Used
+  // when the UI leaves size on "Auto"; an explicit UI size always overrides it.
+  targetCount?: number | null;
 }
 
 // ─── AI tool ──────────────────────────────────────────────────────────────────
@@ -80,6 +83,10 @@ const PROFILE_TOOL: Anthropic.Tool = {
         type: 'string',
         description: 'One sentence describing the vibe/context of this crate',
       },
+      targetCount: {
+        type: 'number',
+        description: 'Only set this if the prompt explicitly names a number of tracks (e.g. "30-track set", "give me 20"). Otherwise omit it.',
+      },
     },
   },
 };
@@ -104,6 +111,7 @@ BPM guidance by genre family:
 - Pop / Top 40: 95-130
 
 Use genreKeywords that would match what's in a typical DJ's Serato library (Serato genres are often broad: "House", "Hip Hop", "R&B", etc.).
+If (and only if) the prompt names a specific number of tracks (e.g. "30-track warmup", "give me 20"), set targetCount to that number; otherwise omit it.
 Call parse_crate_prompt with the structured profile.`;
 
 // ─── Track filtering & sorting ────────────────────────────────────────────────
@@ -341,13 +349,17 @@ export async function POST(req: NextRequest) {
       cleanOnly: body.cleanOnly,
     };
 
-    // Filter, then select + order. targetCount: 0 means "no cap"; omitted falls
-    // back to DEFAULT_CRATE_SIZE so a broad genre can't produce an unusable crate.
+    // Filter, then select + order.
     const { tracks: filtered, genreRequested, genreMatchCount } =
       filterTracks(rawTracks as RawTrack[], profile, extra);
-    const cap = body.targetCount === 0
-      ? null
-      : (body.targetCount && body.targetCount > 0 ? body.targetCount : DEFAULT_CRATE_SIZE);
+    // Size precedence: an explicit UI count wins; targetCount: 0 means "All" (no
+    // cap); when the UI leaves it on Auto (undefined), use a count parsed from the
+    // prompt, else DEFAULT_CRATE_SIZE so a broad genre can't produce a huge crate.
+    let cap: number | null;
+    if (body.targetCount === 0) cap = null;
+    else if (typeof body.targetCount === 'number' && body.targetCount > 0) cap = body.targetCount;
+    else if (typeof profile.targetCount === 'number' && profile.targetCount > 0) cap = profile.targetCount;
+    else cap = DEFAULT_CRATE_SIZE;
     const ordered = orderAndCap(filtered, profile.sortOrder, cap);
     const selected = ordered.map(toStoredTrack);
 
