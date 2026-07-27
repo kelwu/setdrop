@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAnthropic } from '@/lib/anthropic';
 import { jsonrepair } from 'jsonrepair';
 import { createClient } from '@/lib/supabase/server';
+import { recordCost, usageFrom, type CallUsage } from '@/lib/api-usage';
 
 export const maxDuration = 300;
 
@@ -9,6 +10,7 @@ const MODEL = 'claude-sonnet-4-6';
 
 async function lookupBpmKey(
   tracks: Array<{ id: string; artist: string; title: string }>,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<Array<{ id: string; bpm: number | null; key: string | null }>> {
   const anthropic = getAnthropic();
 
@@ -28,6 +30,7 @@ Return ONLY a JSON array with one object per track in order:
 [{"bpm": 128, "key": "8A"}, {"bpm": 95, "key": "2B"}, ...]`,
     }],
   }, { timeout: 120_000 });
+  onUsage?.(usageFrom(MODEL, msg));
 
   const text = msg.content.find(b => b.type === 'text')?.text ?? '';
   const match = text.match(/\[[\s\S]*\]/);
@@ -52,6 +55,8 @@ export async function POST() {
 
   const BATCH = 10;
   let enriched = 0;
+  const usages: CallUsage[] = [];
+  const pushUsage = (u: CallUsage) => usages.push(u);
 
   // Wishlist tracks missing BPM or key — cap at 50 to bound Anthropic spend
   const { data: wishlistTracks } = await supabase
@@ -67,6 +72,7 @@ export async function POST() {
     const batch = wishlistToEnrich.slice(i, i + BATCH);
     const results = await lookupBpmKey(
       batch.map(t => ({ id: t.id, artist: t.artist ?? '', title: t.title ?? '' })),
+      pushUsage,
     );
     await Promise.all(results.map(async (r) => {
       const orig = batch.find(t => t.id === r.id);
@@ -117,5 +123,6 @@ export async function POST() {
     }
   }
 
+  await recordCost(user.id, 'enrich-bpm-key', usages);
   return NextResponse.json({ enriched });
 }

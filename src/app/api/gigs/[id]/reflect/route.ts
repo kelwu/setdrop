@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { recordUsage, recordCost, usageFrom } from '@/lib/api-usage';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
 
@@ -217,6 +217,7 @@ Produce a factual diff. Match tracks by artist/title similarity. "matched" = sam
     tools: [REFLECT_TOOL],
     tool_choice: { type: 'tool', name: 'generate_reflection' },
   }, { timeout: 55_000 });
+  await recordCost(user.id, 'gig-reflect', usageFrom(MODEL, msg));
 
   const block = msg.content.find((b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use');
   if (!block) return NextResponse.json({ error: 'Claude did not return reflection' }, { status: 500 });

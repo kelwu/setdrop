@@ -453,10 +453,10 @@ export function LandingPage() {
 
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 40px', display:'flex', flexDirection:'column', gap:14 }}>
                 {[
-                  '3 AI-generated sets / month',
+                  'Unlimited AI set & crate generation',
+                  '3 exports / month (Serato, Rekordbox, M3U)',
                   'Full library upload (Serato DB / CSV)',
                   'BPM & key enrichment',
-                  'Serato crate export',
                 ].map(f => (
                   <li key={f} style={{ display:'flex', alignItems:'flex-start', gap:12,
                     fontFamily:SD.body, fontSize:14, color:SD.textSec, lineHeight:1.5 }}>
@@ -498,9 +498,9 @@ export function LandingPage() {
 
               <ul style={{ listStyle:'none', padding:0, margin:'0 0 40px', display:'flex', flexDirection:'column', gap:14 }}>
                 {[
-                  '50 AI-generated sets / month',
-                  'Priority AI processing',
-                  'Unlimited crate exports',
+                  'Unlimited exports — Serato, Rekordbox, M3U',
+                  'Unlimited AI set & crate generation',
+                  '500 Track IDs / month',
                   'Full library upload (Serato DB / CSV)',
                   'BPM & key enrichment',
                 ].map(f => (

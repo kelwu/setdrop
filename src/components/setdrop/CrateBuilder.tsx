@@ -195,11 +195,10 @@ export function CrateBuilder() {
       });
       const json = await res.json() as { crate?: ActiveCrate; error?: string; tier?: string; limit?: number; warning?: string };
       if (res.status === 429) {
-        const isPro = json.tier === 'pro';
         setError(
-          isPro
-            ? `You've used all ${json.limit} crate builds this month. Resets in 30 days.`
-            : `Free plan includes ${json.limit} crate builds/month. Upgrade to Pro for 30/month.`
+          json.error === 'cost_limit'
+            ? "You've hit today's usage limit — it resets tomorrow. Upgrade to Pro for no daily limits."
+            : `You've hit today's generation limit${json.limit ? ` (${json.limit}/day)` : ''} — it resets tomorrow. Upgrade to Pro for no daily limits.`
         );
         return;
       }

@@ -25,12 +25,16 @@ export const PLANS = {
     priceId: process.env.STRIPE_PRO_PRICE_ID ?? '',
     exportLimit: null as number | null,
     dailyGenCap: null as number | null,
+    // Per-user daily estimated-spend ceiling (USD) — anti-abuse backstop on the
+    // real COGS driver (generation). null = no ceiling.
+    dailyCostCeilingUsd: null as number | null,
     trackIdLimit: 500,
   },
   free: {
     name: `${BRAND.name} Free`,
     exportLimit: 3 as number | null,
     dailyGenCap: 25 as number | null,
+    dailyCostCeilingUsd: 2 as number | null,
     trackIdLimit: 10,
   },
 } as const;

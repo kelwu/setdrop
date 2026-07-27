@@ -149,7 +149,7 @@ export function Account({ email, tier, exportsUsed, limit, hasStripeCustomer, up
             <div style={{ borderTop: `1px solid ${SD.border}`, paddingTop: 20, marginTop: 4 }}>
               <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted,
                 lineHeight: 1.8, marginBottom: 16 }}>
-                Pro includes unlimited exports, unlimited set &amp; crate generation, and priority processing. Free includes {limit} exports/month.
+                Pro includes unlimited exports and unlimited set &amp; crate generation. Free includes {limit} exports/month.
               </div>
               <SDButton
                 onClick={handleUpgrade}

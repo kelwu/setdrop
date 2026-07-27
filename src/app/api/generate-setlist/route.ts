@@ -3,7 +3,7 @@ import { runSetlistPipeline } from '@/lib/agents/pipeline';
 import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types';
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
-import { recordUsage, usageToday } from '@/lib/api-usage';
+import { recordUsage, usageToday, costToday, recordCost, type CallUsage } from '@/lib/api-usage';
 import { PLANS } from '@/lib/stripe';
 
 export const maxDuration = 300;
@@ -63,15 +63,17 @@ export async function POST(req: NextRequest) {
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
   const isBeta = dbBeta || (!!user.email && betaEmails.includes(user.email.toLowerCase()));
 
-  // Generation is unlimited for normal use; enforce only a soft daily cap as an
-  // anti-abuse guard (the paywall is on exports, not generation).
+  // Generation is unlimited for normal use; enforce only anti-abuse guards (the
+  // paywall is on exports, not generation): a soft daily count cap AND a per-user
+  // daily estimated-spend ceiling, since generation is the real COGS driver.
+  let tier: 'free' | 'pro' = 'free';
   if (!isBeta) {
     const { data: userRow } = await supabase
       .from('users')
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
-    const tier = (userRow?.subscription_tier ?? 'free') as 'free' | 'pro';
+    tier = (userRow?.subscription_tier ?? 'free') as 'free' | 'pro';
     const dailyCap = PLANS[tier].dailyGenCap;
     if (dailyCap != null) {
       // recordUsage already logged this call, so `used` includes it.
@@ -79,6 +81,10 @@ export async function POST(req: NextRequest) {
       if (used > dailyCap) {
         return NextResponse.json({ error: 'daily_limit', tier, limit: dailyCap }, { status: 429 });
       }
+    }
+    const ceiling = PLANS[tier].dailyCostCeilingUsd;
+    if (ceiling != null && (await costToday(user.id)) >= ceiling) {
+      return NextResponse.json({ error: 'cost_limit', tier }, { status: 429 });
     }
   }
 
@@ -193,9 +199,13 @@ export async function POST(req: NextRequest) {
         }
       } catch { /* non-fatal */ }
 
-      const setlist = await runSetlistPipeline(input, library, recentlyPlayed, (event) => {
-        writer.write(encode(event));
-      });
+      const usages: CallUsage[] = [];
+      const setlist = await runSetlistPipeline(
+        input, library, recentlyPlayed,
+        (event) => { writer.write(encode(event)); },
+        (u) => { usages.push(u); },
+      );
+      await recordCost(user.id, 'generate-setlist', usages);
 
       await writer.write(encode({
         type: 'complete',

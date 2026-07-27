@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { recordUsage, usageToday } from '@/lib/api-usage';
+import { recordUsage, usageToday, costToday, recordCost, usageFrom } from '@/lib/api-usage';
 import { PLANS } from '@/lib/stripe';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
@@ -278,6 +278,10 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'daily_limit', tier, limit: dailyCap }, { status: 429 });
         }
       }
+      const ceiling = PLANS[tier].dailyCostCeilingUsd;
+      if (ceiling != null && (await costToday(user.id)) >= ceiling) {
+        return NextResponse.json({ error: 'cost_limit', tier }, { status: 429 });
+      }
     }
 
     const body = await req.json() as { prompt?: string; name?: string; genre?: string; bpmMin?: number; bpmMax?: number; yearMin?: number; yearMax?: number; excludeArtists?: string[]; cleanOnly?: boolean; targetCount?: number };
@@ -326,6 +330,7 @@ export async function POST(req: NextRequest) {
       tools: [PROFILE_TOOL],
       tool_choice: { type: 'tool', name: 'parse_crate_prompt' },
     }, { timeout: 45_000 });
+    await recordCost(user.id, 'crates-generate', usageFrom(MODEL, msg));
 
     const block = msg.content.find(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use',

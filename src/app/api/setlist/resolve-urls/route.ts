@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
-import { createClient } from '@/lib/supabase/server';
-import { recordUsage } from '@/lib/api-usage';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { recordUsage, recordCost, usageFrom, type CallUsage } from '@/lib/api-usage';
 
 export const maxDuration = 60;
 
@@ -82,12 +82,36 @@ async function resolveBeatport(artist: string, title: string): Promise<string | 
   }
 }
 
-// Web search verification for pools without public APIs
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Web search verification for pools without public APIs. Each call is a paid
+// web search ($0.01), so results are cached in `track_url_cache` keyed by
+// (artist, title, pool) and SHARED across all users/setlists — a track resolved
+// once is free on every later view and for every other user.
 async function searchPool(
   artist: string,
   title: string,
   domain: string,
+  onUsage?: (u: CallUsage) => void,
 ): Promise<{ url?: string; found: boolean }> {
+  const admin = createAdminClient();
+  const artistNorm = norm(artist);
+  const titleNorm = norm(title);
+
+  try {
+    const { data: cached } = await admin
+      .from('track_url_cache')
+      .select('url, found')
+      .eq('artist_norm', artistNorm)
+      .eq('title_norm', titleNorm)
+      .eq('pool', domain)
+      .maybeSingle();
+    if (cached) {
+      const c = cached as { url: string | null; found: boolean };
+      return { url: c.url ?? undefined, found: c.found };
+    }
+  } catch { /* cache miss / lookup failure — fall through to a live search */ }
+
   try {
     const msg = await anthropic().messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -101,16 +125,31 @@ async function searchPool(
       } as Anthropic.Messages.WebSearchTool20260209],
       tool_choice: { type: 'any' },
     }, { timeout: 15_000 });
+    onUsage?.(usageFrom('claude-haiku-4-5-20251001', msg));
 
+    let result: { url?: string; found: boolean } = { found: false };
     for (const block of msg.content) {
       if (block.type === 'web_search_tool_result') {
         const content = (block as Anthropic.Messages.WebSearchToolResultBlock).content;
         if (Array.isArray(content) && content.length > 0) {
-          return { url: content[0].url, found: true };
+          result = { url: content[0].url, found: true };
+          break;
         }
       }
     }
-    return { found: false };
+
+    // Cache the outcome (including "not found") so we don't re-pay for it.
+    try {
+      await admin.from('track_url_cache').upsert({
+        artist_norm: artistNorm,
+        title_norm: titleNorm,
+        pool: domain,
+        url: result.url ?? null,
+        found: result.found,
+      }, { onConflict: 'artist_norm,title_norm,pool' });
+    } catch { /* non-fatal — result still returned */ }
+
+    return result;
   } catch {
     return { found: false };
   }
@@ -129,8 +168,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ resolved: [] });
   }
 
-  // Cap to prevent unbounded fan-out (each wishlist track = 3 Claude web-search calls)
   const capped = tracks.slice(0, 100);
+  // Bound the paid web-search fan-out: resolve store pools for at most the first
+  // WISHLIST_RESOLVE_CAP wishlist tracks (× 3 pools = 60 searches max/request).
+  // Caching means re-views and popular tracks cost nothing, so this cap only
+  // bites a single first view of a huge wishlist. Beatport (free direct API)
+  // still resolves for all tracks.
+  const WISHLIST_RESOLVE_CAP = 20;
+  const wishlistToResolve = new Set(
+    capped.filter(t => t.isWishlist).slice(0, WISHLIST_RESOLVE_CAP).map(t => t.position),
+  );
+
+  const usages: CallUsage[] = [];
+  const pushUsage = (u: CallUsage) => usages.push(u);
 
   const results = await Promise.allSettled(
     capped.map(async (t): Promise<ResolvedTrack> => {
@@ -138,11 +188,11 @@ export async function POST(req: NextRequest) {
 
       resolved.beatportUrl = await resolveBeatport(t.artist, t.title);
 
-      if (t.isWishlist) {
+      if (t.isWishlist && wishlistToResolve.has(t.position)) {
         const [bpm, trax, djc] = await Promise.all([
-          searchPool(t.artist, t.title, 'www.bpmsupreme.com'),
-          searchPool(t.artist, t.title, 'www.traxsource.com'),
-          searchPool(t.artist, t.title, 'www.djcity.com'),
+          searchPool(t.artist, t.title, 'www.bpmsupreme.com', pushUsage),
+          searchPool(t.artist, t.title, 'www.traxsource.com', pushUsage),
+          searchPool(t.artist, t.title, 'www.djcity.com', pushUsage),
         ]);
         resolved.bpmSupremeUrl = bpm.url;
         resolved.bpmSupremeFound = bpm.found;
@@ -155,6 +205,9 @@ export async function POST(req: NextRequest) {
       return resolved;
     })
   );
+
+  // Record only the web searches that actually ran (cache hits produce no usage).
+  await recordCost(user.id, 'resolve-urls', usages);
 
   const resolved: ResolvedTrack[] = results
     .filter((r): r is PromiseFulfilledResult<ResolvedTrack> => r.status === 'fulfilled')
