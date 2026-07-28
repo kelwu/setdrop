@@ -7,6 +7,7 @@ import {
 } from './types';
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
+import { genreRelevance, superFamily } from '@/lib/setdrop/genre';
 
 // Notes are model-generated free text; occasionally the model leaks its own
 // reasoning into them (e.g. "Wait — pos 17… Planning accordingly…"). The prompt
@@ -224,12 +225,23 @@ function filterTracksForGig(
 ): LibraryTrack[] {
   const bpmMin = Math.min(...blueprint.phases.map(p => p.bpmRange.min)) - 15;
   const bpmMax = Math.max(...blueprint.phases.map(p => p.bpmRange.max)) + 15;
-  const primaryGenre = input.primaryGenre.toLowerCase();
-  const secondaryGenre = input.secondaryGenre?.toLowerCase() ?? '';
   const seeds = (input.seedTracks ?? []).map(s => s.toLowerCase());
 
   const isSeed = (t: LibraryTrack) =>
     seeds.some(s => t.title.toLowerCase().includes(s) || t.artist.toLowerCase().includes(s));
+
+  // Genre relevance GATES the pool: a track in a different super-family than the gig
+  // (e.g. R&B for a Trance gig) is excluded outright — genre is not a soft bonus that a
+  // tempo match can tie. Score by tier (exact 4 / family 3 / adjacent 2 / unknown 0).
+  // Secondary genre can rescue a track. Returns null when the track is excluded.
+  const genreScoreFor = (t: LibraryTrack): number | null => {
+    const primary = genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []);
+    const secondary = input.secondaryGenre
+      ? genreRelevance(input.secondaryGenre, t.genre ?? '', t.lastfmTags ?? [])
+      : null;
+    const best = Math.max(primary.score, secondary?.score ?? -1);
+    return best >= 0 ? best : null; // 'off' from both scores -1 → excluded
+  };
 
   // Cap candidates per artist so a library skewed toward one artist can't produce
   // an artist-skewed pool (which is what makes the selector over-repeat). Keeps each
@@ -240,11 +252,10 @@ function filterTracksForGig(
 
   const scored = tracks
     .filter(t => !t.isWishlist && !isSeed(t))
-    .map(t => {
-      let score = 0;
-      const g = (t.genre ?? '').toLowerCase();
-      if (g.includes(primaryGenre) || primaryGenre.includes(g)) score += 3;
-      else if (secondaryGenre && (g.includes(secondaryGenre) || secondaryGenre.includes(g))) score += 2;
+    .map(t => ({ t, genre: genreScoreFor(t) }))
+    .filter((x): x is { t: LibraryTrack; genre: number } => x.genre !== null)
+    .map(({ t, genre }) => {
+      let score = genre;
       if (t.bpm >= bpmMin && t.bpm <= bpmMax) score += 2;
       if (t.lastfmTags?.length) score += 1;
       return { t, score };
@@ -415,6 +426,23 @@ export async function runSetlistPipeline(
     onProgress?.({ type: 'step', step: 1, message: 'Gathering gig intel...' });
     const profile = computeLibraryProfile(tracks);
 
+    // Genre availability: fail fast if the library can't support the gig's super-family
+    // (e.g. asking for Trance with an all-hip-hop library), and remember how many EXACT
+    // genre matches exist so we can be honest when the set leans on adjacent genres.
+    const gigSuper = superFamily(input.primaryGenre);
+    let exactGenreCount = 0;
+    let superFamilyCount = 0;
+    for (const t of tracks) {
+      if (t.isWishlist) continue;
+      if (genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []).tier === 'exact') exactGenreCount++;
+      if (gigSuper !== 'other' && superFamily(t.genre ?? '', t.lastfmTags ?? []) === gigSuper) superFamilyCount++;
+    }
+    if (gigSuper !== 'other' && superFamilyCount < 20) {
+      throw new Error(
+        `Not enough tracks for a ${input.primaryGenre} set — your library has only ${superFamilyCount} ${gigSuper} track${superFamilyCount === 1 ? '' : 's'}. Import more ${input.primaryGenre} (or related) music and try again.`,
+      );
+    }
+
     onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
     const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal, onUsage);
 
@@ -425,10 +453,17 @@ export async function runSetlistPipeline(
 
     onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
 
+    // Honesty: if there aren't enough true-genre tracks to fill the set, say the set
+    // leans on adjacent genres rather than pretend it's pure.
+    let reviewNotes = reviewed.reviewNotes;
+    if (exactGenreCount < reviewed.tracks.length) {
+      reviewNotes += `\n\nNote: your library has only ${exactGenreCount} true ${input.primaryGenre} track${exactGenreCount === 1 ? '' : 's'}, so this set is built largely from adjacent ${gigSuper} genres. Import more ${input.primaryGenre} for a truer ${input.primaryGenre} set.`;
+    }
+
     return {
       name: input.name || 'Untitled Set',
       tracks: reviewed.tracks,
-      reviewNotes: reviewed.reviewNotes,
+      reviewNotes,
       shareSlug: generateSlug(input.name || 'set'),
     };
   } catch (err) {
