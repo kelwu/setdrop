@@ -7,6 +7,7 @@ import { SD, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenreCombobox, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 import { trackEvent } from '@/lib/analytics';
+import * as Sentry from '@sentry/nextjs';
 
 export function SetlistBuilder() {
   const router = useRouter();
@@ -159,9 +160,11 @@ export function SetlistBuilder() {
           },
         }),
       });
-    } catch {
+    } catch (err) {
       setGenerating(false);
-      setGenError('Network error — check your connection.');
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      setGenError(`Network error — check your connection. (${detail})`);
+      Sentry.captureException(err, { tags: { flow: 'generate-setlist', phase: 'fetch' } });
       trackEvent.setGenerationFailed('network', primaryGenre || undefined);
       return;
     }
@@ -222,6 +225,7 @@ export function SetlistBuilder() {
     } catch (err) {
       setGenerating(false);
       setGenError(err instanceof Error ? err.message : 'Generation failed. Check your ANTHROPIC_API_KEY.');
+      Sentry.captureException(err, { tags: { flow: 'generate-setlist', phase: 'stream' } });
       trackEvent.setGenerationFailed('stream_error', primaryGenre || undefined);
       return;
     }
