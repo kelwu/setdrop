@@ -231,6 +231,13 @@ function filterTracksForGig(
   const isSeed = (t: LibraryTrack) =>
     seeds.some(s => t.title.toLowerCase().includes(s) || t.artist.toLowerCase().includes(s));
 
+  // Cap candidates per artist so a library skewed toward one artist can't produce
+  // an artist-skewed pool (which is what makes the selector over-repeat). Keeps each
+  // artist's highest-scoring tracks; the set-level "max 2 per artist" is enforced by
+  // the selector prompt on top of this.
+  const POOL_PER_ARTIST_CAP = 3;
+  const perArtist: Record<string, number> = {};
+
   const scored = tracks
     .filter(t => !t.isWishlist && !isSeed(t))
     .map(t => {
@@ -243,10 +250,15 @@ function filterTracksForGig(
       return { t, score };
     })
     .sort((a, b) => b.score - a.score)
+    .filter(({ t }) => {
+      const key = t.artist.toLowerCase().trim();
+      perArtist[key] = (perArtist[key] ?? 0) + 1;
+      return perArtist[key] <= POOL_PER_ARTIST_CAP;
+    })
     .slice(0, MAX_SELECTOR_TRACKS)
     .map(({ t }) => t);
 
-  // Always include seed tracks and wishlist tracks
+  // Always include seed tracks and wishlist tracks (uncapped — user-requested)
   const pinned = tracks.filter(t => t.isWishlist || isSeed(t));
   return [...pinned, ...scored];
 }
@@ -363,7 +375,21 @@ ${JSON.stringify(tracks.map(t => ({
       whyThisTrack: stripLeaked(t.whyThisTrack, ''),
     };
   });
-  return { tracks: annotated, reviewNotes: result.reviewNotes };
+
+  // Honesty: if an artist still appears 3+ times, the diversified pool was genuinely
+  // too thin to avoid it — surface that rather than ship a lopsided set silently.
+  const artistCounts: Record<string, { name: string; count: number }> = {};
+  for (const t of annotated) {
+    const key = t.artist.toLowerCase().trim();
+    artistCounts[key] = { name: t.artist, count: (artistCounts[key]?.count ?? 0) + 1 };
+  }
+  const worst = Object.values(artistCounts).sort((a, b) => b.count - a.count)[0];
+  let reviewNotes = result.reviewNotes;
+  if (worst && worst.count >= 3) {
+    reviewNotes += `\n\nHeads up — this set repeats ${worst.name} ${worst.count}×: your ${input.primaryGenre} library is thin in this tempo range. Add more ${input.primaryGenre} artists to diversify future sets.`;
+  }
+
+  return { tracks: annotated, reviewNotes };
 }
 
 function generateSlug(name: string): string {

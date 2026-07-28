@@ -22,7 +22,7 @@ Selection rules:
 - Do NOT write Camelot step-counts, key distances, or harmonic-smoothness claims in any note. The system computes each track's harmonicMixingNotes for you from the actual keys — anything you write about harmonic distance will be wrong and is discarded. Keep transitionNotes to actionable mixing TECHNIQUE only: bar counts, EQ moves, filter builds, and where to drop.
 - Genre transition rules: Hip Hop ±5 BPM, House ±3 BPM, Afrobeats ±8 BPM, R&B ±10 BPM
 - Use lastfmTags for mood/energy signals (e.g. "energetic", "mellow", "danceable", "dark")
-- No same artist within 3 tracks; no two tracks with same BPM±2 AND same key back-to-back
+- No artist may appear more than TWICE in the whole set, and never within 4 positions of itself — prefer breadth of artists over repeating a favourite. No two tracks with same BPM±2 AND same key back-to-back
 - Never select the same song title more than once — even if different versions or remixes of the same original exist in the library
 - For lounge, wedding, radio, and corporate crowd contexts: always prefer clean or radio-edit versions over dirty/explicit versions when both exist in the library
 - MUST include every seed track listed in user preferences — place them at a fitting position in the set
