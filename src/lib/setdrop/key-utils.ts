@@ -47,3 +47,46 @@ export function toCamelot(raw: string): string {
 
   return MUSICAL_TO_CAMELOT[normalized] ?? trimmed;
 }
+
+// Parses a Camelot key like "8A" into { num: 8, letter: 'A' }, or null if it
+// isn't valid Camelot notation.
+function parseCamelot(raw: string): { num: number; letter: 'A' | 'B' } | null {
+  const c = toCamelot(raw);
+  const m = /^(\d{1,2})([AB])$/.exec(c);
+  if (!m) return null;
+  const num = Number(m[1]);
+  if (num < 1 || num > 12) return null;
+  return { num, letter: m[2] as 'A' | 'B' };
+}
+
+export interface CamelotRelation {
+  steps: number;       // ring distance of the numbers (0-6); -1 when a key is unknown
+  compatible: boolean; // true for same key / adjacent / relative
+  label: string;       // short, accurate, DJ-facing description of the move
+}
+
+/**
+ * The harmonic relationship between two keys on the Camelot wheel — computed, not
+ * guessed. Use for `harmonicMixingNotes` so the numbers are always correct.
+ */
+export function camelotRelation(fromRaw: string, toRaw: string): CamelotRelation {
+  const a = parseCamelot(fromRaw);
+  const b = parseCamelot(toRaw);
+  if (!a || !b) {
+    return { steps: -1, compatible: false, label: 'key unknown — mix by ear / percussively' };
+  }
+  const diff = Math.abs(a.num - b.num);
+  const d = Math.min(diff, 12 - diff); // ring distance (0-6)
+  const sameLetter = a.letter === b.letter;
+
+  if (d === 0 && sameLetter) return { steps: 0, compatible: true, label: 'same key — seamless blend' };
+  if (d === 0 && !sameLetter) return { steps: 0, compatible: true, label: 'relative major/minor — smooth' };
+  if (d === 1 && sameLetter) return { steps: 1, compatible: true, label: 'adjacent — energy-boost blend' };
+  if (d === 1) return { steps: 1, compatible: false, label: '1 step across scales — workable with an EQ swap' };
+  if (d === 2) return { steps: 2, compatible: false, label: '2 steps — bridge with an EQ / percussive blend' };
+  return {
+    steps: d,
+    compatible: false,
+    label: `${d}-step clash — don't blend harmonically; use a percussive or acapella bridge, or a stepping-stone track`,
+  };
+}

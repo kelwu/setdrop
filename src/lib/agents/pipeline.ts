@@ -6,6 +6,22 @@ import {
   SetBlueprint, GeneratedSetlist,
 } from './types';
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
+import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
+
+// Notes are model-generated free text; occasionally the model leaks its own
+// reasoning into them (e.g. "Wait — pos 17… Planning accordingly…"). The prompt
+// forbids this; this strips any that slips through so users never see scratchpad.
+const LEAK_MARKERS = [/\bWait\s*[—–-]/i, /planning accordingly/i, /respect the .*?rule/i, /\bpos\.?\s*\d+/i, /\bposition\s+\d+\b/i];
+function stripLeaked(s: string, fallback: string): string {
+  if (!s) return fallback;
+  if (!LEAK_MARKERS.some(m => m.test(s))) return s;
+  const kept = s
+    .split(/(?<=[.!?])\s+/)
+    .filter(c => !LEAK_MARKERS.some(m => m.test(c)))
+    .join(' ')
+    .trim();
+  return kept || fallback;
+}
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_SELECTOR_TRACKS = 200;
@@ -331,7 +347,23 @@ ${JSON.stringify(tracks.map(t => ({
   if (!result?.tracks?.length) {
     throw new Error('Selector returned no tracks — the model response may have been truncated. Please try again.');
   }
-  return result;
+
+  // Own the harmonic assessment in code — the model fabricates Camelot distances.
+  // This only annotates the already-selected/sequenced list (no reordering), and
+  // scrubs any leaked reasoning from the free-text notes.
+  const annotated = result.tracks.map((t, i) => {
+    const next = result.tracks[i + 1];
+    const harmonicMixingNotes = next
+      ? `→ ${next.artist} "${next.title}" (${toCamelot(next.key) || next.key || '?'}): ${camelotRelation(t.key, next.key).label}`
+      : 'Final track — let it ride out.';
+    return {
+      ...t,
+      harmonicMixingNotes,
+      transitionNotes: stripLeaked(t.transitionNotes, 'Blend into the next track: ride the outro, EQ-swap the bass, and drop on the downbeat.'),
+      whyThisTrack: stripLeaked(t.whyThisTrack, ''),
+    };
+  });
+  return { tracks: annotated, reviewNotes: result.reviewNotes };
 }
 
 function generateSlug(name: string): string {
