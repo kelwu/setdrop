@@ -31,6 +31,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Exclude static assets AND the streaming setlist route: middleware in the
+    // path buffers the SSE response until it fully completes (~60-90s), so mobile
+    // clients time out waiting for the first byte. The route authenticates itself
+    // via createClient()/getUser(), so it doesn't need the session-refresh here.
+    '/((?!_next/static|_next/image|favicon.ico|api/generate-setlist|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
