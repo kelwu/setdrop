@@ -92,6 +92,16 @@ export async function POST(req: NextRequest) {
   const { readable, writable } = new TransformStream<Uint8Array>();
   const writer = writable.getWriter();
 
+  // Keepalive: the pipeline has 20–40s silent gaps (blueprint + selector) where no
+  // SSE bytes flow. Mobile browsers drop a connection that looks idle, so emit an
+  // SSE comment every 10s. The client ignores lines that don't start with "data: ".
+  const KEEPALIVE = new TextEncoder().encode(': keepalive\n\n');
+  let streamClosed = false;
+  const heartbeat = setInterval(() => {
+    if (streamClosed) return;
+    writer.write(KEEPALIVE).catch(() => { /* connection gone — will surface below */ });
+  }, 10_000);
+
   (async () => {
     try {
       await writer.write(encode({ type: 'step', step: 0, message: 'Analyzing your library...' }));
@@ -218,6 +228,8 @@ export async function POST(req: NextRequest) {
       console.error('[generate-setlist] Error:', message);
       await writer.write(encode({ type: 'error', message }));
     } finally {
+      streamClosed = true;
+      clearInterval(heartbeat);
       await writer.close();
     }
   })();
@@ -227,6 +239,8 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      // Disable proxy/CDN buffering so keepalives + progress flush immediately.
+      'X-Accel-Buffering': 'no',
     },
   });
 }
