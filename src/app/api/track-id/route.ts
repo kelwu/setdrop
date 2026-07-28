@@ -3,7 +3,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { recordUsage } from '@/lib/api-usage';
 import { identifyAudio } from '@/lib/setdrop/acrcloud';
 import { loopsSendEvent } from '@/lib/email/loops';
-import { isBotRequest } from '@/lib/botid';
 
 export const maxDuration = 30;
 
@@ -15,8 +14,6 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    if (await isBotRequest()) return NextResponse.json({ error: 'bot_detected' }, { status: 403 });
 
     const { banned, isBeta } = await recordUsage(user.id, 'track-id');
     if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
