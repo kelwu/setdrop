@@ -4,7 +4,6 @@ import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
 import { recordUsage, usageToday, costToday, recordCost, type CallUsage } from '@/lib/api-usage';
-import { isBotRequest } from '@/lib/botid';
 import { PLANS } from '@/lib/stripe';
 
 export const maxDuration = 300;
@@ -55,8 +54,6 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  if (await isBotRequest()) return NextResponse.json({ error: 'bot_detected' }, { status: 403 });
 
   const { banned, isBeta: dbBeta } = await recordUsage(user.id, 'generate-setlist');
   if (banned) return NextResponse.json({ error: 'account_suspended' }, { status: 403 });
