@@ -5,6 +5,7 @@ import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
 import { recordUsage, usageToday, costToday, recordCost, type CallUsage } from '@/lib/api-usage';
 import { PLANS } from '@/lib/stripe';
+import { computeAffinity, type DiffEntry, type TasteAffinity } from '@/lib/setdrop/taste';
 
 export const maxDuration = 300;
 
@@ -183,15 +184,25 @@ export async function POST(req: NextRequest) {
       }
       if (!library.length) library = getDemoLibrary();
 
-      // Fetch recently played tracks
+      // Fetch recently played tracks + post-gig reflections. The reflections feed the
+      // per-DJ taste loop: what the DJ actually swapped/skipped/added at past gigs
+      // re-ranks this set's candidate pool (see computeAffinity + filterTracksForGig).
       let recentlyPlayed: string[] = [];
+      let affinity: TasteAffinity | undefined;
       try {
         if (user) {
           const cutoff = new Date();
           cutoff.setDate(cutoff.getDate() - 90);
           const { data: gigs } = await supabase
-            .from('gig_history').select('setlist_id').eq('user_id', user.id)
+            .from('gig_history').select('setlist_id, reflection_json').eq('user_id', user.id)
             .gte('played_at', cutoff.toISOString()).order('played_at', { ascending: false }).limit(10);
+
+          // Distill each gig's planned-vs-actual diff into a bounded taste profile.
+          const diffs: DiffEntry[][] = (gigs ?? [])
+            .map(g => (g.reflection_json as { diff?: DiffEntry[] } | null)?.diff)
+            .filter((d): d is DiffEntry[] => Array.isArray(d) && d.length > 0);
+          if (diffs.length) affinity = computeAffinity(diffs);
+
           const ids = (gigs ?? []).map(g => g.setlist_id).filter(Boolean) as string[];
           if (ids.length) {
             const { data: played } = await supabase.from('setlists')
@@ -211,7 +222,7 @@ export async function POST(req: NextRequest) {
 
       const usages: CallUsage[] = [];
       const setlist = await runSetlistPipeline(
-        input, library, recentlyPlayed,
+        input, library, recentlyPlayed, affinity,
         (event) => { writer.write(encode(event)); },
         (u) => { usages.push(u); },
       );
