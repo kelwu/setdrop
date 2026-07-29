@@ -8,6 +8,7 @@ import {
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
 import { genreRelevance, superFamily } from '@/lib/setdrop/genre';
+import { TasteAffinity, affinityTrackKey, affinityArtistKey } from '@/lib/setdrop/taste';
 
 // Notes are model-generated free text; occasionally the model leaks its own
 // reasoning into them (e.g. "Wait — pos 17… Planning accordingly…"). The prompt
@@ -222,6 +223,7 @@ function filterTracksForGig(
   tracks: LibraryTrack[],
   blueprint: SetBlueprint,
   input: SetlistInput,
+  affinity?: TasteAffinity,
 ): LibraryTrack[] {
   const bpmMin = Math.min(...blueprint.phases.map(p => p.bpmRange.min)) - 15;
   const bpmMax = Math.max(...blueprint.phases.map(p => p.bpmRange.max)) + 15;
@@ -258,6 +260,13 @@ function filterTracksForGig(
       let score = genre;
       if (t.bpm >= bpmMin && t.bpm <= bpmMax) score += 2;
       if (t.lastfmTags?.length) score += 1;
+      // Personalization: re-rank WITHIN the genre-relevant pool from the DJ's own
+      // gig history. Bounded in taste.ts so it nudges order but never rescues an
+      // off-genre track (already gated out above) or forces a track out entirely.
+      if (affinity) {
+        score += affinity.trackScores[affinityTrackKey(t.artist, t.title)] ?? 0;
+        score += 0.5 * (affinity.artistScores[affinityArtistKey(t.artist)] ?? 0);
+      }
       return { t, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -338,6 +347,7 @@ async function runSelectorReviewer(
   blueprint: SetBlueprint,
   intel: GigIntelReport,
   recentlyPlayed: string[],
+  affinity?: TasteAffinity,
   signal?: AbortSignal,
   onUsage?: (u: CallUsage) => void,
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
@@ -400,6 +410,21 @@ ${JSON.stringify(tracks.map(t => ({
     reviewNotes += `\n\nHeads up — this set repeats ${worst.name} ${worst.count}×: your ${input.primaryGenre} library is thin in this tempo range. Add more ${input.primaryGenre} artists to diversify future sets.`;
   }
 
+  // Transparency: personalization is automatic, so say when it happened and what it did.
+  // Reuses this reviewNotes surface (no new UI). Only when there's real, corroborated
+  // taste to name — go-to's leaned into and/or tracks the DJ keeps dropping eased off.
+  if (affinity && affinity.gigsAnalyzed >= 2) {
+    const fmt = (t: { artist: string; title: string }) => `${t.artist} — ${t.title}`;
+    const goTos = affinity.goTos.slice(0, 3).map(fmt);
+    const dropped = affinity.droppedOften.slice(0, 3).map(fmt);
+    if (goTos.length || dropped.length) {
+      const parts: string[] = [];
+      if (goTos.length) parts.push(`leaned into your go-to's (${goTos.join(', ')})`);
+      if (dropped.length) parts.push(`eased off tracks you keep dropping (${dropped.join(', ')})`);
+      reviewNotes += `\n\nPersonalized from your last ${affinity.gigsAnalyzed} gigs: ${parts.join(' and ')}.`;
+    }
+  }
+
   return { tracks: annotated, reviewNotes };
 }
 
@@ -415,6 +440,7 @@ export async function runSetlistPipeline(
   input: SetlistInput,
   tracks: LibraryTrack[],
   recentlyPlayed: string[] = [],
+  affinity?: TasteAffinity,
   onProgress?: (event: PipelineProgressEvent) => void,
   onUsage?: (u: CallUsage) => void,
 ): Promise<GeneratedSetlist> {
@@ -447,9 +473,9 @@ export async function runSetlistPipeline(
     const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal, onUsage);
 
     onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
-    const filtered = filterTracksForGig(tracks, blueprint, input);
+    const filtered = filterTracksForGig(tracks, blueprint, input, affinity);
 
-    const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed, signal, onUsage);
+    const reviewed = await runSelectorReviewer(input, filtered, blueprint, intel, recentlyPlayed, affinity, signal, onUsage);
 
     onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
 
