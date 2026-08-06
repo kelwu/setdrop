@@ -1,0 +1,77 @@
+// Shared "set readiness" model — the single source of truth for whether a DJ's
+// library has enough tracks to build a good set for a given genre + duration.
+//
+// Two distinct numbers:
+//   - TARGET  = how many tracks the generated set contains (fills the slot).
+//   - USABLE  = how many library tracks qualify for the gig genre(s).
+// Readiness judges USABLE against TARGET with CURATION HEADROOM — a library that
+// has exactly enough tracks to fill the slot *is* the whole set (no room for the
+// AI or the DJ to choose). A healthy library gives options.
+//
+// Pure, no I/O. Imported by both the pre-gen readiness endpoint and the backend
+// pipeline so the pre-gen hint and the backend hard-fail can never drift.
+
+export const MIN_SUPERFAMILY_TRACKS = 20;   // backend hard-fail floor (pipeline.ts)
+export const MINUTES_PER_TRACK = 4;         // mirrors the blueprint rule in prompts.ts
+export const CURATE_HEADROOM = 2.5;         // GREEN needs 2.5× the set size ("room to curate")
+
+/** How many tracks a set of the given duration contains. Mirrors the blueprint's
+ *  `totalTracks = min(durationMinutes / 4, …)` rule. */
+export function targetTrackCount(durationMinutes: number): number {
+  return Math.max(1, Math.ceil(durationMinutes / MINUTES_PER_TRACK));
+}
+
+export type ReadinessStatus = 'red' | 'amber' | 'green' | 'unknown';
+
+export interface ReadinessCounts {
+  exact: number;       // true-genre matches
+  family: number;      // same fine-family
+  adjacent: number;    // same super-family
+  superFamily: number; // total in the gig's super-family
+  usable: number;      // total not gated out (exact+family+adjacent+unknown, incl. secondary rescue)
+}
+
+export interface ReadinessResult {
+  status: ReadinessStatus;
+  reason?: string;              // e.g. 'no-auth', 'no-library'
+  counts: ReadinessCounts;
+  target: number;
+  threshold: number;            // MIN_SUPERFAMILY_TRACKS — echoed so UI copy stays in sync
+}
+
+const EMPTY_COUNTS: ReadinessCounts = { exact: 0, family: 0, adjacent: 0, superFamily: 0, usable: 0 };
+
+/** Build an 'unknown' result (no auth / no library) — the builder falls back to
+ *  its existing demo-library messaging when it sees this. */
+export function unknownReadiness(reason: string): ReadinessResult {
+  return { status: 'unknown', reason, counts: { ...EMPTY_COUNTS }, target: 0, threshold: MIN_SUPERFAMILY_TRACKS };
+}
+
+/**
+ * Classify a library's readiness for a gig. First matching tier wins.
+ *   RED   — can't fill the slot honestly: below the super-family floor, or fewer
+ *           usable tracks than the set even needs.
+ *   AMBER — buildable but no room to curate (usable < headroom×target), or the set
+ *           will lean on adjacent genres (few true-genre tracks).
+ *   GREEN — real headroom to curate and keep future sets fresh.
+ *
+ * @param gigSuperIsOther true when the gig genre's super-family is 'other'
+ *        (open-format / unmapped) — the <20 electronic-vs-open floor doesn't apply.
+ */
+export function classifyReadiness(
+  counts: ReadinessCounts,
+  target: number,
+  gigSuperIsOther: boolean,
+): ReadinessResult {
+  let status: ReadinessStatus;
+
+  if ((!gigSuperIsOther && counts.superFamily < MIN_SUPERFAMILY_TRACKS) || counts.usable < target) {
+    status = 'red';
+  } else if (counts.usable < target * CURATE_HEADROOM || counts.exact < target) {
+    status = 'amber';
+  } else {
+    status = 'green';
+  }
+
+  return { status, counts, target, threshold: MIN_SUPERFAMILY_TRACKS };
+}

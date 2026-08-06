@@ -38,6 +38,21 @@ function matchFilePaths(tracks: SetlistTrack[], library: LibraryTrack[]): { path
   return { paths, matched: paths.length };
 }
 
+// `reviewNotes` is a "\n\n"-joined blob: the model's genuine set commentary plus
+// honesty notes the pipeline appends (thin-library advisories, personalization).
+// Bucket by the known prefixes so we can render each in the right tone rather than
+// dumping one wall of text. (Brittle if backend copy changes — see plan's flagged
+// follow-up: a structured `advisories[]` field.)
+function splitReviewNotes(notes: string): { commentary: string[]; advisories: string[]; personalization: string[] } {
+  const commentary: string[] = [], advisories: string[] = [], personalization: string[] = [];
+  for (const p of notes.split('\n\n').map(s => s.trim()).filter(Boolean)) {
+    if (/^(Note:|Heads up)/i.test(p)) advisories.push(p);
+    else if (/^Personalized from/i.test(p)) personalization.push(p);
+    else commentary.push(p);
+  }
+  return { commentary, advisories, personalization };
+}
+
 interface ResolvedUrls {
   beatportUrl?: string;
   bpmSupremeUrl?: string;
@@ -546,6 +561,31 @@ export function SetlistOutput() {
             }}>Rebuild</SDButton>
           </div>
         )}
+
+        {/* Set notes & honesty advisories — full-width so thin-library warnings
+            (already computed by the pipeline) aren't buried. Guidance, not error. */}
+        {(() => {
+          const notes = setlist?.reviewNotes?.trim();
+          if (!notes) return null;
+          const { commentary, advisories, personalization } = splitReviewNotes(notes);
+          const cards = [
+            advisories.length     && { key:'adv',  eyebrow:'Heads Up',     fg:SD.warning, bg:SD.warningDim, border:`${SD.warning}44`, lines:advisories },
+            personalization.length && { key:'pers', eyebrow:'Personalized', fg:SD.info,    bg:SD.infoDim,    border:`${SD.info}44`,    lines:personalization },
+            commentary.length     && { key:'note', eyebrow:'Set Notes',    fg:SD.textSec, bg:SD.surface,    border:SD.border,          lines:commentary },
+          ].filter(Boolean) as { key:string; eyebrow:string; fg:string; bg:string; border:string; lines:string[] }[];
+          return (
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:24 }}>
+              {cards.map(c => (
+                <div key={c.key} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:4, padding:'14px 16px' }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, textTransform:'uppercase', color:c.fg, marginBottom:8 }}>{c.eyebrow}</div>
+                  {c.lines.map((line, i) => (
+                    <p key={i} style={{ fontFamily:SD.mono, fontSize:13, lineHeight:1.65, color:SD.text, margin: i ? '8px 0 0' : 0 }}>{line}</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Two-column layout */}
         <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:16, alignItems:'start' }}>

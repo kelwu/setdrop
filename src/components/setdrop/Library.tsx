@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { BRAND } from '@/lib/brand';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, type LibraryUploadFailReason } from '@/lib/analytics';
 import { LibraryTrack, SetlistTrack } from '@/lib/agents/types';
 import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
@@ -158,6 +158,15 @@ const LibraryRow = React.memo(function LibraryRow({ track, tab, idx, onDelete, t
 
 type UploadMode = 'db' | 'rekordbox';
 
+// Carries which import throw site failed so the caller can log a precise,
+// low-cardinality funnel reason instead of one generic bucket.
+class ImportError extends Error {
+  constructor(public reason: LibraryUploadFailReason, message: string) {
+    super(message);
+    this.name = 'ImportError';
+  }
+}
+
 const SERATO_BLUE = '#1F6BFF';
 const SERATO_BLUE_DIM = 'rgba(31,107,255,0.10)';
 const SERATO_BLUE_BORDER = 'rgba(31,107,255,0.35)';
@@ -174,6 +183,29 @@ function UploadZone({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Detect OS to show the exact `_Serato_` folder path — the #1 import friction is
+  // DJs not finding an extension-less file in a folder they've never opened. Set in
+  // an effect (navigator is client-only) to avoid a hydration mismatch.
+  const [os, setOs] = useState<'mac' | 'windows' | 'other'>('other');
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    if (/Mac/i.test(ua)) setOs('mac');
+    else if (/Win/i.test(ua)) setOs('windows');
+  }, []);
+  const seratoPath = os === 'mac'
+    ? '~/Music/_Serato_/'
+    : os === 'windows'
+      ? 'C:\\Users\\<you>\\Music\\_Serato_\\'
+      : 'in your Music folder';
+
+  // Fire once when the import screen appears — BEFORE the user picks a file — so
+  // the funnel can measure the pre-file-pick drop (landed on import but never
+  // selected a library file), the largest and previously-invisible leak.
+  useEffect(() => {
+    trackEvent.libraryImportViewed(uploadMode === 'db' ? 'serato' : 'rekordbox');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -185,8 +217,10 @@ function UploadZone({
   const dropLabel = uploadMode === 'db' ? 'DROP DATABASE V2 HERE' : 'DROP REKORDBOX XML HERE';
   const instructions = uploadMode === 'db' ? (
     <>
-      Find the <span style={{ color:SD.textSec }}>_Serato_</span> folder inside your Music directory<br/>
-      and drag the <span style={{ color:SD.accent }}>database V2</span> file here, or click to browse.
+      Open your <span style={{ color:SD.textSec }}>_Serato_</span> folder{' '}
+      (<span style={{ color:SD.textSec }}>{seratoPath}</span>) and pick the{' '}
+      <span style={{ color:SD.accent }}>database V2</span> file — it has <strong>no file extension</strong>.<br/>
+      Drag it here, or click to browse.
     </>
   ) : (
     <>
@@ -596,14 +630,14 @@ export function Library() {
       (async () => {
         // Step 1: get a signed upload token from the server
         const urlRes = await fetch('/api/library/upload-url', { method: 'POST' });
-        if (!urlRes.ok) throw new Error(`Upload init failed (HTTP ${urlRes.status})`);
+        if (!urlRes.ok) throw new ImportError('upload_init', `Upload init failed (HTTP ${urlRes.status})`);
         const { token, path: storagePath } = await urlRes.json() as { token: string; path: string };
 
         // Step 2: upload file directly to Supabase Storage (no Vercel function payload involved)
         const { error: uploadError } = await createClient().storage
           .from('library-uploads')
           .uploadToSignedUrl(storagePath, token, file, { contentType: 'application/octet-stream' });
-        if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
+        if (uploadError) throw new ImportError('storage_upload', `Storage upload failed: ${uploadError.message}`);
 
         // Step 3: parse + save server-side (returns only {count, stats} — no large JSON payload)
         return fetch('/api/library/parse-db', {
@@ -614,12 +648,17 @@ export function Library() {
       })()
         .then(async res => {
           const body = await res.json().catch(() => ({})) as { error?: string };
-          if (!res.ok) throw new Error(body.error ?? `Parse step failed (HTTP ${res.status})`);
+          // parse-db does parse+save in one route, so a 500 here is attributed to
+          // parse_throw (the dominant server failure — unsupported DB format).
+          if (!res.ok) throw new ImportError('parse_throw', body.error ?? `Parse step failed (HTTP ${res.status})`);
           return body;
         })
         .then(async (data: { error?: string; count?: number; stats?: { added: number; removed: number; unchanged: number } }) => {
-          if (data.error) throw new Error(`Parse error: ${data.error}`);
-          setParsedCount(data.count ?? 0);
+          if (data.error) throw new ImportError('parse_throw', `Parse error: ${data.error}`);
+          // A "successful" parse that finds 0 tracks means the wrong file — surface
+          // it as a real error instead of a silent empty library.
+          if (!data.count) throw new ImportError('empty_parse', "We couldn't find any tracks in that file. Make sure you picked the Serato 'database V2' file (no extension) from your _Serato_ folder.");
+          setParsedCount(data.count);
           setSyncStats(data.stats ?? { added: 0, removed: 0, unchanged: 0 });
           // Reload from Supabase for display — avoids storing a huge array in memory or localStorage
           setUploadStage('save');
@@ -630,7 +669,7 @@ export function Library() {
         .catch(err => {
           setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to upload library');
-          trackEvent.libraryUploadFailed('serato', 'parse_or_upload_error');
+          trackEvent.libraryUploadFailed('serato', err instanceof ImportError ? err.reason : 'parse_throw');
         });
     } else {
       setUploadStage('parse');
@@ -638,20 +677,27 @@ export function Library() {
       reader.onload = async (e) => {
         try {
           const text = e.target?.result as string;
-          const tracks = parseRekordboxXML(text);
+          let tracks: LibraryTrack[];
+          try {
+            tracks = parseRekordboxXML(text);
+          } catch (parseErr) {
+            throw new ImportError('parse_throw', parseErr instanceof Error ? parseErr.message : 'Failed to parse Rekordbox XML');
+          }
+          // 0 tracks means the wrong export — surface it instead of a silent empty save.
+          if (!tracks.length) throw new ImportError('empty_parse', "We couldn't find any tracks in that XML. In Rekordbox, use File → Export Collection in xml format and pick that file.");
           setParsedCount(tracks.length);
           setUploadStage('save');
 
           // Upload tracks JSON to Supabase Storage to bypass Vercel 4.5MB payload limit
           const urlRes = await fetch('/api/library/upload-url', { method: 'POST' });
-          if (!urlRes.ok) throw new Error(`Upload init failed (HTTP ${urlRes.status})`);
+          if (!urlRes.ok) throw new ImportError('upload_init', `Upload init failed (HTTP ${urlRes.status})`);
           const { token, path: storagePath } = await urlRes.json() as { token: string; path: string };
 
           const jsonBlob = new Blob([JSON.stringify(tracks)], { type: 'application/octet-stream' });
           const { error: uploadError } = await createClient().storage
             .from('library-uploads')
             .uploadToSignedUrl(storagePath, token, jsonBlob, { contentType: 'application/octet-stream' });
-          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+          if (uploadError) throw new ImportError('storage_upload', `Upload failed: ${uploadError.message}`);
 
           const res = await fetch('/api/library/save', {
             method: 'POST',
@@ -660,7 +706,7 @@ export function Library() {
           });
           if (!res.ok) {
             const err = await res.json().catch(() => ({})) as { error?: string };
-            throw new Error(err.error ?? `Library save failed (${res.status})`);
+            throw new ImportError('save_error', err.error ?? `Library save failed (${res.status})`);
           }
           const data = await res.json() as { added?: number; removed?: number; unchanged?: number };
           setSyncStats({ added: data.added ?? 0, removed: data.removed ?? 0, unchanged: data.unchanged ?? 0 });
@@ -671,7 +717,7 @@ export function Library() {
         } catch (err) {
           setUploadStage('idle');
           setParseError(err instanceof Error ? err.message : 'Failed to parse Rekordbox XML');
-          trackEvent.libraryUploadFailed('rekordbox', 'parse_or_upload_error');
+          trackEvent.libraryUploadFailed('rekordbox', err instanceof ImportError ? err.reason : 'parse_throw');
         }
       };
       reader.readAsText(file);

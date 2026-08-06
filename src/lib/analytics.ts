@@ -10,6 +10,16 @@ function track(eventName: string, params?: Record<string, string | number | bool
   window.gtag('event', eventName, params);
 }
 
+// Fixed, low-cardinality categories for where an import dies. Each maps to a
+// distinct throw site in the import flow so the funnel report can tell a
+// pre-file-pick bounce from a parser format failure from a save error.
+export type LibraryUploadFailReason =
+  | 'upload_init'    // couldn't get a signed upload URL from the server
+  | 'storage_upload' // direct-to-Storage upload failed
+  | 'parse_throw'    // parse-db/parse-xml threw (bad/unsupported file format)
+  | 'empty_parse'    // parsed successfully but found 0 tracks (wrong file)
+  | 'save_error';    // parse ok, DB save failed
+
 export const trackEvent = {
   // — Signup —
   signupStarted(method: 'email' | 'google') {
@@ -19,15 +29,21 @@ export const trackEvent = {
     track('sign_up', { method });
   },
 
-  // — Library import — the started/failed pair reveals whether users who don't
-  // finish an import never tried, or tried and hit a parse/upload failure.
+  // — Library import — `viewed` fires when the import screen mounts, BEFORE a
+  // file is picked, so the funnel can see the pre-file-pick drop (users who
+  // land on import but never find/select their library file). started/uploaded/
+  // failed then cover the picked-a-file → success/failure legs, with `reason`
+  // pinpointing which throw site killed a failed import.
+  libraryImportViewed(djSoftware: 'serato' | 'rekordbox') {
+    track('library_import_viewed', { dj_software: djSoftware });
+  },
   libraryUploadStarted(djSoftware: 'serato' | 'rekordbox') {
     track('library_upload_started', { dj_software: djSoftware });
   },
   libraryUploaded(djSoftware: 'serato' | 'rekordbox') {
     track('library_uploaded', { dj_software: djSoftware });
   },
-  libraryUploadFailed(djSoftware: 'serato' | 'rekordbox', reason: string) {
+  libraryUploadFailed(djSoftware: 'serato' | 'rekordbox', reason: LibraryUploadFailReason) {
     track('library_upload_failed', { dj_software: djSoftware, reason });
   },
 
