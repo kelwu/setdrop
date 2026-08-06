@@ -8,6 +8,7 @@ import {
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
 import { genreRelevance, superFamily } from '@/lib/setdrop/genre';
+import { MIN_SUPERFAMILY_TRACKS } from '@/lib/setdrop/readiness';
 import { TasteAffinity, affinityTrackKey, affinityArtistKey } from '@/lib/setdrop/taste';
 
 // Notes are model-generated free text; occasionally the model leaks its own
@@ -463,7 +464,7 @@ export async function runSetlistPipeline(
       if (genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []).tier === 'exact') exactGenreCount++;
       if (gigSuper !== 'other' && superFamily(t.genre ?? '', t.lastfmTags ?? []) === gigSuper) superFamilyCount++;
     }
-    if (gigSuper !== 'other' && superFamilyCount < 20) {
+    if (gigSuper !== 'other' && superFamilyCount < MIN_SUPERFAMILY_TRACKS) {
       throw new Error(
         `Not enough tracks for a ${input.primaryGenre} set — your library has only ${superFamilyCount} ${gigSuper} track${superFamilyCount === 1 ? '' : 's'}. Import more ${input.primaryGenre} (or related) music and try again.`,
       );

@@ -7,7 +7,44 @@ import { SD, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenreCombobox, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 import { trackEvent } from '@/lib/analytics';
+import { superFamily } from '@/lib/setdrop/genre';
+import { CURATE_HEADROOM, type ReadinessResult } from '@/lib/setdrop/readiness';
 import * as Sentry from '@sentry/nextjs';
+
+// Presentation for the pre-gen "set readiness" hint — turns a ReadinessResult into
+// a colored dot + honest, headroom-framed copy (mirrors the backend's phrasing so
+// the pre-gen hint and the post-gen notes agree). Returns null when there's nothing
+// to show (unknown status / no result yet).
+function readinessView(
+  r: ReadinessResult | null,
+  primaryGenre: string,
+  durationLabel: string,
+): { fg: string; bg: string; border: string; text: string } | null {
+  if (!r || r.status === 'unknown') return null;
+  const { counts, target, threshold, status } = r;
+  const sf = superFamily(primaryGenre); // 'electronic' | 'open-format' | 'other'
+  const adjWord = sf === 'other' ? 'related' : sf;
+  const tones = {
+    red:   { fg: SD.danger,  bg: SD.dangerDim,  border: `${SD.danger}33` },
+    amber: { fg: SD.warning, bg: SD.warningDim, border: `${SD.warning}33` },
+    green: { fg: SD.success, bg: SD.successDim, border: `${SD.success}33` },
+  } as const;
+
+  let text: string;
+  if (status === 'red') {
+    const floorHit = sf !== 'other' && counts.superFamily < threshold;
+    const n = floorHit ? counts.superFamily : counts.usable;
+    const word = floorHit ? sf : primaryGenre;
+    text = `Only ${n} ${word} track${n === 1 ? '' : 's'} — below the ~${target} needed to fill ${durationLabel}. Import more ${primaryGenre}, or shorten the set.`;
+  } else if (status === 'amber') {
+    text = counts.usable < target * CURATE_HEADROOM
+      ? `${counts.usable} ${primaryGenre} tracks for a ~${target}-track set — it'll work, but you'll use almost your whole library, leaving little to swap or vary next time.`
+      : `You have ${counts.exact} true ${primaryGenre} track${counts.exact === 1 ? '' : 's'} — this set will lean on adjacent ${adjWord} genres. More ${primaryGenre} = a truer set.`;
+  } else {
+    text = `${counts.usable} ${primaryGenre} tracks ready for a ~${target}-track set — plenty of room to curate.`;
+  }
+  return { ...tones[status], text };
+}
 
 export function SetlistBuilder() {
   const router = useRouter();
@@ -42,6 +79,8 @@ export function SetlistBuilder() {
 
   const [libraryCount, setLibraryCount] = useState<number | null>(null);
   const [libraryTracks, setLibraryTracks] = useState<{ artist: string; title: string; bpm: number; key: string }[]>([]);
+  const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
   useEffect(() => {
     // Try localStorage first (legacy — may not be populated after new upload flow)
     try {
@@ -66,6 +105,30 @@ export function SetlistBuilder() {
       if (data?.total_tracks) setLibraryCount(data.total_tracks);
     }).catch(() => {});
   }, []);
+
+  // Live "set readiness": as the DJ picks genre + duration, check whether their
+  // library has enough tracks (with curation headroom) for that set — BEFORE they
+  // spend a generation. Skipped in demo mode (no real library). Debounced + aborted
+  // so rapid genre/duration changes don't race.
+  useEffect(() => {
+    if (!primaryGenre || !duration || !libraryCount) { setReadiness(null); return; }
+    const durationMinutes = parseInt(duration) || 60;
+    const ctrl = new AbortController();
+    setReadinessLoading(true);
+    const timer = setTimeout(() => {
+      fetch('/api/library/set-readiness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryGenre, secondaryGenre: secondaryGenre || undefined, durationMinutes }),
+        signal: ctrl.signal,
+      })
+        .then(r => (r.ok ? (r.json() as Promise<ReadinessResult>) : null))
+        .then(res => { if (res) setReadiness(res); })
+        .catch(() => { /* aborted or network error — keep prior state */ })
+        .finally(() => setReadinessLoading(false));
+    }, 400);
+    return () => { ctrl.abort(); clearTimeout(timer); };
+  }, [primaryGenre, secondaryGenre, duration, libraryCount]);
 
   useEffect(() => {
     try {
@@ -550,6 +613,29 @@ export function SetlistBuilder() {
                   onChange={g => setSlot(g === slot ? '' : g)} genres={LINEUP_SLOTS} />
               </div>
             </div>
+
+            {/* Set readiness — honest pre-gen signal on whether the library can
+                support this genre + duration with room to curate. Warn, never block. */}
+            {(readiness || readinessLoading) && (() => {
+              const rv = readinessView(readiness, primaryGenre, duration || 'the set');
+              if (!rv && !readinessLoading) return null;
+              return (
+                <div style={{
+                  padding:'11px 14px', borderRadius:3,
+                  background: rv ? rv.bg : SD.surface,
+                  border:`1px solid ${rv ? rv.border : SD.border}`,
+                  display:'flex', alignItems:'flex-start', gap:9,
+                }}>
+                  <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0, marginTop:5,
+                    display:'inline-block', background: rv ? rv.fg : SD.textMuted,
+                    boxShadow: rv ? `0 0 6px ${rv.fg}` : 'none' }} />
+                  <span style={{ fontFamily:SD.mono, fontSize:12, lineHeight:1.6,
+                    color: rv ? SD.text : SD.textMuted }}>
+                    {rv ? rv.text : 'Checking library readiness…'}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         )}
 
