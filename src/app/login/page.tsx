@@ -20,6 +20,7 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'auth_failed') setError('Authentication failed. Please try again.');
+    if (params.get('mode') === 'signup') setMode('signup');
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) router.replace('/dashboard');
     });

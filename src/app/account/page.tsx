@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { Account } from '@/components/setdrop/Account';
 import { PLANS } from '@/lib/stripe';
 
+// Per-user authed page — never prerender it. (Also prevents a missing/rotated
+// Supabase env var from failing the whole production build at prerender time.)
+export const dynamic = 'force-dynamic';
+
 export default async function AccountPage({
   searchParams,
 }: {

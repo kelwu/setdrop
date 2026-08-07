@@ -16,14 +16,15 @@ export async function GET(req: NextRequest) {
   const cutoff30d = new Date(Date.now() - 30 * 24 * 3_600_000).toISOString();
 
   // Users inactive for 14+ days who haven't been re-engaged in 30 days.
-  // Uses last_sign_in_at from auth.users via the public users view.
-  const { data: candidates } = await admin
-    .from('users')
-    .select('id, email, last_sign_in_at')
-    .lt('last_sign_in_at', cutoff14d)
-    .not('email', 'is', null);
+  // last_sign_in_at lives on auth.users (NOT public.users) — querying public.users
+  // for it threw "column does not exist" and silently broke this cron. List via the
+  // admin API and filter in code. Fine at this scale; paginate past 1000 users.
+  const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const candidates = (authList?.users ?? []).filter(
+    u => u.email && u.last_sign_in_at && u.last_sign_in_at < cutoff14d,
+  );
 
-  if (!candidates?.length) return NextResponse.json({ sent: 0 });
+  if (!candidates.length) return NextResponse.json({ sent: 0 });
 
   // Filter out users who received a re-engagement email in the last 30 days.
   const { data: recentEmails } = await admin
