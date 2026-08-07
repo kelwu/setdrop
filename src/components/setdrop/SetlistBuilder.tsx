@@ -685,7 +685,10 @@ export function SetlistBuilder() {
               Optional seeds help the AI ground your set in specific directions.
             </div>
             <div style={fieldStyle}>
-              <label style={labelStyle}>Seed Track — Search your Serato library</label>
+              <label style={labelStyle}>Seed Track (optional) — a song your set must include</label>
+              <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textMuted, lineHeight:1.6 }}>
+                Pin a track you know you want to play — the AI is guaranteed to place it in the set and builds the flow around it. Search your library by artist or title.
+              </div>
               <div style={{ position:'relative' }}>
                 <SDInput value={seedSearch} onChange={setSeedSearch}
                   placeholder="Search by artist or title..." />
