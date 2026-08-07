@@ -53,6 +53,20 @@ function splitReviewNotes(notes: string): { commentary: string[]; advisories: st
   return { commentary, advisories, personalization };
 }
 
+// The model writes reviewNotes in markdown (bold, bullets, sometimes headings),
+// but we render into a plain mono/prose UI — so strip the syntax to clean text
+// (bullets → •, drop **/__/`/#/>) rather than showing raw `**` and `-` symbols.
+// Line breaks are preserved via whiteSpace:'pre-wrap' at the render site.
+function formatNoteText(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+    .replace(/__(.+?)__/g, '$1')       // __bold__
+    .replace(/`([^`]+)`/g, '$1')       // `code`
+    .replace(/^#{1,6}\s+/gm, '')       // # headings
+    .replace(/^\s*>\s?/gm, '')         // > blockquote
+    .replace(/^\s*[-*+]\s+/gm, '• ');  // - bullets → •
+}
+
 interface ResolvedUrls {
   beatportUrl?: string;
   bpmSupremeUrl?: string;
@@ -562,26 +576,19 @@ export function SetlistOutput() {
           </div>
         )}
 
-        {/* Set notes & honesty advisories — full-width so thin-library warnings
-            (already computed by the pipeline) aren't buried. Guidance, not error. */}
+        {/* Heads Up — the short, actionable thin-library advisory stays above the
+            tracklist. The longer set notes move below the grid (tracks come first). */}
         {(() => {
           const notes = setlist?.reviewNotes?.trim();
           if (!notes) return null;
-          const { commentary, advisories, personalization } = splitReviewNotes(notes);
-          const cards = [
-            advisories.length     && { key:'adv',  eyebrow:'Heads Up',     fg:SD.warning, bg:SD.warningDim, border:`${SD.warning}44`, lines:advisories },
-            personalization.length && { key:'pers', eyebrow:'Personalized', fg:SD.info,    bg:SD.infoDim,    border:`${SD.info}44`,    lines:personalization },
-            commentary.length     && { key:'note', eyebrow:'Set Notes',    fg:SD.textSec, bg:SD.surface,    border:SD.border,          lines:commentary },
-          ].filter(Boolean) as { key:string; eyebrow:string; fg:string; bg:string; border:string; lines:string[] }[];
+          const { advisories } = splitReviewNotes(notes);
+          if (!advisories.length) return null;
           return (
-            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:24 }}>
-              {cards.map(c => (
-                <div key={c.key} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:4, padding:'14px 16px' }}>
-                  <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, textTransform:'uppercase', color:c.fg, marginBottom:8 }}>{c.eyebrow}</div>
-                  {c.lines.map((line, i) => (
-                    <p key={i} style={{ fontFamily:SD.mono, fontSize:13, lineHeight:1.65, color:SD.text, margin: i ? '8px 0 0' : 0 }}>{line}</p>
-                  ))}
-                </div>
+            <div style={{ background:SD.warningDim, border:`1px solid ${SD.warning}44`,
+              borderRadius:4, padding:'14px 16px', marginBottom:24 }}>
+              <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, textTransform:'uppercase', color:SD.warning, marginBottom:8 }}>Heads Up</div>
+              {advisories.map((line, i) => (
+                <p key={i} style={{ fontFamily:SD.mono, fontSize:13, lineHeight:1.65, color:SD.text, whiteSpace:'pre-wrap', margin: i ? '8px 0 0' : 0 }}>{formatNoteText(line)}</p>
               ))}
             </div>
           );
@@ -809,6 +816,31 @@ export function SetlistOutput() {
             )}
           </div>
         </div>
+
+        {/* Set notes — the model's overview + personalization, below the tracklist
+            so tracks come first. Markdown-stripped for the mono/prose UI. */}
+        {(() => {
+          const notes = setlist?.reviewNotes?.trim();
+          if (!notes) return null;
+          const { commentary, personalization } = splitReviewNotes(notes);
+          const groups = [
+            personalization.length && { key:'pers', eyebrow:'Personalized', fg:SD.info,      lines:personalization },
+            commentary.length      && { key:'note', eyebrow:'Set Notes',    fg:SD.textMuted, lines:commentary },
+          ].filter(Boolean) as { key:string; eyebrow:string; fg:string; lines:string[] }[];
+          if (!groups.length) return null;
+          return (
+            <div style={{ marginTop:24, display:'flex', flexDirection:'column', gap:16 }}>
+              {groups.map(g => (
+                <div key={g.key} style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4, padding:'16px 18px' }}>
+                  <div style={{ fontFamily:SD.mono, fontSize:11, letterSpacing:2, textTransform:'uppercase', color:g.fg, marginBottom:10 }}>{g.eyebrow}</div>
+                  {g.lines.map((line, i) => (
+                    <p key={i} style={{ fontFamily:SD.body, fontSize:14, lineHeight:1.7, color:SD.textSec, whiteSpace:'pre-wrap', margin: i ? '10px 0 0' : 0 }}>{formatNoteText(line)}</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
