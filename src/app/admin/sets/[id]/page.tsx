@@ -3,15 +3,9 @@ import { getAdminUser } from '@/lib/admin';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
 import { BRAND } from '@/lib/brand';
+import { SD } from '@/lib/setdrop/constants';
 
 export const dynamic = 'force-dynamic';
-
-const S = {
-  bg: '#0A0A0A', surface: '#141414', surface2: '#1A1A1A', border: 'rgba(255,255,255,0.07)',
-  accent: '#F5A623', accentDim: 'rgba(245,166,35,0.12)',
-  text: '#F0F0F0', textSec: '#8A8A8A', textMuted: '#4A4A4A',
-  mono: 'var(--font-mono), monospace', display: 'var(--font-display), sans-serif',
-};
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -82,19 +76,19 @@ export default async function AdminSetPage({ params }: Props) {
   const arcFill = arcD ? arcD + ` L${pts[n - 1][0]},${py + ch} L${px},${py + ch}Z` : '';
 
   return (
-    <div style={{ background: S.bg, minHeight: '100vh', color: S.text }}>
+    <div style={{ background: SD.bg, minHeight: '100vh', color: SD.text }}>
       {/* Admin header */}
       <div style={{
-        padding: '12px 40px', borderBottom: `1px solid ${S.border}`,
+        padding: '12px 40px', borderBottom: `1px solid ${SD.border}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: S.surface2,
+        background: SD.surface2,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <a href="/admin" style={{ fontFamily: S.mono, fontSize: 11, letterSpacing: 2, color: S.textMuted, textDecoration: 'none', textTransform: 'uppercase' }}>
+          <a href="/admin" style={{ fontFamily: SD.mono, fontSize: 11, letterSpacing: 2, color: SD.textMuted, textDecoration: 'none', textTransform: 'uppercase' }}>
             ← Control Room
           </a>
-          <span style={{ color: S.border }}>|</span>
-          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted }}>
+          <span style={{ color: SD.border }}>|</span>
+          <span style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted }}>
             {ownerEmail}
           </span>
         </div>
@@ -105,7 +99,7 @@ export default async function AdminSetPage({ params }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                fontFamily: S.mono, fontSize: 11, letterSpacing: 1, color: S.accent,
+                fontFamily: SD.mono, fontSize: 11, letterSpacing: 1, color: SD.accent,
                 border: `1px solid rgba(245,166,35,0.3)`, borderRadius: 3,
                 padding: '4px 10px', textDecoration: 'none',
               }}
@@ -115,8 +109,8 @@ export default async function AdminSetPage({ params }: Props) {
           )}
           {!data.is_public && (
             <span style={{
-              fontFamily: S.mono, fontSize: 11, letterSpacing: 1, color: S.textMuted,
-              border: `1px solid ${S.border}`, borderRadius: 3, padding: '4px 10px',
+              fontFamily: SD.mono, fontSize: 11, letterSpacing: 1, color: SD.textMuted,
+              border: `1px solid ${SD.border}`, borderRadius: 3, padding: '4px 10px',
             }}>
               PRIVATE SET
             </span>
@@ -126,52 +120,52 @@ export default async function AdminSetPage({ params }: Props) {
 
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '56px 40px 96px' }}>
         <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{date}</div>
-          <h1 style={{ fontFamily: S.display, fontSize: 'clamp(40px,6vw,80px)', letterSpacing: 4, margin: '0 0 12px', lineHeight: .95, color: S.text }}>
+          <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{date}</div>
+          <h1 style={{ fontFamily: SD.display, fontSize: 'clamp(40px,6vw,80px)', letterSpacing: 4, margin: '0 0 12px', lineHeight: .95, color: SD.text }}>
             {data.name.toUpperCase()}
           </h1>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16 }}>
             {[genre, crowd, dur, data.lineup_slot, `${tracks.length} tracks`].filter(Boolean).map((v, i) => (
-              <span key={i} style={{ fontFamily: S.mono, fontSize: 13, color: S.textSec }}>
-                {i > 0 && <span style={{ color: S.textMuted, marginRight: 16 }}>·</span>}
+              <span key={i} style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textSec }}>
+                {i > 0 && <span style={{ color: SD.textMuted, marginRight: 16 }}>·</span>}
                 {v}
               </span>
             ))}
           </div>
           {(data.vibe || data.wordplay_theme) && (
             <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              {data.vibe && <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>Vibe: {data.vibe}</span>}
-              {data.wordplay_theme && <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>Wordplay: {data.wordplay_theme}</span>}
+              {data.vibe && <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>Vibe: {data.vibe}</span>}
+              {data.wordplay_theme && <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>Wordplay: {data.wordplay_theme}</span>}
             </div>
           )}
         </div>
 
         {arcD && (
-          <div style={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 4, padding: '20px 20px 10px', marginBottom: 24, overflow: 'hidden' }}>
-            <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2, color: S.textMuted, textTransform: 'uppercase', marginBottom: 14 }}>Energy Arc</div>
+          <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: 4, padding: '20px 20px 10px', marginBottom: 24, overflow: 'hidden' }}>
+            <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textMuted, textTransform: 'uppercase', marginBottom: 14 }}>Energy Arc</div>
             <div style={{ overflowX: 'auto' }}>
               <svg width={arcW} height={arcH} style={{ overflow: 'visible', display: 'block' }}>
                 <defs>
                   <linearGradient id="arcFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={S.accent} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={S.accent} stopOpacity={0.02} />
+                    <stop offset="0%" stopColor={SD.accent} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={SD.accent} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 {[0, 2, 4, 6, 8, 10].map(v => {
                   const y = py + ch - (v / 10) * ch;
                   return (
                     <g key={v}>
-                      <line x1={px} y1={y} x2={px + cw} y2={y} stroke={S.border} strokeWidth={0.5} />
-                      <text x={px - 8} y={y + 4} textAnchor="end" fill={S.textMuted} fontSize={9} fontFamily="var(--font-mono),monospace">{v}</text>
+                      <line x1={px} y1={y} x2={px + cw} y2={y} stroke={SD.border} strokeWidth={0.5} />
+                      <text x={px - 8} y={y + 4} textAnchor="end" fill={SD.textMuted} fontSize={9} fontFamily="var(--font-mono),monospace">{v}</text>
                     </g>
                   );
                 })}
                 <path d={arcFill} fill="url(#arcFill)" />
-                <path d={arcD} fill="none" stroke={S.accent} strokeWidth={2} />
+                <path d={arcD} fill="none" stroke={SD.accent} strokeWidth={2} />
                 {pts.map((pt, i) => (
                   <g key={i}>
-                    <circle cx={pt[0]} cy={pt[1]} r={4} fill={S.accent} stroke={S.bg} strokeWidth={1.5} />
-                    <text x={pt[0]} y={py + ch + 16} textAnchor="middle" fill={S.textMuted} fontSize={8} fontFamily="var(--font-mono),monospace">
+                    <circle cx={pt[0]} cy={pt[1]} r={4} fill={SD.accent} stroke={SD.bg} strokeWidth={1.5} />
+                    <text x={pt[0]} y={py + ch + 16} textAnchor="middle" fill={SD.textMuted} fontSize={8} fontFamily="var(--font-mono),monospace">
                       {tracks[i].artist?.split(' ')[0] ?? ''}
                     </text>
                   </g>
@@ -182,94 +176,94 @@ export default async function AdminSetPage({ params }: Props) {
         )}
 
         {/* User Library */}
-        <div style={{ marginBottom: 48, border: `1px solid ${S.border}`, borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', background: S.surface2, borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2, color: S.textSec, textTransform: 'uppercase' }}>
+        <div style={{ marginBottom: 48, border: `1px solid ${SD.border}`, borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', background: SD.surface2, borderBottom: `1px solid ${SD.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textSec, textTransform: 'uppercase' }}>
               User Library
             </div>
             {library ? (
               <div style={{ display: 'flex', gap: 16 }}>
-                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
                   {(libraryTracks?.length ?? 0).toLocaleString()} tracks{(libraryTracks?.length ?? 0) >= 2000 ? ' (capped at 2000)' : ''}
                 </span>
-                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
                   {library.source ?? 'serato'}
                 </span>
-                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>
                   synced {new Date(library.last_synced).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
             ) : (
-              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>No library uploaded</span>
+              <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>No library uploaded</span>
             )}
           </div>
           {topGenres.length > 0 && (
-            <div style={{ padding: '12px 20px', borderBottom: `1px solid ${S.border}`, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ padding: '12px 20px', borderBottom: `1px solid ${SD.border}`, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {topGenres.map(([genre, count]) => (
-                <span key={genre} style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted, background: S.surface2, border: `1px solid ${S.border}`, borderRadius: 2, padding: '2px 8px' }}>
-                  {genre} <span style={{ color: S.textSec }}>{count}</span>
+                <span key={genre} style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, background: SD.surface2, border: `1px solid ${SD.border}`, borderRadius: 2, padding: '2px 8px' }}>
+                  {genre} <span style={{ color: SD.textSec }}>{count}</span>
                 </span>
               ))}
             </div>
           )}
           {libraryTracks && libraryTracks.length > 0 ? (
             <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: S.mono, fontSize: 12 }}>
-                <thead style={{ position: 'sticky', top: 0, background: S.surface2, zIndex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SD.mono, fontSize: 12 }}>
+                <thead style={{ position: 'sticky', top: 0, background: SD.surface2, zIndex: 1 }}>
                   <tr>
                     {['Artist', 'Title', 'BPM', 'Key', 'Genre'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: S.textMuted, fontWeight: 400, borderBottom: `1px solid ${S.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: SD.textMuted, fontWeight: 400, borderBottom: `1px solid ${SD.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {libraryTracks.map((t, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${S.border}` }}>
-                      <td style={{ padding: '7px 12px', color: S.text, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</td>
-                      <td style={{ padding: '7px 12px', color: S.textSec, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</td>
-                      <td style={{ padding: '7px 12px', color: S.accent, whiteSpace: 'nowrap' }}>{t.bpm ?? '—'}</td>
-                      <td style={{ padding: '7px 12px', color: S.textSec, whiteSpace: 'nowrap' }}>{t.key ?? '—'}</td>
-                      <td style={{ padding: '7px 12px', color: S.textMuted, whiteSpace: 'nowrap' }}>{t.genre ?? '—'}</td>
+                    <tr key={i} style={{ borderBottom: `1px solid ${SD.border}` }}>
+                      <td style={{ padding: '7px 12px', color: SD.text, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</td>
+                      <td style={{ padding: '7px 12px', color: SD.textSec, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</td>
+                      <td style={{ padding: '7px 12px', color: SD.accent, whiteSpace: 'nowrap' }}>{t.bpm ?? '—'}</td>
+                      <td style={{ padding: '7px 12px', color: SD.textSec, whiteSpace: 'nowrap' }}>{t.key ?? '—'}</td>
+                      <td style={{ padding: '7px 12px', color: SD.textMuted, whiteSpace: 'nowrap' }}>{t.genre ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : library ? (
-            <div style={{ padding: '20px', fontFamily: S.mono, fontSize: 12, color: S.textMuted }}>Library exists but no tracks found.</div>
+            <div style={{ padding: '20px', fontFamily: SD.mono, fontSize: 12, color: SD.textMuted }}>Library exists but no tracks found.</div>
           ) : null}
         </div>
 
         <div>
-          <div style={{ fontFamily: S.mono, fontSize: 12, letterSpacing: 2, color: S.textSec, textTransform: 'uppercase', marginBottom: 12 }}>
+          <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textSec, textTransform: 'uppercase', marginBottom: 12 }}>
             Tracklist
           </div>
           {tracks.length === 0 && (
-            <div style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted, padding: '24px 0' }}>No tracks saved.</div>
+            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, padding: '24px 0' }}>No tracks saved.</div>
           )}
           {tracks.map((t, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderBottom: `1px solid ${S.border}` }}>
-              <span style={{ fontFamily: S.mono, fontSize: 13, color: S.textMuted, width: 22, textAlign: 'right', flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderBottom: `1px solid ${SD.border}` }}>
+              <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, width: 22, textAlign: 'right', flexShrink: 0 }}>
                 {String(t.position || i + 1).padStart(2, '0')}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 600, color: S.text }}>{t.artist}</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>— {t.title}</span>
+                  <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>{t.artist}</span>
+                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>— {t.title}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.accent }}>{t.bpm} BPM</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>{t.key}</span>
+                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.accent }}>{t.bpm} BPM</span>
+                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{t.key}</span>
                   {t.harmonicMixingNotes && (
-                    <span style={{ fontFamily: S.mono, fontSize: 12, color: S.textSec }}>{t.harmonicMixingNotes}</span>
+                    <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{t.harmonicMixingNotes}</span>
                   )}
                 </div>
                 {t.whyThisTrack && (
-                  <div style={{ fontFamily: S.mono, fontSize: 11, color: S.textMuted, marginTop: 4, lineHeight: 1.5 }}>{t.whyThisTrack}</div>
+                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 4, lineHeight: 1.5 }}>{t.whyThisTrack}</div>
                 )}
               </div>
               <div style={{ flexShrink: 0 }}>
-                <span style={{ fontFamily: S.mono, fontSize: 13, color: S.accentDim, background: S.accentDim, border: `1px solid ${S.accent}22`, borderRadius: 2, padding: '2px 6px' }}>
+                <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.accentDim, background: SD.accentDim, border: `1px solid ${SD.accent}22`, borderRadius: 2, padding: '2px 6px' }}>
                   E{t.energyLevel}
                 </span>
               </div>
