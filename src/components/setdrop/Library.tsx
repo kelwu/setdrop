@@ -7,7 +7,7 @@ import { BRAND } from '@/lib/brand';
 import { SD, LIBRARY_TRACKS, SampleTrack, ConfidenceStatus } from '@/lib/setdrop/constants';
 import { trackEvent, type LibraryUploadFailReason } from '@/lib/analytics';
 import { LibraryTrack, SetlistTrack } from '@/lib/agents/types';
-import { parseRekordboxXML } from '@/lib/setdrop/rekordbox-parser';
+import { parseRekordboxLibrary, type RekordboxPlaylist } from '@/lib/setdrop/rekordbox-parser';
 import { buildCrate, downloadCrate } from '@/lib/setdrop/serato-crate';
 import { buildRekordboxXml, buildM3u, downloadRekordboxXml, downloadM3u } from '@/lib/setdrop/rekordbox-export';
 import { SDButton, SDInput, ConfidenceBadge, EnergyDot, Tabs } from './shared';
@@ -678,8 +678,9 @@ export function Library() {
         try {
           const text = e.target?.result as string;
           let tracks: LibraryTrack[];
+          let playlists: RekordboxPlaylist[];
           try {
-            tracks = parseRekordboxXML(text);
+            ({ tracks, playlists } = parseRekordboxLibrary(text));
           } catch (parseErr) {
             throw new ImportError('parse_throw', parseErr instanceof Error ? parseErr.message : 'Failed to parse Rekordbox XML');
           }
@@ -693,7 +694,7 @@ export function Library() {
           if (!urlRes.ok) throw new ImportError('upload_init', `Upload init failed (HTTP ${urlRes.status})`);
           const { token, path: storagePath } = await urlRes.json() as { token: string; path: string };
 
-          const jsonBlob = new Blob([JSON.stringify(tracks)], { type: 'application/octet-stream' });
+          const jsonBlob = new Blob([JSON.stringify({ tracks, playlists })], { type: 'application/octet-stream' });
           const { error: uploadError } = await createClient().storage
             .from('library-uploads')
             .uploadToSignedUrl(storagePath, token, jsonBlob, { contentType: 'application/octet-stream' });
@@ -737,6 +738,7 @@ export function Library() {
         .eq('user_id', user.id)
         .single();
       if (library) {
+        await supabase.from('serato_crates').delete().eq('library_id', library.id);
         await supabase.from('serato_tracks').delete().eq('library_id', library.id);
         await supabase.from('serato_libraries').delete().eq('id', library.id);
       }

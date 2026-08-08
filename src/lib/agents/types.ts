@@ -15,6 +15,7 @@ export interface SetlistInput {
     cooldown: number;
   };
   lineupSlot: string;
+  sourcePlaylist?: string;    // when set, pool = this Rekordbox playlist; genre is optional and the genre gate is skipped
   seedTracks?: string[];
   soundcloudUrl?: string;
   wordplayTheme?: string;

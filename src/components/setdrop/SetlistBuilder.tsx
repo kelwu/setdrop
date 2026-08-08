@@ -8,7 +8,7 @@ import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenreCombobox, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 import { trackEvent } from '@/lib/analytics';
 import { superFamily } from '@/lib/setdrop/genre';
-import { CURATE_HEADROOM, type ReadinessResult } from '@/lib/setdrop/readiness';
+import { CURATE_HEADROOM, classifyReadiness, targetTrackCount, type ReadinessResult } from '@/lib/setdrop/readiness';
 import * as Sentry from '@sentry/nextjs';
 
 // Presentation for the pre-gen "set readiness" hint — turns a ReadinessResult into
@@ -19,6 +19,7 @@ function readinessView(
   r: ReadinessResult | null,
   primaryGenre: string,
   durationLabel: string,
+  playlistName?: string,
 ): { fg: string; bg: string; border: string; text: string } | null {
   if (!r || r.status === 'unknown') return null;
   const { counts, target, threshold, status } = r;
@@ -29,6 +30,19 @@ function readinessView(
     amber: { fg: SD.warning, bg: SD.warningDim, border: `${SD.warning}33` },
     green: { fg: SD.success, bg: SD.successDim, border: `${SD.success}33` },
   } as const;
+
+  // Playlist mode: the curated playlist IS the pool, so copy is about its size vs
+  // the set length — never about genre coverage.
+  if (playlistName) {
+    const n = counts.usable;
+    const noun = `track${n === 1 ? '' : 's'}`;
+    const text = status === 'red'
+      ? `Only ${n} ${noun} in "${playlistName}" — below the ~${target} needed to fill ${durationLabel}. Add more tracks to the playlist, or shorten the set.`
+      : status === 'amber'
+        ? `${n} ${noun} in "${playlistName}" for a ~${target}-track set — it'll work, but there's little room to vary the set next time.`
+        : `${n} ${noun} in "${playlistName}" — plenty of room to build a ~${target}-track set.`;
+    return { ...tones[status], text };
+  }
 
   let text: string;
   if (status === 'red') {
@@ -81,6 +95,25 @@ export function SetlistBuilder() {
   const [libraryTracks, setLibraryTracks] = useState<{ artist: string; title: string; bpm: number; key: string }[]>([]);
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
+
+  // Imported Rekordbox playlists (crates). When present, the DJ can build a set
+  // scoped to one of them; sourcePlaylist=null means "whole library, genre-filtered".
+  const [playlists, setPlaylists] = useState<{ name: string; count: number }[]>([]);
+  const [sourcePlaylist, setSourcePlaylist] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = createClient();
+    void Promise.resolve(
+      supabase.from('serato_crates').select('crate_name, track_count')
+    ).then(({ data }) => {
+      if (!data?.length) return;
+      setPlaylists(
+        data
+          .filter((c): c is { crate_name: string; track_count: number } => !!c.crate_name)
+          .map(c => ({ name: c.crate_name, count: c.track_count ?? 0 }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    }).catch(() => {});
+  }, []);
   useEffect(() => {
     // Try localStorage first (legacy — may not be populated after new upload flow)
     try {
@@ -111,6 +144,18 @@ export function SetlistBuilder() {
   // spend a generation. Skipped in demo mode (no real library). Debounced + aborted
   // so rapid genre/duration changes don't race.
   useEffect(() => {
+    // Playlist mode: we already know the pool size (the crate's count), so judge
+    // readiness locally — no API round-trip, and genre is irrelevant here.
+    if (sourcePlaylist) {
+      const pl = playlists.find(p => p.name === sourcePlaylist);
+      if (!pl || !duration) { setReadiness(null); return; }
+      const target = targetTrackCount(parseInt(duration) || 60);
+      setReadiness(classifyReadiness(
+        { exact: pl.count, family: 0, adjacent: 0, superFamily: pl.count, usable: pl.count },
+        target, true,
+      ));
+      return;
+    }
     if (!primaryGenre || !duration || !libraryCount) { setReadiness(null); return; }
     const durationMinutes = parseInt(duration) || 60;
     const ctrl = new AbortController();
@@ -128,7 +173,7 @@ export function SetlistBuilder() {
         .finally(() => setReadinessLoading(false));
     }, 400);
     return () => { ctrl.abort(); clearTimeout(timer); };
-  }, [primaryGenre, secondaryGenre, duration, libraryCount]);
+  }, [sourcePlaylist, playlists, primaryGenre, secondaryGenre, duration, libraryCount]);
 
   useEffect(() => {
     try {
@@ -217,6 +262,7 @@ export function SetlistBuilder() {
               sustain: arcPoints[3], cooldown: arcPoints[4],
             },
             lineupSlot: slot,
+            sourcePlaylist: sourcePlaylist || undefined,
             seedTracks: seedSearch ? [seedSearch] : undefined,
             wordplayTheme: wordplay || undefined,
             venueContext: venueName || undefined,
@@ -373,7 +419,8 @@ export function SetlistBuilder() {
   };
 
   const stepValid = (s: number) => {
-    if (s === 1) return primaryGenre && crowd && duration && slot;
+    // Genre is optional when building from a curated playlist.
+    if (s === 1) return (sourcePlaylist || primaryGenre) && crowd && duration && slot;
     return true;
   };
 
@@ -576,8 +623,50 @@ export function SetlistBuilder() {
               <SDInput label="Venue Name (optional — Gig Intel)" value={venueName}
                 onChange={setVenueName} placeholder="e.g. Fabric, London" />
             </div>
+            {playlists.length > 0 && (
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Track Source</label>
+                <div style={{ display:'flex', borderRadius:3, overflow:'hidden', border:`1px solid ${SD.border}` }}>
+                  {([['library','Whole Library'],['playlist','From a Playlist']] as const).map(([mode, label], i) => {
+                    const active = mode === 'playlist' ? !!sourcePlaylist : !sourcePlaylist;
+                    return (
+                      <button key={mode} type="button"
+                        onClick={() => setSourcePlaylist(mode === 'playlist' ? (sourcePlaylist ?? playlists[0]?.name ?? null) : null)}
+                        style={{
+                          flex:1, fontFamily:SD.mono, fontSize:13, letterSpacing:.5,
+                          border:'none', borderLeft: i > 0 ? `1px solid ${SD.border}` : 'none',
+                          background: active ? SD.accent : SD.surface2,
+                          color: active ? '#000' : SD.textSec,
+                          padding:'9px 4px', cursor:'pointer', transition:'all .12s',
+                        }}>{label}</button>
+                    );
+                  })}
+                </div>
+                {sourcePlaylist && (
+                  <select value={sourcePlaylist} onChange={e => setSourcePlaylist(e.target.value)}
+                    style={{
+                      marginTop:10, width:'100%', fontFamily:SD.mono, fontSize:13,
+                      background:SD.surface2, color:SD.text, border:`1px solid ${SD.border}`,
+                      borderRadius:3, padding:'9px 10px', cursor:'pointer',
+                    }}>
+                    {playlists.map(p => (
+                      <option key={p.name} value={p.name}>{p.name} ({p.count} track{p.count === 1 ? '' : 's'})</option>
+                    ))}
+                  </select>
+                )}
+                <p style={{ fontFamily:SD.mono, fontSize:11, lineHeight:1.6, color:SD.textMuted, margin:'8px 0 0' }}>
+                  {sourcePlaylist
+                    ? `SetDrop arranges a set within your "${sourcePlaylist}" playlist. Genre is optional — you've already picked the tracks.`
+                    : 'SetDrop picks from your whole library, filtered by the genre you choose below.'}
+                </p>
+              </div>
+            )}
             <div style={fieldStyle}>
-              <label style={labelStyle}>Primary Genre <span style={{ color:SD.accent }}>*</span></label>
+              <label style={labelStyle}>
+                Primary Genre {sourcePlaylist
+                  ? <span style={{ color:SD.textMuted, fontWeight:400 }}>(optional)</span>
+                  : <span style={{ color:SD.accent }}>*</span>}
+              </label>
               <GenreCombobox value={primaryGenre} onChange={setPrimaryGenre} />
             </div>
             <div style={fieldStyle}>
@@ -617,7 +706,7 @@ export function SetlistBuilder() {
             {/* Set readiness — honest pre-gen signal on whether the library can
                 support this genre + duration with room to curate. Warn, never block. */}
             {(readiness || readinessLoading) && (() => {
-              const rv = readinessView(readiness, primaryGenre, duration || 'the set');
+              const rv = readinessView(readiness, primaryGenre, duration || 'the set', sourcePlaylist || undefined);
               if (!rv && !readinessLoading) return null;
               return (
                 <div style={{
