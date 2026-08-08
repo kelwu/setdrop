@@ -44,9 +44,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { input, tracks } = body;
-  if (!input?.primaryGenre || !input?.crowdContext || !input?.durationMinutes || !input?.lineupSlot) {
+  // Genre is required UNLESS building from a curated playlist (which supplies the pool).
+  if ((!input?.primaryGenre && !input?.sourcePlaylist) || !input?.crowdContext || !input?.durationMinutes || !input?.lineupSlot) {
     return NextResponse.json(
-      { error: 'Missing required fields: primaryGenre, crowdContext, durationMinutes, lineupSlot' },
+      { error: 'Missing required fields: primaryGenre (or sourcePlaylist), crowdContext, durationMinutes, lineupSlot' },
       { status: 400 }
     );
   }
@@ -117,7 +118,38 @@ export async function POST(req: NextRequest) {
               .select('id')
               .eq('user_id', user.id)
               .single();
-            if (lib) {
+            if (lib && input.sourcePlaylist) {
+              // Playlist mode: the pool is exactly the crate's tracks, joined by real
+              // serato_tracks UUIDs (see library-save.ts) — no genre filtering.
+              const { data: crate } = await supabase
+                .from('serato_crates')
+                .select('track_ids')
+                .eq('library_id', lib.id)
+                .eq('crate_name', input.sourcePlaylist)
+                .maybeSingle();
+              const ids = (crate?.track_ids ?? []) as string[];
+              const CHUNK = 300;
+              const rows: Array<{
+                id: string; artist: string | null; title: string | null;
+                bpm: number | null; key: string | null; genre: string | null;
+                file_path: string | null; lastfm_tags: string[] | null;
+              }> = [];
+              for (let i = 0; i < ids.length; i += CHUNK) {
+                const { data } = await supabase.from('serato_tracks')
+                  .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                  .eq('library_id', lib.id)
+                  .in('id', ids.slice(i, i + CHUNK));
+                if (data) rows.push(...data);
+              }
+              if (rows.length) {
+                library = rows.map(t => ({
+                  id: t.id, artist: t.artist ?? '', title: t.title ?? '',
+                  bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                  filePath: t.file_path ?? undefined, lastfmTags: t.lastfm_tags ?? [],
+                  isWishlist: false, enrichmentSource: 'serato' as const,
+                }));
+              }
+            } else if (lib) {
               const genre = input.primaryGenre;
               const sanitizeSeed = (s: string) =>
                 s.replace(/[,()[\]—–]/g, ' ').replace(/\s+/g, ' ').trim();
