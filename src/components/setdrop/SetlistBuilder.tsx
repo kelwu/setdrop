@@ -467,10 +467,22 @@ export function SetlistBuilder() {
     }, 400);
   };
 
+  // Commit any text still sitting in the artist input into a chip. The chip is only
+  // added on Enter/comma, so a DJ who types an artist and clicks Continue would
+  // otherwise lose it (and fail the "at least one axis" gate). Flush on blur + Continue.
+  const commitArtistInput = () => {
+    const name = artistInput.trim().replace(/,$/, '').trim();
+    setArtistInput('');
+    if (name && !artists.some(x => x.toLowerCase() === name.toLowerCase())) {
+      setArtists(prev => [...prev, name]);
+    }
+  };
+
   const stepValid = (s: number) => {
     // The pool must be defined by at least one axis: genre, era, artist, or playlist.
+    // A typed-but-not-yet-added artist counts (it's committed when advancing).
     if (s === 1) {
-      const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length);
+      const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length || artistInput.trim());
       return hasAxis && !!crowd && !!duration && !!slot;
     }
     return true;
@@ -716,7 +728,7 @@ export function SetlistBuilder() {
             {/* Pool definition — genre / era / artist are all optional and combine (AND).
                 At least one axis (or a playlist above) is required to continue. */}
             {(() => {
-              const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length);
+              const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length || artistInput.trim());
               return (
                 <p style={{ fontFamily:SD.mono, fontSize:11, lineHeight:1.6,
                   color: hasAxis ? SD.textMuted : SD.accent, margin:'0 0 -8px' }}>
@@ -771,13 +783,10 @@ export function SetlistBuilder() {
                   onKeyDown={e => {
                     if ((e.key === 'Enter' || e.key === ',') && artistInput.trim()) {
                       e.preventDefault();
-                      const name = artistInput.trim().replace(/,$/, '').trim();
-                      if (name && !artists.some(x => x.toLowerCase() === name.toLowerCase())) {
-                        setArtists(prev => [...prev, name]);
-                      }
-                      setArtistInput('');
+                      commitArtistInput();
                     }
                   }}
+                  onBlur={commitArtistInput}
                   placeholder="Type an artist, press Enter…"
                   style={{
                     flex:1, minWidth:180, background:SD.surface2, border:`1px solid ${SD.border}`,
@@ -964,7 +973,7 @@ export function SetlistBuilder() {
             : <span/>
           }
           {step < 3
-            ? <SDButton onClick={() => setStep(s => s+1)} disabled={!stepValid(step)}>Continue →</SDButton>
+            ? <SDButton onClick={() => { if (step === 1) commitArtistInput(); setStep(s => s+1); }} disabled={!stepValid(step)}>Continue →</SDButton>
             : <SDButton onClick={runGeneration} style={{ fontSize:14, padding:'14px 40px' }}>Drop the Set</SDButton>
           }
         </div>
