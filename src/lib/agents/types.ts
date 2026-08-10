@@ -2,8 +2,14 @@
 
 export interface SetlistInput {
   name: string;
-  primaryGenre: string;
+  // The candidate-track pool is defined by any combination (AND) of the axes
+  // below: genre, era, artist, playlist. Each is optional; at least one must be
+  // present (validated at the route + UI). None of them being required is the
+  // whole point of the multi-axis model.
+  primaryGenre?: string;
   secondaryGenre?: string;
+  eras?: number[];            // decade-start years to include, e.g. [2000, 2010] = 2000s+2010s
+  artists?: string[];         // anchor artists — pool is limited to tracks by these (substring match)
   vibe?: string;
   crowdContext: string;
   durationMinutes: number;
@@ -15,7 +21,7 @@ export interface SetlistInput {
     cooldown: number;
   };
   lineupSlot: string;
-  sourcePlaylist?: string;    // when set, pool = this Rekordbox playlist; genre is optional and the genre gate is skipped
+  sourcePlaylist?: string;    // when set, pool = this Rekordbox playlist; other axes narrow within it
   seedTracks?: string[];
   soundcloudUrl?: string;
   wordplayTheme?: string;
@@ -125,8 +131,10 @@ export interface GeneratedSetlist {
   excludedCount?: number;
   libraryTracksUsed?: number;
   input?: {
-    primaryGenre: string;
+    primaryGenre?: string;
     secondaryGenre?: string;
+    eras?: number[];
+    artists?: string[];
     crowdContext: string;
     durationMinutes: number;
     lineupSlot: string;

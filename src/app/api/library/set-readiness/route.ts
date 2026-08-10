@@ -19,14 +19,21 @@ export const maxDuration = 30;
 interface Body {
   primaryGenre?: string;
   secondaryGenre?: string;
+  eras?: number[];
+  artists?: string[];
   durationMinutes?: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { primaryGenre, secondaryGenre, durationMinutes } = (await req.json()) as Body;
-    if (!primaryGenre?.trim() || !durationMinutes) {
-      return NextResponse.json({ error: 'primaryGenre and durationMinutes required' }, { status: 400 });
+    const { primaryGenre, secondaryGenre, eras, artists, durationMinutes } = (await req.json()) as Body;
+    const genreActive = !!primaryGenre?.trim();
+    const eraSet = new Set(eras ?? []);
+    const eraActive = eraSet.size > 0;
+    const anchors = (artists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
+    const artistActive = anchors.length > 0;
+    if ((!genreActive && !eraActive && !artistActive) || !durationMinutes) {
+      return NextResponse.json({ error: 'durationMinutes and at least one axis (genre, era, or artist) required' }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -42,14 +49,14 @@ export async function POST(req: NextRequest) {
       .single();
     if (!library) return NextResponse.json(unknownReadiness('no-library'));
 
-    // Tiny 2-column scan (genre + tags only), paged like analyze-gaps.
+    // Tiny scan (genre + tags + year + artist), paged like analyze-gaps.
     const PAGE = 1000;
-    const rows: Array<{ genre: string | null; lastfm_tags: unknown }> = [];
+    const rows: Array<{ genre: string | null; lastfm_tags: unknown; year: number | null; artist: string | null }> = [];
     let from = 0;
     while (true) {
       const { data: page } = await admin
         .from('serato_tracks')
-        .select('genre, lastfm_tags')
+        .select('genre, lastfm_tags, year, artist')
         .eq('library_id', library.id)
         .eq('in_library', true)
         .range(from, from + PAGE - 1);
@@ -60,29 +67,39 @@ export async function POST(req: NextRequest) {
     }
     if (!rows.length) return NextResponse.json(unknownReadiness('no-library'));
 
-    const gigSuper = superFamily(primaryGenre);
-    const counts: ReadinessCounts = { exact: 0, family: 0, adjacent: 0, superFamily: 0, usable: 0 };
+    const gigSuper = genreActive ? superFamily(primaryGenre!) : 'other';
+    const counts: ReadinessCounts = { exact: 0, family: 0, adjacent: 0, superFamily: 0, usable: 0, withYear: 0, poolTotal: 0 };
 
     for (const t of rows) {
       const genre = t.genre ?? '';
       const tags = (t.lastfm_tags as string[] | null) ?? [];
 
-      // exact/family/adjacent + super-family use the PRIMARY genre only, mirroring
-      // pipeline.ts:459-465 (so "few true-genre tracks" agrees with the backend note).
-      const primary = genreRelevance(primaryGenre, genre, tags);
-      if (primary.tier === 'exact') counts.exact++;
-      else if (primary.tier === 'family') counts.family++;
-      else if (primary.tier === 'adjacent') counts.adjacent++;
-      if (gigSuper !== 'other' && superFamily(genre, tags) === gigSuper) counts.superFamily++;
+      // Genre-tier counts (primary genre only) — mirror the pipeline honesty note.
+      // Only meaningful when a genre axis is active.
+      if (genreActive) {
+        const primary = genreRelevance(primaryGenre!, genre, tags);
+        if (primary.tier === 'exact') counts.exact++;
+        else if (primary.tier === 'family') counts.family++;
+        else if (primary.tier === 'adjacent') counts.adjacent++;
+        if (gigSuper !== 'other' && superFamily(genre, tags) === gigSuper) counts.superFamily++;
+      }
 
-      // usable uses the best of primary/secondary — mirrors filterTracksForGig's
-      // genreScoreFor gate (a track survives if either genre isn't 'off').
-      const secondaryScore = secondaryGenre ? genreRelevance(secondaryGenre, genre, tags).score : -1;
-      if (Math.max(primary.score, secondaryScore) >= 0) counts.usable++;
+      // Combined-pool membership — must pass every active axis, mirroring
+      // filterTracksForGig + the pipeline gate.
+      if (eraActive && !(t.year != null && eraSet.has(Math.floor(t.year / 10) * 10))) continue;
+      if (artistActive && !anchors.some(a => (t.artist ?? '').toLowerCase().includes(a))) continue;
+      counts.poolTotal++;
+      if (genreActive) {
+        const primaryScore = genreRelevance(primaryGenre!, genre, tags).score;
+        const secondaryScore = secondaryGenre ? genreRelevance(secondaryGenre, genre, tags).score : -1;
+        if (Math.max(primaryScore, secondaryScore) < 0) continue; // 'off' from both → excluded
+      }
+      counts.usable++;
+      if (t.year != null) counts.withYear++;
     }
 
     const target = targetTrackCount(durationMinutes);
-    const result: ReadinessResult = classifyReadiness(counts, target, gigSuper === 'other');
+    const result: ReadinessResult = classifyReadiness(counts, target, gigSuper === 'other', { genreActive, eraActive });
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

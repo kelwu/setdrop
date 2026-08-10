@@ -219,6 +219,72 @@ function computeLibraryProfile(tracks: LibraryTrack[]): LibraryProfile {
   };
 }
 
+// ── Multi-axis pool helpers ──────────────────────────────────────────────
+// The candidate pool is the AND of whatever axes the DJ supplied: genre, era
+// (release-year decade), artist, playlist. These helpers keep the axis logic
+// and the human-readable phrasing in one place so the filter, the gate, the
+// LLM prompt, and the review notes all agree.
+
+const decadeOf = (year: number) => Math.floor(year / 10) * 10;
+
+/** "the 2000s" / "the 1990s & 2010s" from decade-start years. */
+function eraLabel(eras: number[]): string {
+  const decades = [...new Set(eras)].sort((a, b) => a - b).map(d => `${d}s`);
+  if (decades.length <= 1) return `the ${decades[0] ?? ''}`.trim();
+  return `the ${decades.slice(0, -1).join(', ')} & ${decades[decades.length - 1]}`;
+}
+
+/** "Drake" / "Drake & Future" / "Drake, Future & Skrillex". */
+function artistLabel(artists: string[]): string {
+  if (artists.length <= 1) return artists[0] ?? '';
+  return `${artists.slice(0, -1).join(', ')} & ${artists[artists.length - 1]}`;
+}
+
+/** Human phrase for the active pool axes, e.g. "pop from the 2000s", "tracks by
+ *  Drake", "the 2010s". Used in gate errors, the blueprint prompt, and notes. */
+function poolDescription(input: SetlistInput): string {
+  const genre = input.primaryGenre
+    ? (input.secondaryGenre ? `${input.primaryGenre}/${input.secondaryGenre}` : input.primaryGenre)
+    : '';
+  const segs: string[] = [];
+  if (genre) segs.push(genre);
+  if (input.artists?.length) segs.push(`${genre ? '' : 'tracks '}by ${artistLabel(input.artists)}`.trim());
+  if (input.eras?.length) segs.push(`from ${eraLabel(input.eras)}`);
+  if (input.sourcePlaylist) segs.push(`within your "${input.sourcePlaylist}" playlist`);
+  return segs.join(' ').trim() || 'your library';
+}
+
+/** Track passes the era axis: has a year whose decade is one the DJ selected.
+ *  Null-year tracks are excluded when era is active (they can't be placed). */
+function makeEraPredicate(input: SetlistInput) {
+  const eraSet = new Set(input.eras ?? []);
+  const active = eraSet.size > 0;
+  return (t: { year?: number }) => !active || (t.year != null && eraSet.has(decadeOf(t.year)));
+}
+
+/** Track passes the artist axis: its artist string contains any anchor artist.
+ *  Typed on `{ artist }` so it works for both LibraryTrack pools and selected tracks. */
+function makeArtistPredicate(input: SetlistInput) {
+  const anchors = (input.artists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
+  const active = anchors.length > 0;
+  const isAnchor = (t: { artist: string }) => anchors.some(a => t.artist.toLowerCase().includes(a));
+  return { active, isAnchor: (t: { artist: string }) => !active || isAnchor(t), matchesAnchor: isAnchor };
+}
+
+/** Error copy when the combined (non-playlist) pool is too thin to fill the set. */
+function poolFloorError(input: SetlistInput, n: number): string {
+  const genreActive = !!input.primaryGenre;
+  const eraActive = (input.eras?.length ?? 0) > 0;
+  const artistActive = (input.artists?.length ?? 0) > 0;
+  if (eraActive && !genreActive && !artistActive) {
+    return `Not enough tracks from ${eraLabel(input.eras!)} — your library has only ${n} dated track${n === 1 ? '' : 's'} in that range (many tracks may lack release-year data). Pick more decades, add a genre, or shorten the set.`;
+  }
+  if (artistActive && !genreActive && !eraActive) {
+    return `Not enough tracks by ${artistLabel(input.artists!)} — your library has only ${n}. Add more of their music, broaden the artists, or shorten the set.`;
+  }
+  return `Not enough tracks match ${poolDescription(input)} — only ${n} found. Loosen a filter (genre, era, or artist) or shorten the set.`;
+}
+
 // Filter library down to the most relevant tracks for this gig
 function filterTracksForGig(
   tracks: LibraryTrack[],
@@ -233,16 +299,18 @@ function filterTracksForGig(
   const isSeed = (t: LibraryTrack) =>
     seeds.some(s => t.title.toLowerCase().includes(s) || t.artist.toLowerCase().includes(s));
 
-  // Playlist mode: the DJ already curated the pool, so genre is NOT a gate — every
-  // track passes (scored 0 on genre; BPM/tags/affinity still order it below).
-  const playlistMode = !!input.sourcePlaylist;
+  // Era + artist axes narrow the pool in every mode (including within a playlist).
+  const matchesEra = makeEraPredicate(input);
+  const artist = makeArtistPredicate(input);
 
-  // Genre relevance GATES the pool: a track in a different super-family than the gig
-  // (e.g. R&B for a Trance gig) is excluded outright — genre is not a soft bonus that a
-  // tempo match can tie. Score by tier (exact 4 / family 3 / adjacent 2 / unknown 0).
-  // Secondary genre can rescue a track. Returns null when the track is excluded.
+  // Genre relevance GATES the pool only when a genre axis is supplied: a track in a
+  // different super-family than the gig (e.g. R&B for a Trance gig) is excluded
+  // outright — genre is not a soft bonus a tempo match can tie. Score by tier
+  // (exact 4 / family 3 / adjacent 2 / unknown 0). Secondary genre can rescue a
+  // track. When no genre is set (era/artist/playlist-only), genre isn't a gate:
+  // every track scores 0 and order is decided by BPM/tags/affinity below.
   const genreScoreFor = (t: LibraryTrack): number | null => {
-    if (playlistMode) return 0;
+    if (!input.primaryGenre) return 0;
     const primary = genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []);
     const secondary = input.secondaryGenre
       ? genreRelevance(input.secondaryGenre, t.genre ?? '', t.lastfmTags ?? [])
@@ -260,6 +328,7 @@ function filterTracksForGig(
 
   const scored = tracks
     .filter(t => !t.isWishlist && !isSeed(t))
+    .filter(t => matchesEra(t) && artist.isAnchor(t))
     .map(t => ({ t, genre: genreScoreFor(t) }))
     .filter((x): x is { t: LibraryTrack; genre: number } => x.genre !== null)
     .map(({ t, genre }) => {
@@ -277,6 +346,8 @@ function filterTracksForGig(
     })
     .sort((a, b) => b.score - a.score)
     .filter(({ t }) => {
+      // Anchor artists are the whole point of an artist-anchored set — never cap them.
+      if (artist.active && artist.matchesAnchor(t)) return true;
       const key = t.artist.toLowerCase().trim();
       perArtist[key] = (perArtist[key] ?? 0) + 1;
       return perArtist[key] <= POOL_PER_ARTIST_CAP;
@@ -303,11 +374,16 @@ ${JSON.stringify(profile, null, 2)}
 Gig context:
 - Venue: ${input.venueContext || 'Not specified'}
 - Crowd: ${input.crowdContext}
+- Pool: ${poolDescription(input)}
 - Primary genre: ${input.primaryGenre
     || (input.sourcePlaylist
       ? `(building from the "${input.sourcePlaylist}" playlist — infer the dominant genre and energy from the library profile above)`
-      : 'Not specified')}
+      : (input.eras?.length || input.artists?.length)
+        ? '(no genre filter — the pool is defined by the era/artist above; infer dominant genre and energy from the profile)'
+        : 'Not specified')}
 - Secondary genre: ${input.secondaryGenre || 'None'}
+- Era: ${input.eras?.length ? eraLabel(input.eras) : 'Any'}
+- Artists: ${input.artists?.length ? artistLabel(input.artists) : 'Any'}
 - Lineup slot: ${input.lineupSlot}
 - Duration: ${input.durationMinutes} minutes
 - Vibe: ${input.vibe || 'Not specified'}
@@ -370,8 +446,10 @@ ${JSON.stringify(intel, null, 2)}
 
 User preferences:
 - Setlist name: "${input.name || 'Untitled Set'}"
+- Pool focus: ${poolDescription(input)}
 - Wordplay theme: ${input.wordplayTheme || 'None'}
 - Seed tracks: ${input.seedTracks?.join(', ') || 'None'}
+- Anchor artists (intentional focus — the "max 2 per artist" rule does NOT apply to these): ${input.artists?.join(', ') || 'None'}
 
 Recently played tracks (DO NOT repeat these):
 ${recentlyPlayed.length ? recentlyPlayed.map(t => `- ${t}`).join('\n') : 'None'}
@@ -408,19 +486,21 @@ ${JSON.stringify(tracks.map(t => ({
 
   // Honesty: if an artist still appears 3+ times, the diversified pool was genuinely
   // too thin to avoid it — surface that rather than ship a lopsided set silently.
+  // Anchor artists are excluded: repeating them is the point of an artist-anchored set.
+  const anchor = makeArtistPredicate(input);
   const artistCounts: Record<string, { name: string; count: number }> = {};
   for (const t of annotated) {
+    if (anchor.active && anchor.matchesAnchor(t)) continue;
     const key = t.artist.toLowerCase().trim();
     artistCounts[key] = { name: t.artist, count: (artistCounts[key]?.count ?? 0) + 1 };
   }
   const worst = Object.values(artistCounts).sort((a, b) => b.count - a.count)[0];
   let reviewNotes = result.reviewNotes;
   if (worst && worst.count >= 3) {
-    const source = input.sourcePlaylist ? `"${input.sourcePlaylist}" playlist` : `${input.primaryGenre} library`;
     const fix = input.sourcePlaylist
       ? `Add more variety to the playlist to diversify future sets.`
-      : `Add more ${input.primaryGenre} artists to diversify future sets.`;
-    reviewNotes += `\n\nHeads up — this set repeats ${worst.name} ${worst.count}×: your ${source} is thin in this tempo range. ${fix}`;
+      : `Broaden your pool (more artists or genres) to diversify future sets.`;
+    reviewNotes += `\n\nHeads up — this set repeats ${worst.name} ${worst.count}×: ${poolDescription(input)} is thin in this tempo range. ${fix}`;
   }
 
   // Transparency: personalization is automatic, so say when it happened and what it did.
@@ -465,37 +545,65 @@ export async function runSetlistPipeline(
     onProgress?.({ type: 'step', step: 1, message: 'Gathering gig intel...' });
     const profile = computeLibraryProfile(tracks);
 
-    // Playlist mode: the pool IS the curated playlist, so the genre floor doesn't apply.
-    // Just make sure there are enough tracks to build the requested duration.
+    // Pool readiness across whatever axes the DJ supplied (genre / era / artist /
+    // playlist). One scan computes: genre super-family + exact counts (for the genre
+    // floor and honesty note), and the COMBINED-pool size — tracks passing every
+    // active axis — which is what actually has to fill the set.
     const playlistMode = !!input.sourcePlaylist;
-    const poolSize = tracks.filter(t => !t.isWishlist).length;
-    if (playlistMode) {
-      const target = targetTrackCount(input.durationMinutes);
-      const floor = Math.min(target, 8); // don't block short sets; a handful of tracks is enough to try
-      if (poolSize < floor) {
-        throw new Error(
-          `Your "${input.sourcePlaylist}" playlist has only ${poolSize} track${poolSize === 1 ? '' : 's'} — too few to build a ${input.durationMinutes}-minute set. Add more tracks to the playlist, or pick a shorter duration.`,
-        );
-      }
-    }
+    const genreActive = !!input.primaryGenre;
+    const eraActive = (input.eras?.length ?? 0) > 0;
+    const matchesEra = makeEraPredicate(input);
+    const anchor = makeArtistPredicate(input);
+    const gigSuper = genreActive ? superFamily(input.primaryGenre!) : 'other';
+    const target = targetTrackCount(input.durationMinutes);
 
-    // Genre availability: fail fast if the library can't support the gig's super-family
-    // (e.g. asking for Trance with an all-hip-hop library), and remember how many EXACT
-    // genre matches exist so we can be honest when the set leans on adjacent genres.
-    // Skipped entirely in playlist mode (genre may be absent and isn't a gate there).
-    const gigSuper = superFamily(input.primaryGenre);
     let exactGenreCount = 0;
     let superFamilyCount = 0;
-    if (!playlistMode) {
-      for (const t of tracks) {
-        if (t.isWishlist) continue;
-        if (genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []).tier === 'exact') exactGenreCount++;
+    let poolCount = 0;      // tracks passing all active axes (genre-not-off, era, artist)
+    let poolWithYear = 0;   // of the combined pool, how many carry a release year
+    for (const t of tracks) {
+      if (t.isWishlist) continue;
+      if (genreActive) {
+        const rel = genreRelevance(input.primaryGenre!, t.genre ?? '', t.lastfmTags ?? []);
+        if (rel.tier === 'exact') exactGenreCount++;
         if (gigSuper !== 'other' && superFamily(t.genre ?? '', t.lastfmTags ?? []) === gigSuper) superFamilyCount++;
       }
-      if (gigSuper !== 'other' && superFamilyCount < MIN_SUPERFAMILY_TRACKS) {
+      if (!matchesEra(t) || !anchor.isAnchor(t)) continue;
+      if (genreActive) {
+        const primary = genreRelevance(input.primaryGenre!, t.genre ?? '', t.lastfmTags ?? []).score;
+        const secondary = input.secondaryGenre
+          ? genreRelevance(input.secondaryGenre, t.genre ?? '', t.lastfmTags ?? []).score
+          : -1;
+        if (Math.max(primary, secondary) < 0) continue; // 'off' from both → excluded
+      }
+      poolCount++;
+      if (t.year != null) poolWithYear++;
+    }
+
+    if (playlistMode) {
+      // The DJ curated the pool, so no genre super-family floor — just make sure
+      // enough tracks survive any era/artist/genre narrowing to build the duration.
+      const floor = Math.min(target, 8); // don't block short sets
+      if (poolCount < floor) {
+        const narrowed = genreActive || eraActive || anchor.active;
+        throw new Error(
+          narrowed
+            ? `Only ${poolCount} track${poolCount === 1 ? '' : 's'} in your "${input.sourcePlaylist}" playlist match your filters — too few for a ${input.durationMinutes}-minute set. Loosen a filter or pick a shorter duration.`
+            : `Your "${input.sourcePlaylist}" playlist has only ${poolCount} track${poolCount === 1 ? '' : 's'} — too few to build a ${input.durationMinutes}-minute set. Add more tracks to the playlist, or pick a shorter duration.`,
+        );
+      }
+    } else {
+      // Genre super-family floor: fail fast if the library can't support the gig's
+      // super-family at all (e.g. Trance with an all-hip-hop library).
+      if (genreActive && gigSuper !== 'other' && superFamilyCount < MIN_SUPERFAMILY_TRACKS) {
         throw new Error(
           `Not enough tracks for a ${input.primaryGenre} set — your library has only ${superFamilyCount} ${gigSuper} track${superFamilyCount === 1 ? '' : 's'}. Import more ${input.primaryGenre} (or related) music and try again.`,
         );
+      }
+      // Combined-pool floor: even if the genre is well-stocked, the era/artist
+      // intersection may be too thin to fill the set.
+      if (poolCount < target) {
+        throw new Error(poolFloorError(input, poolCount));
       }
     }
 
@@ -510,11 +618,16 @@ export async function runSetlistPipeline(
     onProgress?.({ type: 'step', step: 4, message: 'Reviewing transitions and flow...' });
 
     // Honesty: if there aren't enough true-genre tracks to fill the set, say the set
-    // leans on adjacent genres rather than pretend it's pure. (No genre gate in
-    // playlist mode, so this note doesn't apply.)
+    // leans on adjacent genres rather than pretend it's pure. (Only when a genre axis
+    // is active; no genre gate in playlist mode.)
     let reviewNotes = reviewed.reviewNotes;
-    if (!playlistMode && exactGenreCount < reviewed.tracks.length) {
+    if (!playlistMode && genreActive && exactGenreCount < reviewed.tracks.length) {
       reviewNotes += `\n\nNote: your library has only ${exactGenreCount} true ${input.primaryGenre} track${exactGenreCount === 1 ? '' : 's'}, so this set is built largely from adjacent ${gigSuper} genres. Import more ${input.primaryGenre} for a truer ${input.primaryGenre} set.`;
+    }
+    // Parallel honesty for the era axis: if much of the pool lacked release-year data,
+    // the era filter only saw the tracks we could date.
+    if (eraActive && poolWithYear < reviewed.tracks.length) {
+      reviewNotes += `\n\nNote: only ${poolWithYear} of your matched tracks carry release-year data, so this ${eraLabel(input.eras!)} set is built from the tracks we could date — re-sync your library with year metadata for tighter era targeting.`;
     }
 
     return {

@@ -28,7 +28,9 @@ export interface ReadinessCounts {
   family: number;      // same fine-family
   adjacent: number;    // same super-family
   superFamily: number; // total in the gig's super-family
-  usable: number;      // total not gated out (exact+family+adjacent+unknown, incl. secondary rescue)
+  usable: number;      // combined-pool survivors — tracks passing every active axis (genre/era/artist)
+  withYear: number;    // of the combined pool, how many carry a non-null release year (era coverage)
+  poolTotal: number;   // library tracks scanned before genre scoring (base pool after era/artist filters)
 }
 
 export interface ReadinessResult {
@@ -39,7 +41,7 @@ export interface ReadinessResult {
   threshold: number;            // MIN_SUPERFAMILY_TRACKS — echoed so UI copy stays in sync
 }
 
-const EMPTY_COUNTS: ReadinessCounts = { exact: 0, family: 0, adjacent: 0, superFamily: 0, usable: 0 };
+const EMPTY_COUNTS: ReadinessCounts = { exact: 0, family: 0, adjacent: 0, superFamily: 0, usable: 0, withYear: 0, poolTotal: 0 };
 
 /** Build an 'unknown' result (no auth / no library) — the builder falls back to
  *  its existing demo-library messaging when it sees this. */
@@ -57,17 +59,28 @@ export function unknownReadiness(reason: string): ReadinessResult {
  *
  * @param gigSuperIsOther true when the gig genre's super-family is 'other'
  *        (open-format / unmapped) — the <20 electronic-vs-open floor doesn't apply.
+ * @param opts.genreActive  whether a genre axis is in play (default true, preserving
+ *        legacy callers). When false, the genre-specific triggers (super-family floor,
+ *        "few true-genre tracks") are skipped — an era-only or artist-only pool has no genre.
+ * @param opts.eraActive    whether an era axis is in play. When true, a pool thin on
+ *        year-dated tracks (withYear < headroom×target) drops to AMBER.
  */
 export function classifyReadiness(
   counts: ReadinessCounts,
   target: number,
   gigSuperIsOther: boolean,
+  opts: { genreActive?: boolean; eraActive?: boolean } = {},
 ): ReadinessResult {
+  const { genreActive = true, eraActive = false } = opts;
   let status: ReadinessStatus;
 
-  if ((!gigSuperIsOther && counts.superFamily < MIN_SUPERFAMILY_TRACKS) || counts.usable < target) {
+  if ((genreActive && !gigSuperIsOther && counts.superFamily < MIN_SUPERFAMILY_TRACKS) || counts.usable < target) {
     status = 'red';
-  } else if (counts.usable < target * CURATE_HEADROOM || counts.exact < target) {
+  } else if (
+    counts.usable < target * CURATE_HEADROOM ||
+    (genreActive && counts.exact < target) ||
+    (eraActive && counts.withYear < target * CURATE_HEADROOM)
+  ) {
     status = 'amber';
   } else {
     status = 'green';

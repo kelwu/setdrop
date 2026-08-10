@@ -44,10 +44,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { input, tracks } = body;
-  // Genre is required UNLESS building from a curated playlist (which supplies the pool).
-  if ((!input?.primaryGenre && !input?.sourcePlaylist) || !input?.crowdContext || !input?.durationMinutes || !input?.lineupSlot) {
+  // The pool must be defined by at least one axis: genre, era, artist, or playlist.
+  const hasPoolAxis = !!(
+    input?.primaryGenre || input?.sourcePlaylist || input?.eras?.length || input?.artists?.length
+  );
+  if (!hasPoolAxis || !input?.crowdContext || !input?.durationMinutes || !input?.lineupSlot) {
     return NextResponse.json(
-      { error: 'Missing required fields: primaryGenre (or sourcePlaylist), crowdContext, durationMinutes, lineupSlot' },
+      { error: 'Missing required fields: at least one pool filter (genre, era, artist, or playlist), plus crowdContext, durationMinutes, lineupSlot' },
       { status: 400 }
     );
   }
@@ -132,11 +135,11 @@ export async function POST(req: NextRequest) {
               const rows: Array<{
                 id: string; artist: string | null; title: string | null;
                 bpm: number | null; key: string | null; genre: string | null;
-                file_path: string | null; lastfm_tags: string[] | null;
+                year: number | null; file_path: string | null; lastfm_tags: string[] | null;
               }> = [];
               for (let i = 0; i < ids.length; i += CHUNK) {
                 const { data } = await supabase.from('serato_tracks')
-                  .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                  .select('id, artist, title, bpm, key, genre, year, file_path, lastfm_tags')
                   .eq('library_id', lib.id)
                   .in('id', ids.slice(i, i + CHUNK));
                 if (data) rows.push(...data);
@@ -145,49 +148,97 @@ export async function POST(req: NextRequest) {
                 library = rows.map(t => ({
                   id: t.id, artist: t.artist ?? '', title: t.title ?? '',
                   bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                  year: t.year ?? undefined,
                   filePath: t.file_path ?? undefined, lastfmTags: t.lastfm_tags ?? [],
                   isWishlist: false, enrichmentSource: 'serato' as const,
                 }));
               }
             } else if (lib) {
+              // Multi-axis pool: the candidate rows are fetched by whichever axes the
+              // DJ supplied (genre / era / artist). Era + artist narrow in SQL to keep
+              // the returned set small; genre keeps its tiered fetch. The pipeline does
+              // the precise decade-membership + genre-tier filtering on top.
+              const SELECT = 'id, artist, title, bpm, key, genre, year, file_path, lastfm_tags';
               const genre = input.primaryGenre;
+              const eras = input.eras ?? [];
+              const artists = input.artists ?? [];
+              const sanitizeLike = (s: string) => s.replace(/[%,()]/g, ' ').replace(/\s+/g, ' ').trim();
+
+              // Era → inclusive year bounds. Non-contiguous decades are over-fetched
+              // here and precisely filtered by decade membership in the pipeline.
+              const yearMin = eras.length ? Math.min(...eras) : undefined;
+              const yearMax = eras.length ? Math.max(...eras) + 9 : undefined;
+              const artistFilter = artists.length
+                ? artists.map(a => `artist.ilike.%${sanitizeLike(a)}%`).filter(f => f.length > 'artist.ilike.%%'.length).join(',')
+                : '';
+
+              // Apply the era/artist axes to any query builder (structural generic — no `any`).
+              const applyAxes = <Q extends {
+                gte(c: string, v: number): Q; lte(c: string, v: number): Q; or(f: string): Q;
+              }>(q: Q): Q => {
+                let out = q;
+                if (yearMin !== undefined) out = out.gte('year', yearMin);
+                if (yearMax !== undefined) out = out.lte('year', yearMax);
+                if (artistFilter) out = out.or(artistFilter);
+                return out;
+              };
+
+              // Seed tracks are explicit must-includes — fetched WITHOUT axis narrowing.
               const sanitizeSeed = (s: string) =>
                 s.replace(/[,()[\]—–]/g, ' ').replace(/\s+/g, ' ').trim();
               const seedQueries = (input.seedTracks ?? []).map(seed => {
                 const safe = sanitizeSeed(seed);
                 return supabase.from('serato_tracks')
-                  .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
+                  .select(SELECT)
                   .eq('library_id', lib.id)
                   .or(`title.ilike.%${safe}%,artist.ilike.%${safe}%`)
                   .limit(5);
               });
-              const [{ data: genreRows }, { data: nullGenreRows }, { data: otherRows }, ...seedResults] =
-                await Promise.all([
-                  supabase.from('serato_tracks')
-                    .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-                    .eq('library_id', lib.id).ilike('genre', `%${genre}%`).limit(400),
-                  supabase.from('serato_tracks')
-                    .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-                    .eq('library_id', lib.id).is('genre', null).limit(100),
-                  supabase.from('serato_tracks')
-                    .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-                    .eq('library_id', lib.id).not('genre', 'ilike', `%${genre}%`).limit(100),
-                  ...seedQueries,
-                ]);
-              const seedRows = seedResults.flatMap(r => r.data ?? []);
-              let allRows = [...(genreRows ?? []), ...(nullGenreRows ?? []), ...(otherRows ?? [])];
+
+              let allRows: Array<{
+                id: string; artist: string | null; title: string | null;
+                bpm: number | null; key: string | null; genre: string | null;
+                year: number | null; file_path: string | null; lastfm_tags: string[] | null;
+              }> = [];
+              const seedResults = await Promise.all(seedQueries);
+
+              if (genre) {
+                // Genre present: keep the tiered fetch (exact-ish / null-genre / other),
+                // each narrowed by era + artist in SQL.
+                const [{ data: genreRows }, { data: nullGenreRows }, { data: otherRows }] =
+                  await Promise.all([
+                    applyAxes(supabase.from('serato_tracks').select(SELECT)
+                      .eq('library_id', lib.id).ilike('genre', `%${genre}%`)).limit(400),
+                    applyAxes(supabase.from('serato_tracks').select(SELECT)
+                      .eq('library_id', lib.id).is('genre', null)).limit(100),
+                    applyAxes(supabase.from('serato_tracks').select(SELECT)
+                      .eq('library_id', lib.id).not('genre', 'ilike', `%${genre}%`)).limit(100),
+                  ]);
+                allRows = [...(genreRows ?? []), ...(nullGenreRows ?? []), ...(otherRows ?? [])];
+              } else {
+                // No genre axis — the pool is defined by era and/or artist alone.
+                const { data } = await applyAxes(supabase.from('serato_tracks').select(SELECT)
+                  .eq('library_id', lib.id)).limit(800);
+                allRows = data ?? [];
+              }
+
               if (!allRows.length) {
-                const { data: fallbackRows } = await supabase.from('serato_tracks')
-                  .select('id, artist, title, bpm, key, genre, file_path, lastfm_tags')
-                  .eq('library_id', lib.id).limit(500);
+                // Nothing matched the axes — fall back to a narrowed sample so the
+                // pipeline can emit a precise "not enough tracks" message rather than
+                // erroring on an empty library.
+                const { data: fallbackRows } = await applyAxes(supabase.from('serato_tracks')
+                  .select(SELECT).eq('library_id', lib.id)).limit(500);
                 allRows = fallbackRows ?? [];
               }
+
+              const seedRows = seedResults.flatMap(r => r.data ?? []);
               const seen = new Set(allRows.map(r => r.id));
               for (const r of seedRows) { if (!seen.has(r.id)) { allRows.push(r); seen.add(r.id); } }
               if (allRows.length) {
                 library = allRows.map(t => ({
                   id: t.id, artist: t.artist ?? '', title: t.title ?? '',
                   bpm: t.bpm ?? 0, key: t.key ?? '', genre: t.genre ?? undefined,
+                  year: t.year ?? undefined,
                   filePath: t.file_path ?? undefined, lastfmTags: t.lastfm_tags ?? [],
                   isWishlist: false, enrichmentSource: 'serato' as const,
                 }));

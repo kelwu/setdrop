@@ -41,6 +41,7 @@ export type Database = {
           key: string | null
           duration: number | null
           genre: string | null
+          year: number | null
           date_added: string | null
           play_count: number
           in_library: boolean

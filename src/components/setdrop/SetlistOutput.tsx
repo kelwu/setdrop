@@ -419,8 +419,14 @@ export function SetlistOutput() {
 
   const setlistName = setlist?.name ?? 'Friday Night Affair';
   const inp = setlist?.input;
+  // Pool descriptor across the active axes (genre / era / artist) — genre may be
+  // absent for era- or artist-defined sets.
   const genreLabel = inp
-    ? `${inp.primaryGenre}${inp.secondaryGenre ? ` / ${inp.secondaryGenre}` : ''}`
+    ? ([
+        inp.primaryGenre ? `${inp.primaryGenre}${inp.secondaryGenre ? ` / ${inp.secondaryGenre}` : ''}` : '',
+        (inp.artists ?? []).join(', '),
+        (inp.eras ?? []).map(d => `${d}s`).join(', '),
+      ].filter(Boolean).join(' · ') || 'Mixed')
     : 'Afrobeats / Hip Hop';
   const crowdLabel = inp?.crowdContext ?? 'Club';
   const durationLabel = inp ? `${inp.durationMinutes} min` : '90 min';
@@ -659,7 +665,7 @@ export function SetlistOutput() {
               <div style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:2,
                 color:SD.textMuted, textTransform:'uppercase', marginBottom:14 }}>Set Info</div>
               {[
-                ['Genre', genreLabel],
+                ['Pool', genreLabel],
                 ['Crowd', crowdLabel],
                 ['Slot', slotLabel],
                 ...(setlist?.libraryTracksUsed ? [['Library', `${setlist.libraryTracksUsed} tracks`]] : []),

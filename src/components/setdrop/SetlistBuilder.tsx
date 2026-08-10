@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { SD, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
+import { SD, CROWD_TYPES, LINEUP_SLOTS, DURATION_OPTS, DECADES, LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { GeneratedSetlist } from '@/lib/agents/types';
 import { SDButton, GenreCombobox, GenrePillSelector, SDInput, AgentProgress, PageHeader } from './shared';
 import { trackEvent } from '@/lib/analytics';
@@ -11,19 +11,43 @@ import { superFamily } from '@/lib/setdrop/genre';
 import { CURATE_HEADROOM, classifyReadiness, targetTrackCount, type ReadinessResult } from '@/lib/setdrop/readiness';
 import * as Sentry from '@sentry/nextjs';
 
+// Axis context that defines the candidate pool. Mirrors the server-side axes on
+// SetlistInput (genre / era / artist / playlist).
+interface PoolCtx { primaryGenre: string; eras: number[]; artists: string[]; playlistName?: string }
+
+/** Human phrase for the active pool axes, e.g. "pop from the 2000s", "tracks by
+ *  Drake". Client mirror of pipeline.ts `poolDescription`. */
+function poolLabelClient(ctx: PoolCtx): string {
+  const decades = [...new Set(ctx.eras)].sort((a, b) => a - b).map(d => `${d}s`);
+  const eraStr = decades.length
+    ? (decades.length === 1 ? `the ${decades[0]}` : `the ${decades.slice(0, -1).join(', ')} & ${decades[decades.length - 1]}`)
+    : '';
+  const artistStr = ctx.artists.length
+    ? (ctx.artists.length === 1 ? ctx.artists[0] : `${ctx.artists.slice(0, -1).join(', ')} & ${ctx.artists[ctx.artists.length - 1]}`)
+    : '';
+  const segs: string[] = [];
+  if (ctx.primaryGenre) segs.push(ctx.primaryGenre);
+  if (artistStr) segs.push(`${ctx.primaryGenre ? '' : 'tracks '}by ${artistStr}`.trim());
+  if (eraStr) segs.push(`from ${eraStr}`);
+  if (ctx.playlistName) segs.push(`${segs.length ? 'within ' : ''}"${ctx.playlistName}" playlist`);
+  return segs.join(' ').trim() || 'your library';
+}
+
 // Presentation for the pre-gen "set readiness" hint — turns a ReadinessResult into
 // a colored dot + honest, headroom-framed copy (mirrors the backend's phrasing so
 // the pre-gen hint and the post-gen notes agree). Returns null when there's nothing
 // to show (unknown status / no result yet).
 function readinessView(
   r: ReadinessResult | null,
-  primaryGenre: string,
+  ctx: PoolCtx,
   durationLabel: string,
-  playlistName?: string,
 ): { fg: string; bg: string; border: string; text: string } | null {
   if (!r || r.status === 'unknown') return null;
   const { counts, target, threshold, status } = r;
-  const sf = superFamily(primaryGenre); // 'electronic' | 'open-format' | 'other'
+  const { primaryGenre, eras, artists, playlistName } = ctx;
+  const genreActive = !!primaryGenre;
+  const eraActive = eras.length > 0;
+  const sf = genreActive ? superFamily(primaryGenre) : 'other'; // 'electronic' | 'open-format' | 'other'
   const adjWord = sf === 'other' ? 'related' : sf;
   const tones = {
     red:   { fg: SD.danger,  bg: SD.dangerDim,  border: `${SD.danger}33` },
@@ -31,31 +55,39 @@ function readinessView(
     green: { fg: SD.success, bg: SD.successDim, border: `${SD.success}33` },
   } as const;
 
-  // Playlist mode: the curated playlist IS the pool, so copy is about its size vs
-  // the set length — never about genre coverage.
+  // Playlist mode: the curated playlist IS the pool. Copy is about its size vs the
+  // set length (optionally noting that other axes narrow it).
   if (playlistName) {
+    const otherAxes = genreActive || eraActive || artists.length > 0;
     const n = counts.usable;
     const noun = `track${n === 1 ? '' : 's'}`;
+    const where = otherAxes ? `match your filters in "${playlistName}"` : `in "${playlistName}"`;
     const text = status === 'red'
-      ? `Only ${n} ${noun} in "${playlistName}" — below the ~${target} needed to fill ${durationLabel}. Add more tracks to the playlist, or shorten the set.`
+      ? `Only ${n} ${noun} ${where} — below the ~${target} needed to fill ${durationLabel}. ${otherAxes ? 'Loosen a filter' : 'Add more tracks to the playlist'}, or shorten the set.`
       : status === 'amber'
-        ? `${n} ${noun} in "${playlistName}" for a ~${target}-track set — it'll work, but there's little room to vary the set next time.`
-        : `${n} ${noun} in "${playlistName}" — plenty of room to build a ~${target}-track set.`;
+        ? `${n} ${noun} ${where} for a ~${target}-track set — it'll work, but there's little room to vary the set next time.`
+        : `${n} ${noun} ${where} — plenty of room to build a ~${target}-track set.`;
     return { ...tones[status], text };
   }
 
+  const label = poolLabelClient({ primaryGenre, eras, artists });
   let text: string;
   if (status === 'red') {
-    const floorHit = sf !== 'other' && counts.superFamily < threshold;
+    const floorHit = genreActive && sf !== 'other' && counts.superFamily < threshold;
     const n = floorHit ? counts.superFamily : counts.usable;
-    const word = floorHit ? sf : primaryGenre;
-    text = `Only ${n} ${word} track${n === 1 ? '' : 's'} — below the ~${target} needed to fill ${durationLabel}. Import more ${primaryGenre}, or shorten the set.`;
+    text = `Only ${n} track${n === 1 ? '' : 's'} match ${label} — below the ~${target} needed to fill ${durationLabel}. Loosen a filter or shorten the set.`;
   } else if (status === 'amber') {
-    text = counts.usable < target * CURATE_HEADROOM
-      ? `${counts.usable} ${primaryGenre} tracks for a ~${target}-track set — it'll work, but you'll use almost your whole library, leaving little to swap or vary next time.`
-      : `You have ${counts.exact} true ${primaryGenre} track${counts.exact === 1 ? '' : 's'} — this set will lean on adjacent ${adjWord} genres. More ${primaryGenre} = a truer set.`;
+    if (counts.usable < target * CURATE_HEADROOM) {
+      text = `${counts.usable} tracks match ${label} for a ~${target}-track set — it'll work, but you'll use almost all of them, leaving little to swap or vary next time.`;
+    } else if (eraActive && counts.withYear < target * CURATE_HEADROOM) {
+      text = `Only ${counts.withYear} of your matched tracks have release-year data — this era filter may come up short. Re-sync your library for year metadata, or add a genre.`;
+    } else if (genreActive) {
+      text = `You have ${counts.exact} true ${primaryGenre} track${counts.exact === 1 ? '' : 's'} — this set will lean on adjacent ${adjWord} genres. More ${primaryGenre} = a truer set.`;
+    } else {
+      text = `${counts.usable} tracks match ${label} for a ~${target}-track set — it'll work, but with little room to vary next time.`;
+    }
   } else {
-    text = `${counts.usable} ${primaryGenre} tracks ready for a ~${target}-track set — plenty of room to curate.`;
+    text = `${counts.usable} tracks match ${label} for a ~${target}-track set — plenty of room to curate.`;
   }
   return { ...tones[status], text };
 }
@@ -71,6 +103,10 @@ export function SetlistBuilder() {
   const [mixName, setMixName] = useState('');
   const [primaryGenre, setPrimaryGenre] = useState('');
   const [secondaryGenre, setSecondaryGenre] = useState('');
+  // Era + artist pool axes (combinable with genre/playlist — see poolLabelClient).
+  const [eras, setEras] = useState<number[]>([]);
+  const [artists, setArtists] = useState<string[]>([]);
+  const [artistInput, setArtistInput] = useState('');
   const [vibe, setVibe] = useState('');
   const [crowd, setCrowd] = useState('');
   const [duration, setDuration] = useState('');
@@ -151,12 +187,13 @@ export function SetlistBuilder() {
       if (!pl || !duration) { setReadiness(null); return; }
       const target = targetTrackCount(parseInt(duration) || 60);
       setReadiness(classifyReadiness(
-        { exact: pl.count, family: 0, adjacent: 0, superFamily: pl.count, usable: pl.count },
+        { exact: pl.count, family: 0, adjacent: 0, superFamily: pl.count, usable: pl.count, withYear: pl.count, poolTotal: pl.count },
         target, true,
       ));
       return;
     }
-    if (!primaryGenre || !duration || !libraryCount) { setReadiness(null); return; }
+    const hasAxis = !!(primaryGenre || eras.length || artists.length);
+    if (!hasAxis || !duration || !libraryCount) { setReadiness(null); return; }
     const durationMinutes = parseInt(duration) || 60;
     const ctrl = new AbortController();
     setReadinessLoading(true);
@@ -164,7 +201,13 @@ export function SetlistBuilder() {
       fetch('/api/library/set-readiness', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ primaryGenre, secondaryGenre: secondaryGenre || undefined, durationMinutes }),
+        body: JSON.stringify({
+          primaryGenre: primaryGenre || undefined,
+          secondaryGenre: secondaryGenre || undefined,
+          eras: eras.length ? eras : undefined,
+          artists: artists.length ? artists : undefined,
+          durationMinutes,
+        }),
         signal: ctrl.signal,
       })
         .then(r => (r.ok ? (r.json() as Promise<ReadinessResult>) : null))
@@ -173,7 +216,7 @@ export function SetlistBuilder() {
         .finally(() => setReadinessLoading(false));
     }, 400);
     return () => { ctrl.abort(); clearTimeout(timer); };
-  }, [sourcePlaylist, playlists, primaryGenre, secondaryGenre, duration, libraryCount]);
+  }, [sourcePlaylist, playlists, primaryGenre, secondaryGenre, eras, artists, duration, libraryCount]);
 
   useEffect(() => {
     try {
@@ -183,6 +226,8 @@ export function SetlistBuilder() {
       const p = JSON.parse(raw) as Record<string, unknown>;
       if (typeof p.primaryGenre === 'string') setPrimaryGenre(p.primaryGenre);
       if (typeof p.secondaryGenre === 'string') setSecondaryGenre(p.secondaryGenre);
+      if (Array.isArray(p.eras)) setEras(p.eras.filter((x): x is number => typeof x === 'number'));
+      if (Array.isArray(p.artists)) setArtists(p.artists.filter((x): x is string => typeof x === 'string'));
       if (typeof p.crowdContext === 'string') setCrowd(p.crowdContext);
       if (typeof p.durationMinutes === 'number') setDuration(String(p.durationMinutes));
       if (typeof p.lineupSlot === 'string') setSlot(p.lineupSlot);
@@ -252,8 +297,10 @@ export function SetlistBuilder() {
         body: JSON.stringify({
           input: {
             name: mixName || 'Untitled Set',
-            primaryGenre,
+            primaryGenre: primaryGenre || undefined,
             secondaryGenre: secondaryGenre || undefined,
+            eras: eras.length ? eras : undefined,
+            artists: artists.length ? artists : undefined,
             vibe: vibe || undefined,
             crowdContext: crowd,
             durationMinutes,
@@ -407,7 +454,9 @@ export function SetlistBuilder() {
         excludedCount,
         libraryTracksUsed,
         input: {
-          primaryGenre, secondaryGenre: secondaryGenre || undefined, crowdContext: crowd,
+          primaryGenre: primaryGenre || undefined, secondaryGenre: secondaryGenre || undefined,
+          eras: eras.length ? eras : undefined, artists: artists.length ? artists : undefined,
+          crowdContext: crowd,
           durationMinutes, lineupSlot: slot,
           mixName: mixName || undefined, vibe: vibe || undefined, venueName: venueName || undefined,
           arcPoints, seedSearch: seedSearch || undefined,
@@ -419,8 +468,11 @@ export function SetlistBuilder() {
   };
 
   const stepValid = (s: number) => {
-    // Genre is optional when building from a curated playlist.
-    if (s === 1) return (sourcePlaylist || primaryGenre) && crowd && duration && slot;
+    // The pool must be defined by at least one axis: genre, era, artist, or playlist.
+    if (s === 1) {
+      const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length);
+      return hasAxis && !!crowd && !!duration && !!slot;
+    }
     return true;
   };
 
@@ -656,22 +708,82 @@ export function SetlistBuilder() {
                 )}
                 <p style={{ fontFamily:SD.mono, fontSize:11, lineHeight:1.6, color:SD.textMuted, margin:'8px 0 0' }}>
                   {sourcePlaylist
-                    ? `SetDrop arranges a set within your "${sourcePlaylist}" playlist. Genre is optional — you've already picked the tracks.`
-                    : 'SetDrop picks from your whole library, filtered by the genre you choose below.'}
+                    ? `SetDrop arranges a set within your "${sourcePlaylist}" playlist. Add a genre, era, or artist below to narrow it further.`
+                    : 'SetDrop picks from your whole library. Define the pool with any combination of genre, era, and artist below.'}
                 </p>
               </div>
             )}
+            {/* Pool definition — genre / era / artist are all optional and combine (AND).
+                At least one axis (or a playlist above) is required to continue. */}
+            {(() => {
+              const hasAxis = !!(sourcePlaylist || primaryGenre || eras.length || artists.length);
+              return (
+                <p style={{ fontFamily:SD.mono, fontSize:11, lineHeight:1.6,
+                  color: hasAxis ? SD.textMuted : SD.accent, margin:'0 0 -8px' }}>
+                  Define your pool by any combination below — genre, era, and/or artist.
+                  {hasAxis ? '' : ' Pick at least one to continue.'}
+                </p>
+              );
+            })()}
             <div style={fieldStyle}>
               <label style={labelStyle}>
-                Primary Genre {sourcePlaylist
-                  ? <span style={{ color:SD.textMuted, fontWeight:400 }}>(optional)</span>
-                  : <span style={{ color:SD.accent }}>*</span>}
+                Primary Genre <span style={{ color:SD.textMuted, fontWeight:400 }}>(optional)</span>
               </label>
               <GenreCombobox value={primaryGenre} onChange={setPrimaryGenre} />
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Secondary Genre (optional)</label>
               <GenreCombobox value={secondaryGenre} onChange={setSecondaryGenre} placeholder="Search or type a genre (optional)…" />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Era (optional)</label>
+              <GenrePillSelector
+                selected={eras.map(d => `${d}s`)}
+                onChange={label => {
+                  const d = parseInt(label, 10);
+                  setEras(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+                }}
+                genres={DECADES} />
+              <p style={{ fontFamily:SD.mono, fontSize:11, lineHeight:1.6, color:SD.textMuted, margin:'8px 0 0' }}>
+                Limits the set to tracks released in the selected decade(s). Tracks without a
+                release year are skipped — Serato libraries carry year data far more often than Rekordbox.
+              </p>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Artist (optional) — build the set around specific artists</label>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+                {artists.map(a => (
+                  <span key={a} style={{
+                    fontFamily:SD.mono, fontSize:11, letterSpacing:1,
+                    background:SD.surface3, border:`1px solid ${SD.borderMid}`,
+                    borderRadius:3, padding:'4px 9px', color:SD.textSec,
+                    display:'flex', alignItems:'center', gap:6,
+                  }}>
+                    {a}
+                    <button type="button" onClick={() => setArtists(prev => prev.filter(x => x !== a))}
+                      style={{ background:'none', border:'none', cursor:'pointer', color:SD.textMuted, padding:0, lineHeight:1 }}>
+                      ✕
+                    </button>
+                  </span>
+                ))}
+                <input type="text" value={artistInput}
+                  onChange={e => setArtistInput(e.target.value)}
+                  onKeyDown={e => {
+                    if ((e.key === 'Enter' || e.key === ',') && artistInput.trim()) {
+                      e.preventDefault();
+                      const name = artistInput.trim().replace(/,$/, '').trim();
+                      if (name && !artists.some(x => x.toLowerCase() === name.toLowerCase())) {
+                        setArtists(prev => [...prev, name]);
+                      }
+                      setArtistInput('');
+                    }
+                  }}
+                  placeholder="Type an artist, press Enter…"
+                  style={{
+                    flex:1, minWidth:180, background:SD.surface2, border:`1px solid ${SD.border}`,
+                    borderRadius:3, color:SD.text, fontFamily:SD.mono, fontSize:13, padding:'9px 10px',
+                  }} />
+              </div>
             </div>
             <SDInput label="Vibe / Mood (optional)" value={vibe} onChange={setVibe}
               placeholder={`e.g. "dark and introspective" or "feel-good summer energy"`} />
@@ -706,7 +818,7 @@ export function SetlistBuilder() {
             {/* Set readiness — honest pre-gen signal on whether the library can
                 support this genre + duration with room to curate. Warn, never block. */}
             {(readiness || readinessLoading) && (() => {
-              const rv = readinessView(readiness, primaryGenre, duration || 'the set', sourcePlaylist || undefined);
+              const rv = readinessView(readiness, { primaryGenre, eras, artists, playlistName: sourcePlaylist || undefined }, duration || 'the set');
               if (!rv && !readinessLoading) return null;
               return (
                 <div style={{
@@ -816,7 +928,7 @@ export function SetlistBuilder() {
                 letterSpacing:2, textTransform:'uppercase', marginBottom:12 }}>Set Summary</div>
               <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 {([
-                  ['Genre', `${primaryGenre}${secondaryGenre ? ` / ${secondaryGenre}` : ''}`],
+                  ['Pool', poolLabelClient({ primaryGenre: primaryGenre + (secondaryGenre ? ` / ${secondaryGenre}` : ''), eras, artists, playlistName: sourcePlaylist || undefined })],
                   ['Crowd', crowd],
                   ['Duration', duration],
                   ['Slot', slot],
