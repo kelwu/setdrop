@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { recordUsage, usageToday, costToday, recordCost, type CallUsage } from '@/lib/api-usage';
 import { PLANS } from '@/lib/stripe';
 import { computeAffinity, type DiffEntry, type TasteAffinity } from '@/lib/setdrop/taste';
+import { targetTrackCount } from '@/lib/setdrop/readiness';
+import { getSimilarArtists } from '@/lib/setdrop/lastfm';
 
 export const maxDuration = 300;
 
@@ -220,6 +222,41 @@ export async function POST(req: NextRequest) {
                 const { data } = await applyAxes(supabase.from('serato_tracks').select(SELECT)
                   .eq('library_id', lib.id)).limit(800);
                 allRows = data ?? [];
+              }
+
+              // Artist-anchored top-up: if the chosen artist(s) can't fill the set,
+              // widen to Last.fm similar artists (ranked), still respecting genre + era.
+              // Anchors stay prioritized in the pipeline; this only adds candidates.
+              if (artists.length && allRows.length < targetTrackCount(input.durationMinutes)) {
+                const anchorLower = new Set(artists.map(a => a.toLowerCase().trim()));
+                const seenSimilar = new Set<string>();
+                const ranked: string[] = [];
+                const perAnchor = await Promise.all(artists.map(a => getSimilarArtists(a, 20)));
+                for (const list of perAnchor) {
+                  for (const name of list) {
+                    const key = name.toLowerCase().trim();
+                    if (!key || anchorLower.has(key) || seenSimilar.has(key)) continue;
+                    seenSimilar.add(key);
+                    ranked.push(name);
+                  }
+                }
+                const names = ranked.slice(0, 40);
+                const simFilter = names.map(a => `artist.ilike.%${sanitizeLike(a)}%`)
+                  .filter(f => f.length > 'artist.ilike.%%'.length).join(',');
+                if (simFilter) {
+                  let simQuery = supabase.from('serato_tracks').select(SELECT).eq('library_id', lib.id);
+                  if (yearMin !== undefined) simQuery = simQuery.gte('year', yearMin);
+                  if (yearMax !== undefined) simQuery = simQuery.lte('year', yearMax);
+                  if (genre) simQuery = simQuery.ilike('genre', `%${genre}%`);
+                  const { data: simRows } = await simQuery.or(simFilter).limit(400);
+                  const seenIds = new Set(allRows.map(r => r.id));
+                  const picked = (simRows ?? []).filter(r => !seenIds.has(r.id));
+                  allRows.push(...picked);
+                  // Record which similar artists actually contributed tracks (for the note).
+                  input.similarArtists = names.filter(n =>
+                    picked.some(r => (r.artist ?? '').toLowerCase().includes(n.toLowerCase())),
+                  );
+                }
               }
 
               if (!allRows.length) {

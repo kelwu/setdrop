@@ -262,13 +262,21 @@ function makeEraPredicate(input: SetlistInput) {
   return (t: { year?: number }) => !active || (t.year != null && eraSet.has(decadeOf(t.year)));
 }
 
-/** Track passes the artist axis: its artist string contains any anchor artist.
- *  Typed on `{ artist }` so it works for both LibraryTrack pools and selected tracks. */
+/** Artist axis. `pass` = membership (anchor OR Last.fm-similar artist) used to build
+ *  the pool; `isAnchor` = strict anchor match, used to exempt anchors from the
+ *  per-artist cap and skip them in the repeated-artist honesty note. Typed on
+ *  `{ artist }` so it works for both LibraryTrack pools and selected tracks. */
 function makeArtistPredicate(input: SetlistInput) {
   const anchors = (input.artists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
+  const similar = (input.similarArtists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
+  const accept = [...anchors, ...similar];
   const active = anchors.length > 0;
-  const isAnchor = (t: { artist: string }) => anchors.some(a => t.artist.toLowerCase().includes(a));
-  return { active, isAnchor: (t: { artist: string }) => !active || isAnchor(t), matchesAnchor: isAnchor };
+  const has = (list: string[], t: { artist: string }) => list.some(a => t.artist.toLowerCase().includes(a));
+  return {
+    active,
+    pass: (t: { artist: string }) => !active || has(accept, t),
+    isAnchor: (t: { artist: string }) => has(anchors, t),
+  };
 }
 
 /** Error copy when the combined (non-playlist) pool is too thin to fill the set. */
@@ -280,7 +288,8 @@ function poolFloorError(input: SetlistInput, n: number): string {
     return `Not enough tracks from ${eraLabel(input.eras!)} — your library has only ${n} dated track${n === 1 ? '' : 's'} in that range (many tracks may lack release-year data). Pick more decades, add a genre, or shorten the set.`;
   }
   if (artistActive && !genreActive && !eraActive) {
-    return `Not enough tracks by ${artistLabel(input.artists!)} — your library has only ${n}. Add more of their music, broaden the artists, or shorten the set.`;
+    const tried = (input.similarArtists?.length ?? 0) > 0 ? ' (even including similar artists)' : '';
+    return `Not enough tracks by ${artistLabel(input.artists!)}${tried} — your library has only ${n}. Add more of their music, broaden the artists, or shorten the set.`;
   }
   return `Not enough tracks match ${poolDescription(input)} — only ${n} found. Loosen a filter (genre, era, or artist) or shorten the set.`;
 }
@@ -328,7 +337,7 @@ function filterTracksForGig(
 
   const scored = tracks
     .filter(t => !t.isWishlist && !isSeed(t))
-    .filter(t => matchesEra(t) && artist.isAnchor(t))
+    .filter(t => matchesEra(t) && artist.pass(t))
     .map(t => ({ t, genre: genreScoreFor(t) }))
     .filter((x): x is { t: LibraryTrack; genre: number } => x.genre !== null)
     .map(({ t, genre }) => {
@@ -347,7 +356,8 @@ function filterTracksForGig(
     .sort((a, b) => b.score - a.score)
     .filter(({ t }) => {
       // Anchor artists are the whole point of an artist-anchored set — never cap them.
-      if (artist.active && artist.matchesAnchor(t)) return true;
+      // (Similar-artist top-ups still get the normal cap, to keep them varied.)
+      if (artist.active && artist.isAnchor(t)) return true;
       const key = t.artist.toLowerCase().trim();
       perArtist[key] = (perArtist[key] ?? 0) + 1;
       return perArtist[key] <= POOL_PER_ARTIST_CAP;
@@ -490,7 +500,7 @@ ${JSON.stringify(tracks.map(t => ({
   const anchor = makeArtistPredicate(input);
   const artistCounts: Record<string, { name: string; count: number }> = {};
   for (const t of annotated) {
-    if (anchor.active && anchor.matchesAnchor(t)) continue;
+    if (anchor.active && anchor.isAnchor(t)) continue;
     const key = t.artist.toLowerCase().trim();
     artistCounts[key] = { name: t.artist, count: (artistCounts[key]?.count ?? 0) + 1 };
   }
@@ -568,7 +578,7 @@ export async function runSetlistPipeline(
         if (rel.tier === 'exact') exactGenreCount++;
         if (gigSuper !== 'other' && superFamily(t.genre ?? '', t.lastfmTags ?? []) === gigSuper) superFamilyCount++;
       }
-      if (!matchesEra(t) || !anchor.isAnchor(t)) continue;
+      if (!matchesEra(t) || !anchor.pass(t)) continue;
       if (genreActive) {
         const primary = genreRelevance(input.primaryGenre!, t.genre ?? '', t.lastfmTags ?? []).score;
         const secondary = input.secondaryGenre
@@ -628,6 +638,15 @@ export async function runSetlistPipeline(
     // the era filter only saw the tracks we could date.
     if (eraActive && poolWithYear < reviewed.tracks.length) {
       reviewNotes += `\n\nNote: only ${poolWithYear} of your matched tracks carry release-year data, so this ${eraLabel(input.eras!)} set is built from the tracks we could date — re-sync your library with year metadata for tighter era targeting.`;
+    }
+    // Transparency for artist top-up: the anchor artist didn't have enough tracks,
+    // so we widened to Last.fm similar artists. Say which ones and how many anchors fit.
+    if (input.similarArtists?.length && input.artists?.length) {
+      const anchorPred = makeArtistPredicate(input);
+      const anchorInSet = reviewed.tracks.filter(t => anchorPred.isAnchor(t)).length;
+      const shown = input.similarArtists.slice(0, 5);
+      const more = input.similarArtists.length > shown.length ? ', and more' : '';
+      reviewNotes += `\n\nOnly ${anchorInSet} track${anchorInSet === 1 ? '' : 's'} by ${artistLabel(input.artists)} fit — filled the rest with similar artists (${artistLabel(shown)}${more}).`;
     }
 
     return {

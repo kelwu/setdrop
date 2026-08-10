@@ -10,6 +10,7 @@ export interface SetlistInput {
   secondaryGenre?: string;
   eras?: number[];            // decade-start years to include, e.g. [2000, 2010] = 2000s+2010s
   artists?: string[];         // anchor artists — pool is limited to tracks by these (substring match)
+  similarArtists?: string[];  // Last.fm similar artists used to top up a thin anchor pool (set server-side, ranked)
   vibe?: string;
   crowdContext: string;
   durationMinutes: number;
