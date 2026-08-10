@@ -70,6 +70,17 @@ function readinessView(
     return { ...tones[status], text };
   }
 
+  // Artist-anchored + thin pool: generation auto-fills from Last.fm similar artists,
+  // so set that expectation instead of a dead-end RED. (Readiness itself doesn't call
+  // Last.fm — it's a cheap debounced check — so this is the honest forward-looking copy.)
+  if (artists.length && counts.usable < target) {
+    const n = counts.usable;
+    const anchorLabel = artists.length === 1
+      ? artists[0]
+      : `${artists.slice(0, -1).join(', ')} & ${artists[artists.length - 1]}`;
+    return { ...tones.amber, text: `Only ${n} track${n === 1 ? '' : 's'} by ${anchorLabel} in your library — SetLab will fill the rest with similar artists.` };
+  }
+
   const label = poolLabelClient({ primaryGenre, eras, artists });
   let text: string;
   if (status === 'red') {
