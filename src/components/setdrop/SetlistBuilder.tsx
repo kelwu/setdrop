@@ -300,37 +300,50 @@ export function SetlistBuilder() {
     const durationMinutes = parseInt(duration) || 60;
     trackEvent.setGenerationStarted(primaryGenre || 'unknown', durationMinutes);
 
+    const requestBody = JSON.stringify({
+      input: {
+        name: mixName || 'Untitled Set',
+        primaryGenre: primaryGenre || undefined,
+        secondaryGenre: secondaryGenre || undefined,
+        eras: eras.length ? eras : undefined,
+        artists: artists.length ? artists : undefined,
+        vibe: vibe || undefined,
+        crowdContext: crowd,
+        durationMinutes,
+        energyArc: {
+          intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2],
+          sustain: arcPoints[3], cooldown: arcPoints[4],
+        },
+        lineupSlot: slot,
+        sourcePlaylist: sourcePlaylist || undefined,
+        seedTracks: seedSearch ? [seedSearch] : undefined,
+        wordplayTheme: wordplay || undefined,
+        venueContext: venueName || undefined,
+      },
+    });
+    const doGenerateFetch = () => fetch('/api/generate-setlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+    });
+
     let res: Response;
     try {
-      res = await fetch('/api/generate-setlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: {
-            name: mixName || 'Untitled Set',
-            primaryGenre: primaryGenre || undefined,
-            secondaryGenre: secondaryGenre || undefined,
-            eras: eras.length ? eras : undefined,
-            artists: artists.length ? artists : undefined,
-            vibe: vibe || undefined,
-            crowdContext: crowd,
-            durationMinutes,
-            energyArc: {
-              intro: arcPoints[0], buildup: arcPoints[1], peak: arcPoints[2],
-              sustain: arcPoints[3], cooldown: arcPoints[4],
-            },
-            lineupSlot: slot,
-            sourcePlaylist: sourcePlaylist || undefined,
-            seedTracks: seedSearch ? [seedSearch] : undefined,
-            wordplayTheme: wordplay || undefined,
-            venueContext: venueName || undefined,
-          },
-        }),
-      });
+      try {
+        res = await doGenerateFetch();
+      } catch (firstErr) {
+        // A single connection-level failure (deploy switchover, a flaky mobile
+        // moment) shouldn't dump the DJ to an error screen for an expensive action.
+        // Retry the connect ONCE after a short backoff before surfacing it. The
+        // request hasn't been read yet, so this only re-attempts the connection.
+        Sentry.captureException(firstErr, { tags: { flow: 'generate-setlist', phase: 'fetch-retry' } });
+        await new Promise(r => setTimeout(r, 900));
+        res = await doGenerateFetch();
+      }
     } catch (err) {
       setGenerating(false);
       const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-      setGenError(`Network error — check your connection. (${detail})`);
+      setGenError(`Network error — check your connection and try again. (${detail})`);
       Sentry.captureException(err, { tags: { flow: 'generate-setlist', phase: 'fetch' } });
       trackEvent.setGenerationFailed('network', primaryGenre || undefined);
       return;
