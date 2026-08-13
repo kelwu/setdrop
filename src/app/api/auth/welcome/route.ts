@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { loopsCreateContact, loopsSendEvent } from '@/lib/email/loops';
+import { loopsCreateContact, loopsSendEvent, updateLoopsContact } from '@/lib/email/loops';
 
 export async function POST() {
   const supabase = await createClient();
@@ -14,6 +14,10 @@ export async function POST() {
   if (isNewUser) {
     loopsCreateContact(user.email); // non-blocking
     loopsSendEvent(user.email, 'signup');
+    updateLoopsContact(user.email, {
+      subscriptionTier: 'free',
+      signedUpAt: new Date().toISOString().split('T')[0],
+    });
   }
 
   return NextResponse.json({ ok: true });

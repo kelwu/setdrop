@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
+import { updateLoopsContact } from '@/lib/email/loops';
 import type Stripe from 'stripe';
 
 export async function POST(req: NextRequest) {
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
           subscription_tier: 'pro',
           stripe_subscription_id: subscriptionId,
         }).eq('id', userId);
+        // Fire-and-forget: sync the upgrade to Loops. The webhook only has the user
+        // id, so look up the account email to key the contact (same email as signup).
+        const { data: u } = await supabase.from('users').select('email').eq('id', userId).single();
+        if (u?.email) updateLoopsContact(u.email, { subscriptionTier: 'pro' });
       }
       break;
     }
