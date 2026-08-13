@@ -496,7 +496,7 @@ export function CrateBuilder() {
             )}
           </div>
           <div style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, marginTop: 5 }}>
-            Auto reads a count from your prompt (e.g. &ldquo;30-track warmup&rdquo;) or picks a sensible size. Larger sets sample evenly across the BPM range.
+            Pick a size and we&rsquo;ll fill it — if exact-genre matches fall short, we top up from the wider genre family and tell you the split. Auto reads a count from your prompt (e.g. &ldquo;30-track warmup&rdquo;) or picks a sensible size; larger sets sample evenly across the BPM range.
           </div>
         </div>
 

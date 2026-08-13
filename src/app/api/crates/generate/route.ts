@@ -5,6 +5,7 @@ import { PLANS } from '@/lib/stripe';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAnthropic } from '@/lib/anthropic';
 import type { CrateTrack } from '@/lib/crates/types';
+import { superFamily, genreRelevance, passesGenreGate } from '@/lib/setdrop/genre';
 
 export const maxDuration = 60;
 
@@ -139,35 +140,33 @@ interface FilterResult {
   genreMatchCount: number;
 }
 
+// Non-genre, non-BPM hard filters: year range, excluded artists, clean-only. Shared
+// by the strict matcher and the fill step so the two can never diverge.
+function matchesHardFilters(t: RawTrack, extra: ExtraFilters): boolean {
+  const { yearMin, yearMax, excludeArtists, cleanOnly } = extra;
+  if (yearMin !== undefined && (t.year == null || t.year < yearMin)) return false;
+  if (yearMax !== undefined && (t.year == null || t.year > yearMax)) return false;
+  if (excludeArtists?.length) {
+    const artist = (t.artist ?? '').toLowerCase();
+    const ex = excludeArtists.map(a => a.toLowerCase().trim()).filter(Boolean);
+    if (ex.some(e => artist.includes(e))) return false;
+  }
+  if (cleanOnly) {
+    const titleLower = (t.title ?? '').toLowerCase();
+    const isDirty = /\(dirty\)|\[dirty\]|dirty version|dirty edit|dirty mix/i.test(titleLower);
+    const cleanPattern = /\(clean\)|\[clean\]|clean edit|radio edit/i;
+    if (isDirty || !cleanPattern.test(titleLower)) return false;
+  }
+  return true;
+}
+
 function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilters = {}): FilterResult {
   const { bpmMin, bpmMax, genreKeywords } = profile;
-  const { yearMin, yearMax, excludeArtists, cleanOnly } = extra;
-
-  const excludeLower = (excludeArtists ?? []).map(a => a.toLowerCase().trim()).filter(Boolean);
-  const cleanPattern = /\(clean\)|\[clean\]|clean edit|radio edit/i;
 
   const pool = raw.filter(t => {
     const bpm = t.bpm ?? 0;
     if (bpm < bpmMin || bpm > bpmMax) return false;
-
-    // Year range
-    if (yearMin !== undefined && (t.year == null || t.year < yearMin)) return false;
-    if (yearMax !== undefined && (t.year == null || t.year > yearMax)) return false;
-
-    // Exclude artists
-    if (excludeLower.length) {
-      const artist = (t.artist ?? '').toLowerCase();
-      if (excludeLower.some(ex => artist.includes(ex))) return false;
-    }
-
-    // Clean only — keep explicitly-labeled clean tracks, block explicitly-labeled dirty ones
-    if (cleanOnly) {
-      const titleLower = (t.title ?? '').toLowerCase();
-      const isDirtyVersion = /\(dirty\)|\[dirty\]|dirty version|dirty edit|dirty mix/i.test(titleLower);
-      if (isDirtyVersion || !cleanPattern.test(titleLower)) return false;
-    }
-
-    return true;
+    return matchesHardFilters(t, extra);
   });
 
   const kwNorms = genreKeywords.map(normGenre).filter(Boolean);
@@ -191,6 +190,52 @@ function filterTracks(raw: RawTrack[], profile: CrateProfile, extra: ExtraFilter
   // Return only the genre-matched tracks — never silently fall back to the full
   // BPM pool. The caller decides how to message a thin or empty match.
   return { tracks: matched, genreRequested: true, genreMatchCount: matched.length };
+}
+
+// When a strict genre match falls short of an EXPLICIT target, top the crate up
+// from the wider genre family so a requested 25 doesn't silently return 12. Pulls
+// candidates that share the gig genre's SUPER-FAMILY (or match its exact/family
+// token), ranked by genre relevance then BPM fit, from a slightly widened BPM
+// window. The super-family gate is the important one: genreRelevance() scores a
+// genre it doesn't recognise (Rock, Country → 'other') as a soft "adjacent", so a
+// score-only gate would pad a house crate with Bon Jovi. Requiring the same KNOWN
+// super-family keeps fills genre-true — the DJ stays in control of "close enough".
+function fillToTarget(
+  raw: RawTrack[],
+  profile: CrateProfile,
+  extra: ExtraFilters,
+  already: RawTrack[],
+  need: number,
+): { tracks: RawTrack[]; usedWiderBpm: boolean } {
+  const gigGenre = profile.genreKeywords[0] ?? '';
+  if (!gigGenre || need <= 0) return { tracks: [], usedWiderBpm: false };
+  // Only fill within a known super-family — refuse to guess for 'other'.
+  const gigSuper = superFamily(gigGenre);
+  if (gigSuper === 'other') return { tracks: [], usedWiderBpm: false };
+
+  const { bpmMin, bpmMax } = profile;
+  const WIDEN = 6;
+  const haveIds = new Set(already.map(t => t.id));
+
+  const scored: Array<{ t: RawTrack; score: number; inBpm: boolean }> = [];
+  for (const t of raw) {
+    if (haveIds.has(t.id)) continue;
+    if (!matchesHardFilters(t, extra)) continue;
+    const bpm = t.bpm ?? 0;
+    if (bpm <= 0) continue;
+    const inBpm = bpm >= bpmMin && bpm <= bpmMax;
+    if (bpm < bpmMin - WIDEN || bpm > bpmMax + WIDEN) continue;
+    const tags = t.lastfm_tags ?? [];
+    // Shared genre gate — same source of truth as the setlist pool + readiness.
+    // allowUnknown:false so the fill never pads a genre crate with untagged tracks.
+    if (!passesGenreGate(gigGenre, t.genre ?? '', tags, { allowUnknown: false })) continue;
+    scored.push({ t, score: genreRelevance(gigGenre, t.genre ?? '', tags).score, inBpm });
+  }
+
+  // In-BPM first, then higher relevance (exact > family > adjacent).
+  scored.sort((a, b) => (a.inBpm !== b.inBpm ? (a.inBpm ? -1 : 1) : b.score - a.score));
+  const picked = scored.slice(0, need);
+  return { tracks: picked.map(s => s.t), usedWiderBpm: picked.some(s => !s.inBpm) };
 }
 
 // Evenly sample n items across an ascending-sorted list so a capped crate spans
@@ -352,19 +397,40 @@ export async function POST(req: NextRequest) {
       cleanOnly: body.cleanOnly,
     };
 
-    // Filter, then select + order.
-    const { tracks: filtered, genreRequested, genreMatchCount } =
-      filterTracks(rawTracks as RawTrack[], profile, extra);
-    // Size precedence: an explicit UI count wins; targetCount: 0 means "All" (no
-    // cap); when the UI leaves it on Auto (undefined), use a count parsed from the
-    // prompt, else DEFAULT_CRATE_SIZE so a broad genre can't produce a huge crate.
+    // Strict match: genre keywords + BPM window.
+    const strict = filterTracks(rawTracks as RawTrack[], profile, extra);
+    const { genreRequested } = strict;
+
+    // An EXPLICIT target = the user set a size (UI count) or named one in the prompt
+    // (e.g. "give me 25"). Only an explicit target triggers fill; Auto/All never do.
+    const explicitTarget =
+      (typeof body.targetCount === 'number' && body.targetCount > 0) ? body.targetCount
+      : (typeof profile.targetCount === 'number' && profile.targetCount > 0) ? profile.targetCount
+      : null;
+
+    // Size precedence: explicit target wins; targetCount:0 = "All" (no cap); Auto
+    // falls back to DEFAULT_CRATE_SIZE so a broad genre can't produce a huge crate.
     let cap: number | null;
-    if (body.targetCount === 0) cap = null;
-    else if (typeof body.targetCount === 'number' && body.targetCount > 0) cap = body.targetCount;
-    else if (typeof profile.targetCount === 'number' && profile.targetCount > 0) cap = profile.targetCount;
+    if (body.targetCount === 0) cap = null;          // "All matches"
+    else if (explicitTarget != null) cap = explicitTarget;
     else cap = DEFAULT_CRATE_SIZE;
-    const ordered = orderAndCap(filtered, profile.sortOrder, cap);
+
+    // Fill toward an explicit target when the strict match falls short — pull the
+    // wider genre family (transparently flagged below) instead of returning 12 for
+    // a requested 25. Skipped for Auto/All, where there's no user target to hit.
+    let pool = strict.tracks;
+    let fillUsedWiderBpm = false;
+    if (genreRequested && explicitTarget != null && cap != null && pool.length < cap) {
+      const fill = fillToTarget(rawTracks as RawTrack[], profile, extra, pool, cap - pool.length);
+      pool = [...pool, ...fill.tracks];
+      fillUsedWiderBpm = fill.usedWiderBpm;
+    }
+
+    const strictIds = new Set(strict.tracks.map(t => t.id));
+    const ordered = orderAndCap(pool, profile.sortOrder, cap);
     const selected = ordered.map(toStoredTrack);
+    const exactN = ordered.filter(t => strictIds.has(t.id)).length;
+    const expandedN = ordered.length - exactN;
 
     if (!selected.length) {
       // Genre requested but nothing tagged with it: the honest failure. Previously
@@ -386,10 +452,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error, profile }, { status: 422 });
     }
 
-    // Thin genre match: still return the crate, but flag it so the UI can say so.
-    const warning = genreRequested && genreMatchCount < GENRE_MATCH_WARN_FLOOR
-      ? `Only ${genreMatchCount} track${genreMatchCount === 1 ? '' : 's'} matched "${profile.genreKeywords[0]}" — try a broader genre or enrich your library.`
-      : undefined;
+    // Always tell the DJ the crate's composition — never a silent shortfall. Three
+    // cases: still short of the requested size, filled by stretching to the wider
+    // family, or a thin exact match on an Auto/All crate.
+    const genreLabel = profile.genreKeywords[0] ?? 'that genre';
+    let warning: string | undefined;
+    if (genreRequested) {
+      if (explicitTarget != null && ordered.length < explicitTarget) {
+        warning = expandedN > 0
+          ? `Only ${ordered.length} of ${explicitTarget} — ${exactN} exact ${genreLabel} plus ${expandedN} from the wider ${genreLabel} family. Widen the BPM or year range, or enrich your library tags, to fill the rest.`
+          : `Only ${exactN} ${genreLabel} track${exactN === 1 ? '' : 's'} in your library within range — widen the BPM or year range, or enrich your tags, to reach ${explicitTarget}.`;
+      } else if (expandedN > 0) {
+        warning = `${ordered.length}-track crate: ${exactN} exact ${genreLabel}, ${expandedN} pulled from the wider ${genreLabel} family${fillUsedWiderBpm ? ' and BPM range' : ''} to hit your target.`;
+      } else if (exactN < GENRE_MATCH_WARN_FLOOR) {
+        warning = `Only ${exactN} track${exactN === 1 ? '' : 's'} matched "${genreLabel}" — try a broader genre or enrich your library.`;
+      }
+    }
 
     // Persist the crate
     const { data: crate, error: insertErr } = await admin

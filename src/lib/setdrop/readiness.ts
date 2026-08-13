@@ -11,14 +11,37 @@
 // Pure, no I/O. Imported by both the pre-gen readiness endpoint and the backend
 // pipeline so the pre-gen hint and the backend hard-fail can never drift.
 
+import { superFamily } from './genre';
+
 export const MIN_SUPERFAMILY_TRACKS = 20;   // backend hard-fail floor (pipeline.ts)
-export const MINUTES_PER_TRACK = 4;         // mirrors the blueprint rule in prompts.ts
+// EFFECTIVE minutes of airtime per track — already discounted for blend overlap, so
+// it's shorter than a track's file length (DJs mix in/out; a 6-min file gets ~3 min
+// solo). This is the base/default; minutesPerTrack() adjusts it by genre. Mirrors the
+// blueprint rule in prompts.ts.
+export const MINUTES_PER_TRACK = 3;
 export const CURATE_HEADROOM = 2.5;         // GREEN needs 2.5× the set size ("room to curate")
 
+// Genres that let tracks breathe (fewer transitions, longer per-track airtime).
+const SLOW_GENRE = /\b(lounge|down\s?tempo|chill(?:out)?|ambient|jazz|bossa)\b/i;
+
+/** Effective minutes of airtime per track for a gig's primary genre, accounting for
+ *  how that style is typically mixed:
+ *    - open-format (hip-hop / top 40 / mashups): fast cuts → ~2.5 min
+ *    - electronic (house / techno / trance) & default: continuous blends → 3 min
+ *    - lounge / downtempo / ambient / jazz: tracks breathe → 4 min
+ *  Undefined genre falls back to the base. */
+export function minutesPerTrack(genre?: string): number {
+  const g = genre?.trim();
+  if (!g) return MINUTES_PER_TRACK;
+  if (SLOW_GENRE.test(g)) return 4;
+  if (superFamily(g) === 'open-format') return 2.5;
+  return MINUTES_PER_TRACK; // electronic + other
+}
+
 /** How many tracks a set of the given duration contains. Mirrors the blueprint's
- *  `totalTracks = min(durationMinutes / 4, …)` rule. */
-export function targetTrackCount(durationMinutes: number): number {
-  return Math.max(1, Math.ceil(durationMinutes / MINUTES_PER_TRACK));
+ *  `totalTracks = min(targetTrackCount, …)` rule; pace varies by genre. */
+export function targetTrackCount(durationMinutes: number, genre?: string): number {
+  return Math.max(1, Math.ceil(durationMinutes / minutesPerTrack(genre)));
 }
 
 export type ReadinessStatus = 'red' | 'amber' | 'green' | 'unknown';

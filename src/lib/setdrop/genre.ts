@@ -104,3 +104,50 @@ export function genreRelevance(gigGenre: string, trackGenre: string, tags: strin
 
   return { tier: 'adjacent', score: 2 };
 }
+
+// Disco-lineage genres that legitimately serve BOTH super-families — they bridge
+// the electronic dance world and the open-format/party world, so they must never
+// be judged out-of-bounds for either an electronic or an open-format gig. (Plain
+// "Disco" classifies as open-format and Freestyle/Hi-NRG as 'other', yet all three
+// belong in a disco-house or nu-disco set.)
+const BRIDGE_GENRES = new Set([
+  'disco', 'italo disco', 'italo', 'freestyle', 'hi nrg', 'nu-disco', 'disco house',
+]);
+
+function isBridgeGenre(raw: string, tags: string[] = []): boolean {
+  if (BRIDGE_GENRES.has(canonToken(raw))) return true;
+  return tags.some(t => BRIDGE_GENRES.has(canonToken(t)));
+}
+
+// The single genre-membership gate: is a candidate track in-bounds for a
+// genre-defined gig? Use this EVERYWHERE a candidate pool or readiness count is
+// filtered by genre — it is the source of truth that keeps the crate builder, the
+// setlist pool, and the readiness signal from drifting apart.
+//
+// Why not just check genreRelevance().score >= 0? Because genreRelevance scores a
+// genre it doesn't recognise ('other' super-family: Rock, Country…) as a soft
+// "adjacent" (2), so a score gate leaks them into an electronic set (the
+// Bon-Jovi-in-a-house-crate bug). This gate admits: an exact/family token match; a
+// same-known-super-family track; a disco-lineage bridge; or — as a fallback so a
+// thinly-tagged library still has a pool — a track with NO genre signal at all
+// (tier 'unknown'). Everything else, including 'off' and soft-'adjacent' 'other'
+// genres, is rejected.
+//
+// allowUnknown (default true) governs that untagged fallback. The setlist pool and
+// readiness count keep it on (better a low-priority fallback than an empty pool).
+// The crate-builder FILL turns it off — it must never pad a genre crate with tracks
+// whose genre it can't confirm.
+export function passesGenreGate(
+  gigGenre: string, trackGenre: string, tags: string[] = [],
+  opts: { allowUnknown?: boolean } = {},
+): boolean {
+  const { allowUnknown = true } = opts;
+  const rel = genreRelevance(gigGenre, trackGenre, tags);
+  if (rel.tier === 'exact' || rel.tier === 'family') return true;
+  if (rel.tier === 'unknown') return allowUnknown;  // no genre signal — fallback, caller's choice
+  const gSuper = superFamily(gigGenre);
+  if (gSuper === 'other') return true;              // gig genre itself unclassified — don't over-filter
+  if (isBridgeGenre(trackGenre, tags)) return true; // disco lineage serves any super-family
+  // tier 'adjacent' or 'off': keep only within the same known super-family.
+  return superFamily(trackGenre, tags) === gSuper;
+}
