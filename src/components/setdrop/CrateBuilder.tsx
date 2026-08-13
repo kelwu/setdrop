@@ -617,7 +617,7 @@ export function CrateBuilder() {
             {/* Column headers */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '36px 1fr 1fr 60px 50px 50px',
+              gridTemplateColumns: '36px 1fr 1fr 110px 60px 50px 50px',
               gap: 0, padding: '8px 16px',
               background: SD.surface2, borderBottom: `1px solid ${SD.border}`,
               fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2,
@@ -626,6 +626,7 @@ export function CrateBuilder() {
               <span>#</span>
               <span>Artist</span>
               <span>Title</span>
+              <span>Genre</span>
               <span>BPM</span>
               <span>Key</span>
               <span>Year</span>
@@ -636,7 +637,7 @@ export function CrateBuilder() {
                 key={t.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '36px 1fr 1fr 60px 50px 50px',
+                  gridTemplateColumns: '36px 1fr 1fr 110px 60px 50px 50px',
                   gap: 0, padding: '9px 16px',
                   borderBottom: `1px solid ${SD.border}`,
                   fontFamily: SD.mono, fontSize: SD.t12, color: SD.text,
@@ -651,6 +652,9 @@ export function CrateBuilder() {
                 </span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
                   {t.title}
+                </span>
+                <span style={{ color: SD.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
+                  {t.genre ?? '—'}
                 </span>
                 <span style={{ color: SD.textSec }}>
                   {t.bpm ?? '—'}
