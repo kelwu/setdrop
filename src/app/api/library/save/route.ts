@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { saveTracksToDatabase } from '@/lib/setdrop/library-save';
+import { updateLoopsContact } from '@/lib/email/loops';
 import type { RekordboxPlaylist } from '@/lib/setdrop/rekordbox-parser';
 import type { LibraryTrack } from '@/lib/agents/types';
 
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
     if (!tracks?.length) return NextResponse.json({ error: 'No tracks provided' }, { status: 400 });
 
     const stats = await saveTracksToDatabase(user.id, tracks, source, playlists);
+
+    // Fire-and-forget: mark the contact as having imported a library (Loops segmentation).
+    if (user.email) updateLoopsContact(user.email, { libraryImported: true });
 
     return NextResponse.json({
       ok: true,
