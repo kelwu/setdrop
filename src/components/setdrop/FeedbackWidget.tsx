@@ -15,8 +15,8 @@ interface Message { id: number; role: Role; text: string; streaming?: boolean }
 const STARTERS = [
   'What is SetLab?',
   'How do I import my library?',
-  'What\'s the pricing?',
-  'How does Track ID work?',
+  'How do I create a setlist?',
+  'How do I create a crate?',
 ];
 
 const BLOCKED_REPLY =
