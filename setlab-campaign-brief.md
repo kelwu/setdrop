@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for writing accurate SetLab email campaigns (Loops).
 > Keep this current — update the "What's New" section whenever a feature ships.
-> Last updated: 2026-08-12.
+> Last updated: 2026-08-13.
 
 ---
 
@@ -92,6 +92,7 @@ Most recent first. Convert these into "we just shipped…" emails.
 
 - **Genre column in the Crate Builder** — see each track's genre in the crate list.
 - **Crates fill to your requested size** — ask for 25, get 25 (topped up from the wider genre family, with a transparent split), instead of a silently short crate.
+- **Sharper genre matching** — sets and crates stay in-genre; off-genre tracks (a rock or country tune in a house set) no longer slip into the pool, and the library-readiness check reflects your true in-genre depth.
 - **Genre-aware set pacing** — set length now reflects how each genre is actually mixed.
 - **Multi-axis set pool** — build a set by genre, era, and/or artist, not just genre.
 - **Build a set from a Rekordbox playlist** — point the builder at an existing playlist.
