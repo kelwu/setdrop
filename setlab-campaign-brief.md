@@ -130,7 +130,45 @@ Most recent first. Convert these into "we just shipped…" emails.
 
 ---
 
-## 8. Accuracy guardrails (don't overclaim)
+## 8. Loops data contract (for Claude cowork)
+
+This is the exact schema the SetLab backend sends to Loops. Build segments and campaigns against **these** names — do **not** invent or rename properties; they already exist on the Loops contact.
+
+**How to read this:** the backend keeps contacts current via two mechanisms. **Properties** describe *who the contact is* (for segmentation) and send nothing on their own. **Events** are *moments* you can trigger campaigns off. Everything is keyed by the contact's **email** (their SetLab account email). All calls are fire-and-forget, so treat them as best-effort signals, not guaranteed-exactly-once.
+
+### Contact properties (segmentation)
+
+| Property | Type | Values | Set when |
+|---|---|---|---|
+| `subscriptionTier` | string | `'free'` \| `'pro'` | Signup → `free`; Pro upgrade (Stripe) → `pro`; churn/downgrade → `free`. Always current in both directions. |
+| `signedUpAt` | string | `YYYY-MM-DD` | Once, at signup. |
+| `libraryImported` | boolean | `true` | After the DJ's first successful library import. (Absent/unset = never imported.) |
+| `setlistsGenerated` | number | running **all-time** total | After every set generation. Note: all-time, **not** monthly. |
+
+The contact itself is created at signup (`source: 'setlab-signup'`).
+
+### Events (campaign triggers)
+
+| Event | Data fields | Fires when |
+|---|---|---|
+| `signup` | — | A new user signs up (Google OAuth **or** email). |
+| `first_setlist` | `setName` (string) | The user's all-time setlist count reaches **1** (their very first set). |
+| `setlist_quota_warning` | `used` (number), `limit` (number, currently `3`) | A **free** user reaches **2 sets in a rolling 30-day window** — i.e. one before the monthly cap of 3. The "1 left, go unlimited" nudge. |
+
+### Segment building blocks (combine the above)
+
+- **Activation — imported but stalled:** `libraryImported = true` AND `setlistsGenerated = 0`.
+- **Onboarding — signed up, never imported:** `libraryImported` unset (any tier).
+- **Upgrade — engaged free power user:** `subscriptionTier = 'free'` AND `setlistsGenerated ≥ N`.
+- **At-the-wall upgrade:** trigger off the `setlist_quota_warning` event (free tier only).
+- **Win-back — churned Pro:** `subscriptionTier = 'free'` who previously had `'pro'` (churn now flips this back, so they re-enter free segments automatically).
+- **Time-based:** `signedUpAt` for anniversary / age-of-account drips.
+
+*(These are the raw materials; see §7 for the campaign angles to pair them with.)*
+
+---
+
+## 9. Accuracy guardrails (don't overclaim)
 
 - SetLab is in **beta** — fine to say so; conveys "early, improving fast."
 - Landing-page stats ("2,400+ tracks analyzed", "98% key accuracy", "<30s set generation") are **existing marketing figures** — reuse them, don't invent new metrics.
