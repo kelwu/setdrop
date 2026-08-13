@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       // Find user by Stripe customer ID
       const { data: userRow } = await supabase
         .from('users')
-        .select('id')
+        .select('id, email')
         .eq('stripe_customer_id', customerId)
         .single();
       if (userRow) {
@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
           subscription_tier: 'free',
           stripe_subscription_id: null,
         }).eq('id', userRow.id);
+        // Fire-and-forget: reflect the churn in Loops so the contact drops back
+        // into free-conversion segments.
+        if (userRow.email) updateLoopsContact(userRow.email, { subscriptionTier: 'free' });
       }
       break;
     }
@@ -64,13 +67,15 @@ export async function POST(req: NextRequest) {
       const isActive = subscription.status === 'active' || subscription.status === 'trialing';
       const { data: userRow } = await supabase
         .from('users')
-        .select('id')
+        .select('id, email')
         .eq('stripe_customer_id', customerId)
         .single();
       if (userRow) {
         await supabase.from('users').update({
           subscription_tier: isActive ? 'pro' : 'free',
         }).eq('id', userRow.id);
+        // Fire-and-forget: keep Loops' subscriptionTier in sync either direction.
+        if (userRow.email) updateLoopsContact(userRow.email, { subscriptionTier: isActive ? 'pro' : 'free' });
       }
       break;
     }
