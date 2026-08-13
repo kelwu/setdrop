@@ -196,7 +196,7 @@ export function SetlistBuilder() {
     if (sourcePlaylist) {
       const pl = playlists.find(p => p.name === sourcePlaylist);
       if (!pl || !duration) { setReadiness(null); return; }
-      const target = targetTrackCount(parseInt(duration) || 60);
+      const target = targetTrackCount(parseInt(duration) || 60, primaryGenre || undefined);
       setReadiness(classifyReadiness(
         { exact: pl.count, family: 0, adjacent: 0, superFamily: pl.count, usable: pl.count, withYear: pl.count, poolTotal: pl.count },
         target, true,

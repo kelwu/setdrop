@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { genreRelevance, superFamily } from '@/lib/setdrop/genre';
+import { genreRelevance, superFamily, passesGenreGate } from '@/lib/setdrop/genre';
 import {
   classifyReadiness, targetTrackCount, unknownReadiness,
   type ReadinessCounts, type ReadinessResult,
@@ -90,15 +90,15 @@ export async function POST(req: NextRequest) {
       if (artistActive && !anchors.some(a => (t.artist ?? '').toLowerCase().includes(a))) continue;
       counts.poolTotal++;
       if (genreActive) {
-        const primaryScore = genreRelevance(primaryGenre!, genre, tags).score;
-        const secondaryScore = secondaryGenre ? genreRelevance(secondaryGenre, genre, tags).score : -1;
-        if (Math.max(primaryScore, secondaryScore) < 0) continue; // 'off' from both → excluded
+        const inGenre = passesGenreGate(primaryGenre!, genre, tags)
+          || (!!secondaryGenre && passesGenreGate(secondaryGenre, genre, tags));
+        if (!inGenre) continue; // out of the gig's genre family (and its bridges) → excluded
       }
       counts.usable++;
       if (t.year != null) counts.withYear++;
     }
 
-    const target = targetTrackCount(durationMinutes);
+    const target = targetTrackCount(durationMinutes, primaryGenre);
     const result: ReadinessResult = classifyReadiness(counts, target, gigSuper === 'other', { genreActive, eraActive });
     return NextResponse.json(result);
   } catch (err) {

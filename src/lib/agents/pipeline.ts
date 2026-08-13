@@ -7,7 +7,7 @@ import {
 } from './types';
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
-import { genreRelevance, superFamily } from '@/lib/setdrop/genre';
+import { genreRelevance, superFamily, passesGenreGate } from '@/lib/setdrop/genre';
 import { MIN_SUPERFAMILY_TRACKS, targetTrackCount } from '@/lib/setdrop/readiness';
 import { TasteAffinity, affinityTrackKey, affinityArtistKey } from '@/lib/setdrop/taste';
 
@@ -312,20 +312,25 @@ function filterTracksForGig(
   const matchesEra = makeEraPredicate(input);
   const artist = makeArtistPredicate(input);
 
-  // Genre relevance GATES the pool only when a genre axis is supplied: a track in a
-  // different super-family than the gig (e.g. R&B for a Trance gig) is excluded
-  // outright — genre is not a soft bonus a tempo match can tie. Score by tier
-  // (exact 4 / family 3 / adjacent 2 / unknown 0). Secondary genre can rescue a
-  // track. When no genre is set (era/artist/playlist-only), genre isn't a gate:
-  // every track scores 0 and order is decided by BPM/tags/affinity below.
+  // Genre GATES the pool only when a genre axis is supplied: a track outside the
+  // gig's genre family — a different super-family (R&B for a Trance gig) OR an
+  // unrecognised 'other' genre (Rock/Country for a House gig) — is excluded
+  // outright via passesGenreGate. Genre is not a soft bonus a tempo match can tie.
+  // Tracks that pass are scored by tier (exact 4 / family 3 / adjacent 2 / unknown
+  // 0, floored at 0 for disco-lineage bridges). Secondary genre can rescue a track.
+  // When no genre is set (era/artist/playlist-only), genre isn't a gate: every
+  // track scores 0 and order is decided by BPM/tags/affinity below.
   const genreScoreFor = (t: LibraryTrack): number | null => {
     if (!input.primaryGenre) return 0;
-    const primary = genreRelevance(input.primaryGenre, t.genre ?? '', t.lastfmTags ?? []);
+    const tags = t.lastfmTags ?? [];
+    const primaryOk = passesGenreGate(input.primaryGenre, t.genre ?? '', tags);
+    const secondaryOk = input.secondaryGenre
+      ? passesGenreGate(input.secondaryGenre, t.genre ?? '', tags) : false;
+    if (!primaryOk && !secondaryOk) return null; // out of family (and its bridges) → excluded
+    const primary = genreRelevance(input.primaryGenre, t.genre ?? '', tags).score;
     const secondary = input.secondaryGenre
-      ? genreRelevance(input.secondaryGenre, t.genre ?? '', t.lastfmTags ?? [])
-      : null;
-    const best = Math.max(primary.score, secondary?.score ?? -1);
-    return best >= 0 ? best : null; // 'off' from both scores -1 → excluded
+      ? genreRelevance(input.secondaryGenre, t.genre ?? '', tags).score : -1;
+    return Math.max(primary, secondary, 0); // never negative once it passed the gate
   };
 
   // Cap candidates per artist so a library skewed toward one artist can't produce
@@ -374,6 +379,7 @@ function filterTracksForGig(
 async function runGigBlueprint(
   profile: LibraryProfile,
   input: SetlistInput,
+  targetTracks: number,
   signal?: AbortSignal,
   onUsage?: (u: CallUsage) => void,
 ): Promise<{ gigIntel: GigIntelReport; blueprint: SetBlueprint }> {
@@ -396,6 +402,7 @@ Gig context:
 - Artists: ${input.artists?.length ? artistLabel(input.artists) : 'Any'}
 - Lineup slot: ${input.lineupSlot}
 - Duration: ${input.durationMinutes} minutes
+- targetTrackCount: ${targetTracks} (fill the set to this many tracks unless the library has fewer)
 - Vibe: ${input.vibe || 'Not specified'}
 - Energy arc: ${JSON.stringify(input.energyArc)}`;
 
@@ -565,7 +572,7 @@ export async function runSetlistPipeline(
     const matchesEra = makeEraPredicate(input);
     const anchor = makeArtistPredicate(input);
     const gigSuper = genreActive ? superFamily(input.primaryGenre!) : 'other';
-    const target = targetTrackCount(input.durationMinutes);
+    const target = targetTrackCount(input.durationMinutes, input.primaryGenre);
 
     let exactGenreCount = 0;
     let superFamilyCount = 0;
@@ -580,11 +587,10 @@ export async function runSetlistPipeline(
       }
       if (!matchesEra(t) || !anchor.pass(t)) continue;
       if (genreActive) {
-        const primary = genreRelevance(input.primaryGenre!, t.genre ?? '', t.lastfmTags ?? []).score;
-        const secondary = input.secondaryGenre
-          ? genreRelevance(input.secondaryGenre, t.genre ?? '', t.lastfmTags ?? []).score
-          : -1;
-        if (Math.max(primary, secondary) < 0) continue; // 'off' from both → excluded
+        const tags = t.lastfmTags ?? [];
+        const inGenre = passesGenreGate(input.primaryGenre!, t.genre ?? '', tags)
+          || (!!input.secondaryGenre && passesGenreGate(input.secondaryGenre, t.genre ?? '', tags));
+        if (!inGenre) continue; // out of the gig's genre family (and its bridges) → excluded
       }
       poolCount++;
       if (t.year != null) poolWithYear++;
@@ -618,7 +624,7 @@ export async function runSetlistPipeline(
     }
 
     onProgress?.({ type: 'step', step: 2, message: 'Architecting the set structure...' });
-    const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, signal, onUsage);
+    const { gigIntel: intel, blueprint } = await runGigBlueprint(profile, input, target, signal, onUsage);
 
     onProgress?.({ type: 'step', step: 3, message: 'Selecting and sequencing tracks...' });
     const filtered = filterTracksForGig(tracks, blueprint, input, affinity);

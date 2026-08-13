@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
               // Artist-anchored top-up: if the chosen artist(s) can't fill the set,
               // widen to Last.fm similar artists (ranked), still respecting genre + era.
               // Anchors stay prioritized in the pipeline; this only adds candidates.
-              if (artists.length && allRows.length < targetTrackCount(input.durationMinutes)) {
+              if (artists.length && allRows.length < targetTrackCount(input.durationMinutes, input.primaryGenre)) {
                 const anchorLower = new Set(artists.map(a => a.toLowerCase().trim()));
                 const seenSimilar = new Set<string>();
                 const ranked: string[] = [];
