@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { trackEvent } from '@/lib/analytics';
 import { SD } from '@/lib/setdrop/constants';
 import { SDButton, PageHeader, Card, CardHeader, Tabs, Badge, EmptyState, LoadingState } from './shared';
+import { WhatsNewModal } from './WhatsNewModal';
 
 interface LibraryStats {
   totalTracks: number;
@@ -299,6 +300,8 @@ export function Dashboard() {
 
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
+      {/* Release-notes popup — once per user, skipped for brand-new signups */}
+      {searchParams.get('new_user') !== '1' && <WhatsNewModal />}
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:1280, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
 
         <PageHeader
