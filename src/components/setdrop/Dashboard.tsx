@@ -313,7 +313,7 @@ export function Dashboard() {
                 ID a Track
               </SDButton>
               <SDButton onClick={() => router.push('/builder')} style={{ fontSize:13, padding:'13px 32px' }}>
-                + Build New Set
+                + Plan New Set
               </SDButton>
             </div>
           }
@@ -338,7 +338,7 @@ export function Dashboard() {
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               {[
                 { n:1, done: libraryStats !== null, label:'Upload your library', sub:'Import your Serato DB, Rekordbox XML, or add tracks manually to your wishlist', page:'library', cta:'Upload Library' },
-                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Build your first set', sub:'Tell the AI your genre, vibe, and crowd — it handles the rest', page:'builder', cta:'Build Set' },
+                { n:2, done: recentSets !== null && recentSets.length > 0, label:'Plan your first set', sub:'Tell the AI your gig — crowd, slot, duration — and it sequences an ordered set', page:'builder', cta:'Plan Set' },
               ].map(step => (
                 <div key={step.n} style={{ display:'flex', alignItems:'center', gap:16,
                   padding:'14px 18px', background:SD.bg,
@@ -369,6 +369,30 @@ export function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* Set vs Crate — the two core create flows, framed side by side so the
+            difference reads at the decision point, not just inside each tool. */}
+        <div className="sd-grid-2" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          {[
+            { icon:'≣', title:'PLAN A SET', copy:'An ordered set for one gig — sequenced start to finish, with transitions and an energy arc.', page:'builder', cta:'Plan a Set' },
+            { icon:'▦', title:'BUILD A CRATE', copy:'A reusable bin of tracks by vibe — group now, play later. Pull from it whenever.', page:'crates', cta:'Build a Crate' },
+          ].map(card => (
+            <div key={card.page}
+              onClick={() => router.push('/' + card.page)}
+              style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4,
+                padding:'20px 22px', cursor:'pointer', transition:'border-color .15s, background .15s',
+                display:'flex', flexDirection:'column', gap:10 }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = SD.accent; e.currentTarget.style.background = SD.surface2; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = SD.border; e.currentTarget.style.background = SD.surface; }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:20, color:SD.accent, lineHeight:1 }}>{card.icon}</span>
+                <span style={{ fontFamily:SD.display, fontSize:20, letterSpacing:2, color:SD.text }}>{card.title}</span>
+              </div>
+              <div style={{ fontFamily:SD.body, fontSize:13, color:SD.textSec, lineHeight:1.5, flex:1 }}>{card.copy}</div>
+              <span style={{ fontFamily:SD.mono, fontSize:12, letterSpacing:1, color:SD.accent, textTransform:'uppercase' }}>{card.cta} →</span>
+            </div>
+          ))}
+        </div>
 
         {/* Status strip */}
         <div style={{ background:SD.surface, border:`1px solid ${SD.border}`, borderRadius:4,

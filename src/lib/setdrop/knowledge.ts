@@ -22,7 +22,7 @@ SetLab never modifies your original Serato or Rekordbox files.`,
   },
   {
     category: 'set_builder',
-    content: `The Set Builder generates a starting setlist from your actual library. You describe the gig — venue, crowd type, duration, lineup slot — and AI builds a structured draft. Each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it. The AI gives you a draft; you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Generating sets is unlimited on both Free and Pro — the free plan only caps exports at 3/month.`,
+    content: `The Set Builder (the "Build Set" link in the top nav) generates a starting setlist from your actual library. You describe the gig — venue, crowd type, duration, lineup slot — and AI builds a structured draft. Each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it. The AI gives you a draft; you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Generating sets is unlimited on both Free and Pro — the free plan only caps exports at 3/month.`,
   },
   {
     category: 'track_id',
@@ -47,7 +47,14 @@ Supported import formats: Serato database V2, Rekordbox XML, Spotify playlist (O
   },
   {
     category: 'themed_crates',
-    content: `Themed Crates let you describe a vibe in plain English and SetLab filters and sequences tracks from your existing library that match. Examples: "Friday peak 1am", "wedding cocktail hour", "warmup with energy building". Output is a named crate ordered by energy curve — preview it, swap any tracks, then export to Serato or Rekordbox. Find it in Library → Crates tab. Note: Themed Crates only use tracks you already own — they don't suggest tracks you don't have.`,
+    content: `Themed Crates let you describe a vibe in plain English and SetLab filters and sequences tracks from your existing library that match. Examples: "Friday peak 1am", "wedding cocktail hour", "warmup with energy building". Output is a named crate ordered by energy curve — preview it, swap any tracks, then export to Serato or Rekordbox. To create one, open the Crates page (the "Crates" link in the top nav), describe your vibe, and generate. Your saved crates also appear on the Library page under the Crates tab. Note: Themed Crates only use tracks you already own — they don't suggest tracks you don't have.`,
+  },
+  {
+    category: 'setlist_vs_crate',
+    content: `Setlist vs Crate — the difference in SetLab:
+A CRATE is a themed collection of tracks pulled from your library — a labeled bag of records that fit a vibe (e.g. "disco house", "wedding cocktail hour"). It's loosely ordered by energy but it is NOT a finished performance: it's a building block you draw from, reorder freely, and reuse. Think of it like a Serato crate or a Rekordbox playlist folder. Create one on the Crates page.
+A SETLIST is a full, ordered performance plan for one specific gig. You give the gig context (venue, crowd, duration, lineup slot) and AI sequences tracks start-to-finish with transition notes, harmonic mixing logic, an energy arc, and timing — the set you actually play top to bottom. Create one with Build Set.
+Simple way to remember it: a crate is the record bag; a setlist is the set you play out of it. A crate answers "which of my tracks fit this vibe?"; a setlist answers "in what order do I play them for this gig?" Both are AI-generated from your own library and both export to Serato (.crate), Rekordbox XML, or M3U.`,
   },
   {
     category: 'export',
@@ -85,6 +92,7 @@ ${KNOWLEDGE_CHUNKS.map(c => c.content).join('\n\n---\n\n')}
 RULES:
 - Only answer questions about SetLab (features, pricing, how-to, troubleshooting, DJ prep in the context of SetLab).
 - If the question is unrelated to SetLab or DJing, respond: "I can only help with SetLab questions — what would you like to know about the app?"
+- Reply in the same language the user writes in — if they ask in Spanish, answer in Spanish; in French, answer in French, and so on. When they ask this same off-topic refusal in another language, translate it too.
 - If someone shares feedback or a bug report, acknowledge it warmly and let them know Kel reads every message.
 - Keep answers short: 1–3 sentences unless a longer answer genuinely helps.
 - Write in plain prose — no bullet lists, no markdown.

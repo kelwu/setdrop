@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { SYSTEM_PROMPT, isMessageBlocked } from '@/lib/setdrop/knowledge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getAnthropic } from '@/lib/anthropic';
 import { BRAND } from '@/lib/brand';
 
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
-  const { message, page } = await req.json();
+  const { message, page, history } = await req.json();
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return NextResponse.json({ error: 'Message required' }, { status: 400 });
@@ -22,15 +22,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ blocked: true });
   }
 
-  // Log to feedback table and notify via email (non-blocking)
+  // Log the question and notify via email (non-blocking). We hold onto the insert
+  // promise so the streamed reply can be written back onto the SAME row once the
+  // response finishes — giving an auditable question↔answer transcript. The admin
+  // client is used so RLS never blocks the select-back or the later update.
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  supabase.from('feedback').insert({
-    user_id: user?.id ?? null,
-    email: user?.email ?? null,
-    message: `[chat] ${message.trim()}`,
-    page: page ?? null,
-  }).then(() => {});
+  const admin = createAdminClient();
+  const logPromise = admin
+    .from('feedback')
+    .insert({
+      user_id: user?.id ?? null,
+      email: user?.email ?? null,
+      message: `[chat] ${message.trim()}`,
+      page: page ?? null,
+    })
+    .select('id')
+    .single()
+    .then(
+      (r) => r,
+      (err): { data: { id: string } | null } => {
+        console.error('[chat] question log failed', err);
+        return { data: null };
+      },
+    );
 
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
@@ -57,13 +72,30 @@ export async function POST(req: NextRequest) {
   // Open the stream before returning so a pre-stream failure surfaces as a real
   // HTTP error rather than an empty 200. The timeout guards against a hung call
   // silently eating the 30s function budget.
+  // Build the conversation for the model: prior turns (sanitised + capped) then
+  // the new question. Multi-turn context lets follow-ups like "show me" / "and
+  // in Spanish?" resolve against what was already said.
+  type ChatTurn = { role: 'user' | 'assistant'; content: string };
+  const priorTurns: ChatTurn[] = (Array.isArray(history) ? history : [])
+    .filter(
+      (m): m is { role: string; text: string } =>
+        !!m && typeof m.text === 'string' && (m.role === 'user' || m.role === 'assistant'),
+    )
+    .slice(-10)
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text.slice(0, 2000).trim() }))
+    .filter((m) => m.content.length > 0);
+  // The API requires the first message to be from the user; drop any leading
+  // assistant turns that would violate that.
+  while (priorTurns.length && priorTurns[0].role === 'assistant') priorTurns.shift();
+  const convo: ChatTurn[] = [...priorTurns, { role: 'user', content: message.trim() }];
+
   let stream: ReturnType<ReturnType<typeof getAnthropic>['messages']['stream']>;
   try {
     stream = getAnthropic().messages.stream({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: message.trim() }],
+      messages: convo,
     }, { timeout: 25_000 });
   } catch (err) {
     console.error('[chat] stream failed to start', err);
@@ -76,12 +108,14 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
+      let full = '';
       try {
         for await (const chunk of stream) {
           if (
             chunk.type === 'content_block_delta' &&
             chunk.delta.type === 'text_delta'
           ) {
+            full += chunk.delta.text;
             controller.enqueue(encoder.encode(chunk.delta.text));
           }
         }
@@ -90,9 +124,21 @@ export async function POST(req: NextRequest) {
         // already received a 200 + partial text, so append a visible notice
         // instead of closing silently on a truncated reply.
         console.error('[chat] stream interrupted', err);
-        controller.enqueue(encoder.encode('\n\n_(Got cut off — please try again.)_'));
+        const notice = '\n\n_(Got cut off — please try again.)_';
+        full += notice;
+        controller.enqueue(encoder.encode(notice));
       } finally {
         controller.close();
+        // Persist the assistant reply onto the logged question row. Best-effort:
+        // the stream is already done, so a logging failure must never surface.
+        try {
+          const { data: row } = await logPromise;
+          if (row?.id && full.trim()) {
+            await admin.from('feedback').update({ reply: full }).eq('id', row.id);
+          }
+        } catch (err) {
+          console.error('[chat] reply log failed', err);
+        }
       }
     },
   });
