@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Nav } from './shared';
 
-const HIDE_NAV_PREFIXES = ['/', '/login', '/set/', '/privacy', '/invoice'];
+const HIDE_NAV_PREFIXES = ['/', '/login', '/set/', '/privacy', '/invoice', '/help'];
 
 export function NavWrapper() {
   const pathname = usePathname();
