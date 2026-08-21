@@ -56,11 +56,6 @@ export const HELP_GUIDES: HelpGuide[] = [
             body:
               'Serato keeps your library in a folder called _Serato_.\n\n' +
               'On Windows it lives at C:\\Users\\<you>\\Music\\_Serato_. On Mac it\'s at ~/Music/_Serato_ — in Finder press ⌘⇧G and paste that path. If your library is on an external drive, look for a _Serato_ folder at the root of that drive instead.',
-            image: {
-              alt: 'Windows Explorer open at C:\\Users\\<you>\\Music\\_Serato_ showing the folder contents',
-              caption: 'The _Serato_ folder in Windows Explorer.',
-              pending: true,
-            },
           },
           {
             heading: 'Find the file named "database V2"',
@@ -68,9 +63,9 @@ export const HELP_GUIDES: HelpGuide[] = [
               'Inside _Serato_ there is a file literally named database V2 — with no file extension. That single file is your entire library.\n\n' +
               'Don\'t open, move, or rename it — you\'re just going to point SetLab at a copy of it.',
             image: {
+              src: '/help/serato-database-v2.png',
               alt: 'The _Serato_ folder with the extensionless "database V2" file highlighted',
-              caption: 'This is the file SetLab needs — note there\'s no ".something" on the end.',
-              pending: true,
+              caption: 'Inside Music/_Serato_ — "database V2", with no file extension.',
             },
           },
           {
