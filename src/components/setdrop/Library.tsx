@@ -215,17 +215,28 @@ function UploadZone({
 
   const accept = uploadMode === 'db' ? '*' : '.xml,application/xml,text/xml';
   const dropLabel = uploadMode === 'db' ? 'DROP DATABASE V2 HERE' : 'DROP REKORDBOX XML HERE';
+  const helpLink = (
+    <a
+      href="/help/import"
+      onClick={(e) => e.stopPropagation()}
+      style={{ color: SD.accent, textDecoration: 'none', borderBottom: `1px solid ${SD.accent}55` }}
+    >
+      the step-by-step import guide →
+    </a>
+  );
   const instructions = uploadMode === 'db' ? (
     <>
       Open your <span style={{ color:SD.textSec }}>_Serato_</span> folder{' '}
       (<span style={{ color:SD.textSec }}>{seratoPath}</span>) and pick the{' '}
       <span style={{ color:SD.accent }}>database V2</span> file — it has <strong>no file extension</strong>.<br/>
-      Drag it here, or click to browse.
+      Drag it here, or click to browse.<br/>
+      <span style={{ fontSize:12 }}>New to this? See {helpLink}</span>
     </>
   ) : (
     <>
       In Rekordbox, go to <span style={{ color:SD.textSec }}>File → Export Collection in xml format</span><br/>
-      then drag the <span style={{ color:SD.accent }}>rekordbox.xml</span> file here, or click to browse.
+      then drag the <span style={{ color:SD.accent }}>rekordbox.xml</span> file here, or click to browse.<br/>
+      <span style={{ fontSize:12 }}>New to this? See {helpLink}</span>
     </>
   );
 

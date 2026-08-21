@@ -90,6 +90,7 @@ Lead with the **benefit**, support with the **feature**.
 
 Most recent first. Convert these into "we just shipped…" emails.
 
+- **Step-by-step visual guides** — new help walkthroughs for importing your library, planning a set, and building a crate, at setlab.ai/help. The help chat links you straight to them.
 - **Ask SetLab, in your language** — the in-app help chat now remembers the conversation (follow-ups like "show me" work) and answers in whatever language you write in.
 - **Set vs Crate, made clear** — plan an *ordered set* for a specific gig, or build a *reusable crate* of tracks by vibe. The two now have distinct names, framing, and side-by-side entry points on your dashboard.
 - **Genre column in the Crate Builder** — see each track's genre in the crate list.
