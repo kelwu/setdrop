@@ -609,64 +609,65 @@ export function CrateBuilder() {
             </div>
           )}
 
-          {/* Track list */}
+          {/* Track bin — a grid of record-tiles, not a spreadsheet. A crate is an
+              unordered bin you pull from; the multi-column tile grid + vinyl badge
+              reads as "a bag of records", distinct from the setlist's ordered list. */}
           <div style={{
-            background: SD.surface, border: `1px solid ${SD.border}`,
-            borderRadius: SD.r3, overflow: 'hidden',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: 12,
           }}>
-            {/* Column headers */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '36px 1fr 1fr 110px 60px 50px 50px',
-              gap: 0, padding: '8px 16px',
-              background: SD.surface2, borderBottom: `1px solid ${SD.border}`,
-              fontFamily: SD.mono, fontSize: SD.t10, letterSpacing: 2,
-              textTransform: 'uppercase', color: SD.textMuted,
-            }}>
-              <span>#</span>
-              <span>Artist</span>
-              <span>Title</span>
-              <span>Genre</span>
-              <span>BPM</span>
-              <span>Key</span>
-              <span>Year</span>
-            </div>
-
-            {pageTracks.map((t, i) => (
-              <div
-                key={t.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '36px 1fr 1fr 110px 60px 50px 50px',
-                  gap: 0, padding: '9px 16px',
-                  borderBottom: `1px solid ${SD.border}`,
-                  fontFamily: SD.mono, fontSize: SD.t12, color: SD.text,
-                  background: i % 2 === 0 ? 'transparent' : SD.surface2,
-                }}
-              >
-                <span style={{ color: SD.textMuted }}>
-                  {page * PAGE_SIZE + i + 1}
-                </span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
-                  {t.artist}
-                </span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
-                  {t.title}
-                </span>
-                <span style={{ color: SD.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>
-                  {t.genre ?? '—'}
-                </span>
-                <span style={{ color: SD.textSec }}>
-                  {t.bpm ?? '—'}
-                </span>
-                <span style={{ color: SD.textSec }}>
-                  {t.key ?? '—'}
-                </span>
-                <span style={{ color: SD.textMuted }}>
-                  {t.year ?? '—'}
-                </span>
-              </div>
-            ))}
+            {pageTracks.map((t, i) => {
+              const meta = [
+                t.bpm ? `${Math.round(t.bpm)} BPM` : null,
+                t.key || null,
+                t.year ? String(t.year) : null,
+              ].filter(Boolean).join(' · ');
+              return (
+                <div
+                  key={t.id}
+                  style={{
+                    background: SD.surface, border: `1px solid ${SD.border}`,
+                    borderRadius: SD.r3, padding: '12px 14px',
+                    display: 'flex', gap: 12, alignItems: 'center', minWidth: 0,
+                  }}
+                >
+                  {/* vinyl badge */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                    background: SD.surface3, border: `1px solid ${SD.borderMid}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: SD.mono, fontSize: SD.t11, color: SD.textSec, position: 'relative',
+                  }}>
+                    <span style={{ position: 'absolute', width: 6, height: 6, borderRadius: '50%', background: SD.accent, opacity: 0.5 }} />
+                    <span style={{ position: 'relative' }}>{page * PAGE_SIZE + i + 1}</span>
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontFamily: SD.mono, fontSize: SD.t12, color: SD.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.title}
+                    </div>
+                    <div style={{ fontFamily: SD.mono, fontSize: SD.t11, color: SD.textSec, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                      {t.artist}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: SD.mono, fontSize: SD.t10, color: SD.textMuted, letterSpacing: 0.5 }}>
+                        {meta || '—'}
+                      </span>
+                      {t.genre && (
+                        <span style={{
+                          fontFamily: SD.mono, fontSize: SD.t10, color: SD.textSec,
+                          background: SD.surface2, border: `1px solid ${SD.border}`, borderRadius: SD.r2,
+                          padding: '1px 6px', overflow: 'hidden', textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap', maxWidth: 120,
+                        }}>
+                          {t.genre}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Pagination */}
