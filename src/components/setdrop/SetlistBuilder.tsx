@@ -675,7 +675,7 @@ export function SetlistBuilder() {
   return (
     <div style={{ background:SD.bg, minHeight:'100vh', paddingTop:56, color:SD.text }}>
       <div className="sd-pad-x sd-inner-pad" style={{ maxWidth:800, margin:'0 auto', padding:'48px 40px', animation:'sdFadeUp 0.5s ease both' }}>
-        <PageHeader eyebrow="Setlist Builder" title="BUILD YOUR SET" />
+        <PageHeader eyebrow="Setlist Builder" title="PLAN YOUR SET" subtitle="An ordered set for one gig — sequenced start to finish, with transitions and an energy arc." />
 
         {/* Library status banner */}
         <div style={{ marginBottom:24, padding:'12px 16px', borderRadius:3,

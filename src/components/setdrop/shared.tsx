@@ -48,7 +48,7 @@ export function Nav() {
 
   const links = [
     { id:'dashboard', label:'Dashboard' },
-    { id:'builder', label:'Build Set' },
+    { id:'builder', label:'Plan Set' },
     { id:'crates', label:'Crates' },
     { id:'id', label:'Track ID' },
     { id:'explore', label:'Explore' },
@@ -56,7 +56,7 @@ export function Nav() {
   ];
   const mobileNavItems = [
     { id:'dashboard', label:'Dash',     icon:'⊞' },
-    { id:'builder',   label:'Build',    icon:'+' },
+    { id:'builder',   label:'Plan',     icon:'≣' },
     { id:'crates',    label:'Crates',   icon:'▦' },
     { id:'id',        label:'Track ID', icon:'◎' },
     { id:'explore',   label:'Explore',  icon:'◉' },
@@ -95,7 +95,7 @@ export function Nav() {
                 paddingBottom:2, transition:'color .15s',
               }}>{l.label}</Link>
             ))}
-            <SDButton onClick={() => router.push('/builder')} small>Build Set</SDButton>
+            <SDButton onClick={() => router.push('/builder')} small>Plan Set</SDButton>
           </div>
           <div ref={menuRef} style={{ position:'relative' }}>
             <div

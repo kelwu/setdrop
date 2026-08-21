@@ -90,11 +90,17 @@ export function FeedbackWidget() {
     const assistantId = newId();
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '', streaming: true }]);
 
+    // Prior turns for multi-turn context. `messages` here is the state before
+    // this send, so it holds the conversation up to (not including) this question.
+    const history = messages
+      .filter(m => m.text && !m.streaming)
+      .map(m => ({ role: m.role, text: m.text }));
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed, page: pathname }),
+        body: JSON.stringify({ message: trimmed, page: pathname, history }),
       });
 
       if (!res.ok) {

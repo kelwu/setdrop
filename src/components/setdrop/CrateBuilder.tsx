@@ -284,9 +284,9 @@ export function CrateBuilder() {
 
       {/* Header */}
       <PageHeader
-        eyebrow="SetLab AI"
+        eyebrow="Themed Crate"
         title="CRATE BUILDER"
-        subtitle="Describe the crate you want. AI scans your entire library, then curates to the size you choose."
+        subtitle="A reusable bin of tracks by vibe — group now, play later. Describe the crate you want; AI scans your whole library and curates to the size you choose."
       />
 
       {/* Generator form */}
