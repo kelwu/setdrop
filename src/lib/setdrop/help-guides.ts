@@ -72,11 +72,6 @@ export const HELP_GUIDES: HelpGuide[] = [
             heading: 'Drop it into SetLab',
             body:
               'In SetLab, open Library and drag database V2 onto the upload area — or click to browse and select it.',
-            image: {
-              alt: 'SetLab Library page showing the drag-and-drop upload area',
-              caption: 'SetLab → Library → upload.',
-              pending: true,
-            },
           },
           {
             heading: 'Let it parse',
@@ -95,11 +90,6 @@ export const HELP_GUIDES: HelpGuide[] = [
             body:
               'In Rekordbox, go to File → Export Collection in xml format.\n\n' +
               'If you don\'t see that option, open Preferences → Advanced → Database and set an "Imported Library" xml path first, then export.',
-            image: {
-              alt: 'Rekordbox File menu open showing "Export Collection in xml format" (or the Preferences → Advanced → Database xml path field)',
-              caption: 'Rekordbox → File → Export Collection in xml format.',
-              pending: true,
-            },
           },
           {
             heading: 'Save the .xml somewhere easy',
@@ -132,21 +122,11 @@ export const HELP_GUIDES: HelpGuide[] = [
             heading: 'Describe the gig',
             body:
               'Set the crowd, lineup slot, and duration — the required pieces. Then optionally narrow the pool by genre, era, artist, or vibe.',
-            image: {
-              alt: 'SetLab Plan Set — the Gig Context step with crowd, slot, duration and optional genre/era/artist fields',
-              caption: 'Gig Context — tell SetLab what the night is.',
-              pending: true,
-            },
           },
           {
             heading: 'Shape the energy arc',
             body:
               'Drag the arc — or pick a preset like Peak Hour — to tell SetLab how the energy should rise and fall across the set.',
-            image: {
-              alt: 'SetLab Plan Set — the interactive draggable energy arc',
-              caption: 'The energy arc is unique to setlists — a crate has no arc.',
-              pending: true,
-            },
           },
           {
             heading: 'Add seeds (optional)',
@@ -183,11 +163,6 @@ export const HELP_GUIDES: HelpGuide[] = [
             heading: 'Name it and set filters',
             body:
               'Give the crate a name — this becomes the crate name in Serato and the playlist name in Rekordbox. Then optionally narrow by genre, BPM range, year range, or crate size.',
-            image: {
-              alt: 'SetLab Crate Builder form — name, genre, BPM/year ranges, and crate size',
-              caption: 'Describe the bin you want.',
-              pending: true,
-            },
           },
           {
             heading: 'Build Crate',
