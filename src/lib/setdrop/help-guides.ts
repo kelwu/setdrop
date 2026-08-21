@@ -199,9 +199,9 @@ export const HELP_GUIDES: HelpGuide[] = [
             body:
               'You get a grid of matching tracks with BPM, key, year, and genre. Swap out anything that doesn\'t fit the vibe.',
             image: {
+              src: '/help/crate-grid.png',
               alt: 'SetLab crate output — the grid of record-tiles',
-              caption: 'A crate is a bin, not an ordered set.',
-              pending: true,
+              caption: 'A crate is a bin, not an ordered set — each tile shows BPM, key, year, and genre.',
             },
           },
           {
