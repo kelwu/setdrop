@@ -32,17 +32,19 @@ const MAX_SELECTOR_TRACKS = 200;
 // The route runs with maxDuration = 300s. Abort the whole pipeline before that
 // ceiling so we can surface a real error to the client instead of a stream that
 // the platform silently kills mid-flight (which the user sees as a hang).
-const PIPELINE_TIMEOUT_MS = 270_000;
+const PIPELINE_TIMEOUT_MS = 285_000;
 // Per-call ceilings so a single hung API request fails fast instead of eating the
 // entire budget. The SDK's own default timeout is 10min — longer than our function
 // limit — so without these a stalled call always blows past 300s.
-// Web intel is best-effort (see runGigBlueprint): a tight budget for the
-// search-enabled pass, a fast no-search fallback when it stalls, and a selector
-// ceiling sized so the WORST case (search timeout + fallback + selector) still
-// lands under PIPELINE_TIMEOUT_MS with margin: 60 + 40 + 165 = 265 < 270.
-const WEB_INTEL_TIMEOUT_MS = 60_000;
-const BLUEPRINT_FALLBACK_TIMEOUT_MS = 40_000;
-const SELECTOR_TIMEOUT_MS = 165_000;
+// The selector is the heavy, quality-critical call and the real long pole under
+// elevated model latency, so it gets the lion's share. The blueprint side is
+// best-effort and fast (single web search, see runGigBlueprint) so it's kept
+// tight. Worst case (search timeout + fallback + selector) still lands under
+// PIPELINE_TIMEOUT_MS with margin: 50 + 30 + 200 = 280 < 285. Normal path
+// (search succeeds) is 50 + 200 = 250.
+const WEB_INTEL_TIMEOUT_MS = 50_000;
+const BLUEPRINT_FALLBACK_TIMEOUT_MS = 30_000;
+const SELECTOR_TIMEOUT_MS = 200_000;
 
 type CallOptions = { signal?: AbortSignal; timeout?: number; onUsage?: (u: CallUsage) => void };
 
