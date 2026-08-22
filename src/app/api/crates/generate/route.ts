@@ -374,7 +374,7 @@ export async function POST(req: NextRequest) {
       messages: [{ role: 'user', content: userMsg }],
       tools: [PROFILE_TOOL],
       tool_choice: { type: 'tool', name: 'parse_crate_prompt' },
-    }, { timeout: 45_000 });
+    }, { timeout: 45_000, maxRetries: 0 });
     await recordCost(user.id, 'crates-generate', usageFrom(MODEL, msg));
 
     const block = msg.content.find(
