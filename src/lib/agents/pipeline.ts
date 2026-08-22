@@ -36,14 +36,10 @@ const PIPELINE_TIMEOUT_MS = 285_000;
 // Per-call ceilings so a single hung API request fails fast instead of eating the
 // entire budget. The SDK's own default timeout is 10min — longer than our function
 // limit — so without these a stalled call always blows past 300s.
-// The selector is the heavy, quality-critical call and the real long pole under
-// elevated model latency, so it gets the lion's share. The blueprint side is
-// best-effort and fast (single web search, see runGigBlueprint) so it's kept
-// tight. Worst case (search timeout + fallback + selector) still lands under
-// PIPELINE_TIMEOUT_MS with margin: 50 + 30 + 200 = 280 < 285. Normal path
-// (search succeeds) is 50 + 200 = 250.
-const WEB_INTEL_TIMEOUT_MS = 50_000;
-const BLUEPRINT_FALLBACK_TIMEOUT_MS = 30_000;
+// Blueprint is a single no-search call (~15-30s measured); the selector is the
+// heavy, quality-critical call and gets the lion's share. Worst case
+// 60 + 200 = 260 < 285 PIPELINE_TIMEOUT < 300 maxDuration.
+const BLUEPRINT_TIMEOUT_MS = 60_000;
 const SELECTOR_TIMEOUT_MS = 200_000;
 
 type CallOptions = { signal?: AbortSignal; timeout?: number; onUsage?: (u: CallUsage) => void };
@@ -59,12 +55,6 @@ function isTimeoutOrAbort(err: unknown): boolean {
 function client() {
   return getAnthropic();
 }
-
-const WEB_SEARCH_TOOL: Anthropic.Messages.WebSearchTool20260209 = {
-  type: 'web_search_20260209',
-  name: 'web_search',
-  max_uses: 1,
-};
 
 const GIG_BLUEPRINT_TOOL: Anthropic.Tool = {
   name: 'generate_gig_blueprint',
@@ -171,7 +161,7 @@ async function callWithTool<T>(
     messages: [{ role: 'user', content: userMessage }],
     tools: [tool],
     tool_choice: { type: 'tool', name: tool.name },
-  }, { signal: options.signal, timeout: options.timeout });
+  }, { signal: options.signal, timeout: options.timeout, maxRetries: 0 });
   options.onUsage?.(usageFrom(MODEL, msg));
 
   const block = msg.content.find(b => b.type === 'tool_use');
@@ -413,66 +403,28 @@ Gig context:
 - Vibe: ${input.vibe || 'Not specified'}
 - Energy arc: ${JSON.stringify(input.energyArc)}`;
 
-  type BlueprintResult = { gigIntel: GigIntelReport; blueprint: SetBlueprint };
+  // Single no-search blueprint call, built purely from the library profile + gig
+  // context. Web search was removed here: it was the slow, variable step
+  // (frequently >50s in prod, and the client's one retry doubled that toward
+  // ~100s on a timeout), while its only output — a trending-genre nudge — is
+  // advisory (it doesn't filter tracks, shape the set structure, or surface to
+  // the user). maxRetries:0 so a slow call fails into the budget rather than
+  // silently retrying and doubling its cost.
+  const res = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    system: GIG_BLUEPRINT_SYSTEM,
+    messages: [{ role: 'user', content: userMessage }],
+    tools: [GIG_BLUEPRINT_TOOL],
+    tool_choice: { type: 'tool', name: 'generate_gig_blueprint' },
+  }, { signal, timeout: BLUEPRINT_TIMEOUT_MS, maxRetries: 0 });
+  onUsage?.(usageFrom(MODEL, res));
 
-  // No-search blueprint: build purely from the library profile + gig context.
-  // Used both to "force" the tool after a search that didn't emit it, and as the
-  // graceful fallback when the web-search pass stalls or errors.
-  const noSearchBlueprint = async (
-    messages: Anthropic.Messages.MessageParam[],
-  ): Promise<BlueprintResult> => {
-    const res = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 2048,
-      system: GIG_BLUEPRINT_SYSTEM,
-      messages,
-      tools: [GIG_BLUEPRINT_TOOL],
-      tool_choice: { type: 'tool', name: 'generate_gig_blueprint' },
-    }, { signal, timeout: BLUEPRINT_FALLBACK_TIMEOUT_MS });
-    onUsage?.(usageFrom(MODEL, res));
-    const block = res.content.find((b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use');
-    if (!block) throw new Error('Expected tool_use block from generate_gig_blueprint');
-    return block.input as BlueprintResult;
-  };
-
-  // Best-effort web-intel pass. Web intel is advisory only — a trending-genre
-  // nudge to the selector; it does NOT filter tracks, shape the set structure, or
-  // surface to the user — so a slow/stalled web search must never sink the whole
-  // generation. If the search-enabled call doesn't return inside
-  // WEB_INTEL_TIMEOUT_MS, degrade to the no-search blueprint. This is the fix for
-  // the systemic timeouts when Anthropic's web search is slow.
-  let msg: Anthropic.Messages.Message;
-  try {
-    msg = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: GIG_BLUEPRINT_SYSTEM,
-      messages: [{ role: 'user', content: userMessage }],
-      tools: [WEB_SEARCH_TOOL, GIG_BLUEPRINT_TOOL],
-      tool_choice: { type: 'auto' },
-    }, { signal, timeout: WEB_INTEL_TIMEOUT_MS });
-  } catch (err) {
-    if (signal?.aborted) throw err; // overall pipeline deadline fired — nothing to salvage
-    console.warn(
-      '[generate-setlist] web-intel pass failed; building blueprint without it:',
-      err instanceof Error ? err.message : err,
-    );
-    return noSearchBlueprint([{ role: 'user', content: userMessage }]);
-  }
-  onUsage?.(usageFrom(MODEL, msg));
-
-  const blueprintBlock = msg.content.find(
-    (b): b is Anthropic.Messages.ToolUseBlock =>
-      b.type === 'tool_use' && b.name === 'generate_gig_blueprint',
+  const block = res.content.find(
+    (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use' && b.name === 'generate_gig_blueprint',
   );
-  if (blueprintBlock) return blueprintBlock.input as BlueprintResult;
-
-  // Model researched but didn't emit the tool — force it (no further search).
-  return noSearchBlueprint([
-    { role: 'user', content: userMessage },
-    { role: 'assistant', content: msg.content as unknown as Anthropic.Messages.ContentBlockParam[] },
-    { role: 'user', content: 'Now call generate_gig_blueprint with your complete analysis.' },
-  ]);
+  if (!block) throw new Error('Expected tool_use block from generate_gig_blueprint');
+  return block.input as { gigIntel: GigIntelReport; blueprint: SetBlueprint };
 }
 
 // Call 2: Select and write polished notes from filtered tracks
