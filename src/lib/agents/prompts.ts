@@ -25,8 +25,9 @@ Selection rules:
 - MUST include every seed track listed in user preferences — place them at a fitting position in the set
 - Avoid every track on the "recently played" list unless no suitable alternative exists
 - Assign tracks to phases from the blueprint in order
-- whyThisTrack: 1-2 sentences on why this track AND why at this point in the set
-- transitionNotes: specific, actionable technique for mixing INTO the next track (bar counts, EQ, filters, where to drop) — no harmonic step-count claims
+- whyThisTrack: ONE short clause, max 12 words — why this track here. No preamble, no full sentences.
+- transitionNotes: ONE actionable technique, max 12 words (e.g. "ride the 16-bar outro, EQ-swap bass on the drop") — no harmonic step-count claims
+- Brevity is REQUIRED — every note is a single terse line. Do not elaborate: it keeps notes scannable for the DJ and the response fast.
 - harmonicMixingNotes: the system overwrites this field with a computed value — output an empty string for it
 - Flag weak transitions honestly; flag wishlist tracks as needing download
 - Every note is FINAL, user-facing text. Never include your reasoning, planning, self-corrections, rule names, or track position numbers. Never write words like "Wait" or "Planning accordingly" — output only the finished instruction.
