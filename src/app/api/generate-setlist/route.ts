@@ -3,7 +3,7 @@ import { runSetlistPipeline } from '@/lib/agents/pipeline';
 import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types';
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
-import { recordUsage, usageToday, costToday, recordCost, type CallUsage } from '@/lib/api-usage';
+import { recordUsage, usageToday, costToday, recordCost, recordGenerationEvent, type CallUsage } from '@/lib/api-usage';
 import { PLANS } from '@/lib/stripe';
 import { computeAffinity, type DiffEntry, type TasteAffinity } from '@/lib/setdrop/taste';
 import { targetTrackCount } from '@/lib/setdrop/readiness';
@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
   }, 10_000);
 
   (async () => {
+    const genStart = Date.now();
     try {
       await writer.write(encode({ type: 'step', step: 0, message: 'Analyzing your library...' }));
 
@@ -347,6 +348,7 @@ export async function POST(req: NextRequest) {
         (u) => { usages.push(u); },
       );
       await recordCost(user.id, 'generate-setlist', usages);
+      await recordGenerationEvent(user.id, 'generate-setlist', 'success', Date.now() - genStart);
 
       await writer.write(encode({
         type: 'complete',
@@ -357,6 +359,7 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('[generate-setlist] Error:', message);
+      await recordGenerationEvent(user?.id ?? null, 'generate-setlist', 'error', Date.now() - genStart, message);
       await writer.write(encode({ type: 'error', message }));
     } finally {
       streamClosed = true;
