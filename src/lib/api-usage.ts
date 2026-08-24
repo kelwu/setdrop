@@ -127,6 +127,31 @@ export async function recordCost(
   }
 }
 
+// Records the outcome + duration of one AI generation to the generation_events
+// ledger — for BOTH success and failure. usage_costs only logs successes, so
+// this is what lets the health-check watchdog see completion rate and latency
+// creep. Never throws — monitoring must not break the request.
+export async function recordGenerationEvent(
+  userId: string | null,
+  endpoint: string,
+  status: 'success' | 'error',
+  durationMs: number,
+  errorReason?: string,
+): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    await admin.from('generation_events').insert({
+      user_id: userId,
+      endpoint,
+      status,
+      duration_ms: Math.max(0, Math.round(durationMs)),
+      error_reason: errorReason ? errorReason.slice(0, 500) : null,
+    });
+  } catch {
+    /* never throw — monitoring must not break the request */
+  }
+}
+
 // Sums this user's estimated cost since the start of the current (server-local)
 // day. Powers the per-user daily spend ceiling. Fails open (returns 0).
 export async function costToday(userId: string): Promise<number> {
