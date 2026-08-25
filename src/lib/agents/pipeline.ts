@@ -5,7 +5,7 @@ import {
   SetlistInput, LibraryTrack, LibraryProfile, GigIntelReport,
   SetBlueprint, GeneratedSetlist,
 } from './types';
-import { GIG_BLUEPRINT_SYSTEM, SELECTOR_REVIEWER_SYSTEM } from './prompts';
+import { GIG_BLUEPRINT_SYSTEM, SELECTOR_SYSTEM, NOTES_SYSTEM } from './prompts';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
 import { genreRelevance, superFamily, passesGenreGate } from '@/lib/setdrop/genre';
 import { MIN_SUPERFAMILY_TRACKS, targetTrackCount } from '@/lib/setdrop/readiness';
@@ -27,6 +27,9 @@ function stripLeaked(s: string, fallback: string): string {
 }
 
 const MODEL = 'claude-sonnet-4-6';
+// The per-track notes are descriptive text, not the creative selection, so they
+// run on the cheaper/faster Haiku in a parallel second stage (see runNotesStage).
+const NOTES_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_SELECTOR_TRACKS = 200;
 
 // The route runs with maxDuration = 300s. Abort the whole pipeline before that
@@ -36,13 +39,15 @@ const PIPELINE_TIMEOUT_MS = 285_000;
 // Per-call ceilings so a single hung API request fails fast instead of eating the
 // entire budget. The SDK's own default timeout is 10min — longer than our function
 // limit — so without these a stalled call always blows past 300s.
-// Blueprint is a single no-search call (~15-30s measured); the selector is the
-// heavy, quality-critical call and gets the lion's share. Worst case
-// 60 + 200 = 260 < 285 PIPELINE_TIMEOUT < 300 maxDuration.
+// Three sequential stages, each internally fast: blueprint (single no-search
+// call ~15-30s), selection (Sonnet, compact ids-only output ~15-40s), and notes
+// (Haiku, parallel batches ~15-30s wall). Worst case 60 + 90 + 45 = 195 < 285
+// PIPELINE_TIMEOUT < 300 maxDuration — a big margin vs the old monolithic call.
 const BLUEPRINT_TIMEOUT_MS = 60_000;
-const SELECTOR_TIMEOUT_MS = 200_000;
+const SELECTOR_TIMEOUT_MS = 90_000;   // stage: selection only (no per-track prose)
+const NOTES_TIMEOUT_MS = 45_000;      // stage: each parallel note batch (Haiku)
 
-type CallOptions = { signal?: AbortSignal; timeout?: number; onUsage?: (u: CallUsage) => void };
+type CallOptions = { signal?: AbortSignal; timeout?: number; onUsage?: (u: CallUsage) => void; model?: string };
 
 function isTimeoutOrAbort(err: unknown): boolean {
   if (err instanceof Anthropic.APIUserAbortError) return true;
@@ -110,9 +115,13 @@ const GIG_BLUEPRINT_TOOL: Anthropic.Tool = {
   },
 };
 
+// Stage-1 selection: the model returns only positions + library track ids +
+// energy (no per-track prose, no echoed metadata). We reconstruct artist/title/
+// bpm/key/URLs from the real library track by id — cheaper, faster, and it can't
+// mistype metadata. Notes are written by the separate Haiku stage.
 const SELECTOR_TOOL: Anthropic.Tool = {
   name: 'select_and_sequence_tracks',
-  description: 'Output the final ordered tracklist and review notes.',
+  description: 'Output the ordered track selection (library ids + positions) and review notes.',
   input_schema: {
     type: 'object',
     required: ['tracks', 'reviewNotes'],
@@ -121,27 +130,42 @@ const SELECTOR_TOOL: Anthropic.Tool = {
         type: 'array',
         items: {
           type: 'object',
-          required: ['position', 'artist', 'title', 'bpm', 'key', 'energyLevel', 'whyThisTrack', 'transitionNotes', 'harmonicMixingNotes', 'isWishlistTrack'],
+          required: ['position', 'id', 'energyLevel'],
           properties: {
-            position: { type: 'number' },
-            artist: { type: 'string' },
-            title: { type: 'string' },
-            bpm: { type: 'number' },
-            key: { type: 'string' },
+            position: { type: 'number', description: '1-based play order' },
+            id: { type: 'string', description: 'The track id EXACTLY as given in the candidate library' },
             energyLevel: { type: 'number' },
-            whyThisTrack: { type: 'string' },
-            transitionNotes: { type: 'string' },
-            harmonicMixingNotes: { type: 'string' },
             wordplayConnection: { type: 'string' },
             isWishlistTrack: { type: 'boolean' },
-            beatportUrl: { type: 'string' },
-            bpmSupremeSearchUrl: { type: 'string' },
-            traxsourceSearchUrl: { type: 'string' },
-            djcitySearchUrl: { type: 'string' },
           },
         },
       },
       reviewNotes: { type: 'string' },
+    },
+  },
+};
+
+// Stage-2 notes (Haiku): per-track why + transition, written for the already-
+// chosen, already-sequenced set.
+const NOTES_TOOL: Anthropic.Tool = {
+  name: 'write_track_notes',
+  description: 'Write the per-track why + transition notes for a batch of sequenced tracks.',
+  input_schema: {
+    type: 'object',
+    required: ['notes'],
+    properties: {
+      notes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['position', 'whyThisTrack', 'transitionNotes'],
+          properties: {
+            position: { type: 'number' },
+            whyThisTrack: { type: 'string' },
+            transitionNotes: { type: 'string' },
+          },
+        },
+      },
     },
   },
 };
@@ -154,15 +178,16 @@ async function callWithTool<T>(
   options: CallOptions = {},
 ): Promise<T> {
   const anthropic = client();
+  const model = options.model ?? MODEL;
   const msg = await anthropic.messages.create({
-    model: MODEL,
+    model,
     max_tokens: maxTokens,
     system,
     messages: [{ role: 'user', content: userMessage }],
     tools: [tool],
     tool_choice: { type: 'tool', name: tool.name },
   }, { signal: options.signal, timeout: options.timeout, maxRetries: 0 });
-  options.onUsage?.(usageFrom(MODEL, msg));
+  options.onUsage?.(usageFrom(model, msg));
 
   const block = msg.content.find(b => b.type === 'tool_use');
   if (!block || block.type !== 'tool_use') {
@@ -428,6 +453,51 @@ Gig context:
 }
 
 // Call 2: Select and write polished notes from filtered tracks
+// Stage 2 of selection: write the per-track why + transition notes on Haiku, in
+// parallel batches, so a big set's notes don't serialize into one slow call. A
+// slow/failed batch degrades to empty notes for those tracks (harmless — the
+// harmonic note is still computed in code), and never sinks the generation.
+async function runNotesStage(
+  picked: Array<{ sel: { position: number; id: string; energyLevel: number }; lib: LibraryTrack }>,
+  signal?: AbortSignal,
+  onUsage?: (u: CallUsage) => void,
+): Promise<Map<number, { whyThisTrack: string; transitionNotes: string }>> {
+  const items = picked.map(({ sel, lib }, i) => {
+    const next = picked[i + 1]?.lib;
+    return {
+      position: sel.position,
+      artist: lib.artist, title: lib.title, bpm: lib.bpm, key: lib.key,
+      genre: lib.genre ?? '', energy: sel.energyLevel, tags: (lib.lastfmTags ?? []).slice(0, 6),
+      into: next
+        ? `${next.artist} — ${next.title} (${next.bpm}bpm ${toCamelot(next.key) || next.key || '?'})`
+        : 'FINAL TRACK — let it ride out',
+    };
+  });
+
+  const BATCH = 6;
+  const batches: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += BATCH) batches.push(items.slice(i, i + BATCH));
+
+  const results = await Promise.all(batches.map(async batch => {
+    try {
+      const res = await callWithTool<{ notes: Array<{ position: number; whyThisTrack: string; transitionNotes: string }> }>(
+        NOTES_SYSTEM,
+        `Write notes for these tracks, in set order:\n${JSON.stringify(batch, null, 2)}`,
+        NOTES_TOOL,
+        1500,
+        { signal, timeout: NOTES_TIMEOUT_MS, onUsage, model: NOTES_MODEL },
+      );
+      return res.notes ?? [];
+    } catch {
+      return [];
+    }
+  }));
+
+  return new Map(
+    results.flat().map(n => [n.position, { whyThisTrack: n.whyThisTrack, transitionNotes: n.transitionNotes }]),
+  );
+}
+
 async function runSelectorReviewer(
   input: SetlistInput,
   tracks: LibraryTrack[],
@@ -438,8 +508,13 @@ async function runSelectorReviewer(
   signal?: AbortSignal,
   onUsage?: (u: CallUsage) => void,
 ): Promise<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }> {
-  const result = await callWithTool<{ tracks: GeneratedSetlist['tracks']; reviewNotes: string }>(
-    SELECTOR_REVIEWER_SYSTEM,
+  // Stage 1 (Sonnet): select + sequence. Compact output — positions + library
+  // ids + energy only, no per-track prose — so this call stays fast.
+  const selection = await callWithTool<{
+    tracks: Array<{ position: number; id: string; energyLevel: number; isWishlistTrack?: boolean; wordplayConnection?: string }>;
+    reviewNotes: string;
+  }>(
+    SELECTOR_SYSTEM,
     `Set blueprint:
 ${JSON.stringify(blueprint, null, 2)}
 
@@ -463,18 +538,50 @@ ${JSON.stringify(tracks.map(t => ({
   lastfmTags: t.lastfmTags ?? [], isWishlist: t.isWishlist,
 })), null, 2)}`,
     SELECTOR_TOOL,
-    16384,
+    2048,
     { signal, timeout: SELECTOR_TIMEOUT_MS, onUsage },
   );
-  if (!result?.tracks?.length) {
+  if (!selection?.tracks?.length) {
     throw new Error('Selector returned no tracks — the model response may have been truncated. Please try again.');
   }
 
+  // Join the selection back to the candidate pool by id (dropping any hallucinated
+  // ids), in play order. Metadata + purchase URLs come from the real library track.
+  const byId = new Map(tracks.map(t => [t.id, t]));
+  const picked = selection.tracks
+    .filter(s => byId.has(s.id))
+    .sort((a, b) => a.position - b.position)
+    .map(sel => ({ sel, lib: byId.get(sel.id)! }));
+  if (!picked.length) {
+    throw new Error('Selector returned no matching tracks — please try again.');
+  }
+
+  // Stage 2 (Haiku): write the per-track notes in parallel, sequence-aware.
+  const notesByPos = await runNotesStage(picked, signal, onUsage);
+
+  const base = picked.map(({ sel, lib }, i) => {
+    const n = notesByPos.get(sel.position);
+    return {
+      position: i + 1,
+      artist: lib.artist, title: lib.title, bpm: lib.bpm, key: lib.key ?? '',
+      energyLevel: sel.energyLevel ?? 5,
+      whyThisTrack: n?.whyThisTrack ?? '',
+      transitionNotes: n?.transitionNotes ?? '',
+      harmonicMixingNotes: '',
+      wordplayConnection: sel.wordplayConnection,
+      isWishlistTrack: lib.isWishlist || sel.isWishlistTrack || false,
+      beatportUrl: lib.beatportUrl ?? lib.beatportSearchUrl,
+      bpmSupremeSearchUrl: lib.bpmSupremeSearchUrl,
+      traxsourceSearchUrl: lib.traxsourceSearchUrl,
+      djcitySearchUrl: lib.djcitySearchUrl,
+    };
+  });
+
   // Own the harmonic assessment in code — the model fabricates Camelot distances.
   // This only annotates the already-selected/sequenced list (no reordering), and
-  // scrubs any leaked reasoning from the free-text notes.
-  const annotated = result.tracks.map((t, i) => {
-    const next = result.tracks[i + 1];
+  // scrubs any leaked reasoning from the note stage's free text.
+  const annotated = base.map((t, i) => {
+    const next = base[i + 1];
     const harmonicMixingNotes = next
       ? `→ ${next.artist} "${next.title}" (${toCamelot(next.key) || next.key || '?'}): ${camelotRelation(t.key, next.key).label}`
       : 'Final track — let it ride out.';
@@ -497,7 +604,7 @@ ${JSON.stringify(tracks.map(t => ({
     artistCounts[key] = { name: t.artist, count: (artistCounts[key]?.count ?? 0) + 1 };
   }
   const worst = Object.values(artistCounts).sort((a, b) => b.count - a.count)[0];
-  let reviewNotes = result.reviewNotes;
+  let reviewNotes = selection.reviewNotes;
   if (worst && worst.count >= 3) {
     const fix = input.sourcePlaylist
       ? `Add more variety to the playlist to diversify future sets.`
@@ -530,7 +637,8 @@ function generateSlug(name: string): string {
 
 export type PipelineProgressEvent = { type: 'step'; step: number; message: string };
 
-// Main pipeline — profile in code + 2 LLM calls
+// Main pipeline — profile in code + blueprint (Sonnet) + selection (Sonnet) +
+// parallel notes (Haiku)
 export async function runSetlistPipeline(
   input: SetlistInput,
   tracks: LibraryTrack[],
