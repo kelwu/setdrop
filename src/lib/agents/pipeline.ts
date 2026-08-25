@@ -538,7 +538,11 @@ ${JSON.stringify(tracks.map(t => ({
   lastfmTags: t.lastfmTags ?? [], isWishlist: t.isWishlist,
 })), null, 2)}`,
     SELECTOR_TOOL,
-    2048,
+    // Compact output (ids only), but a long set is ~90-130 tokens/track once you
+    // count UUID ids + reviewNotes, so a 120-min (~30 track) set needs headroom —
+    // 2048 truncated large sets into an empty tracks array. The model stops at
+    // tool completion, so this doesn't slow normal sets.
+    8192,
     { signal, timeout: SELECTOR_TIMEOUT_MS, onUsage },
   );
   if (!selection?.tracks?.length) {
