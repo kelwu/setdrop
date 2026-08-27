@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for writing accurate SetLab email campaigns (Loops).
 > Keep this current — update the "What's New" section whenever a feature ships.
-> Last updated: 2026-08-13.
+> Last updated: 2026-08-26.
 
 ---
 
@@ -33,7 +33,7 @@ SetLab is a **co-pilot, not an autopilot.** It does the grunt work — analyzing
 Lead with the **benefit**, support with the **feature**.
 
 ### Library
-- **Import & instant search** — Upload a Serato DB, Rekordbox XML, or CSV; the whole library becomes searchable in seconds.
+- **Import & instant search** — Upload a Serato DB or Rekordbox XML; the whole library becomes searchable in seconds.
 - **AI enrichment** — Every track auto-tagged with BPM, key, energy score, and genre tags. No manual tagging.
 - **Library gap analysis** — See where your collection is thin for the gigs you play.
 

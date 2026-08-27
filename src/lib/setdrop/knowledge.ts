@@ -14,32 +14,31 @@ Generating sets and crates is unlimited on both plans; exports are what the free
     category: 'getting_started',
     content: `Getting started with SetLab:
 1. Sign up at setlab.ai (free, no credit card needed)
-2. Import your library — upload your Serato "database V2" file or Rekordbox XML export, or connect Spotify to pull a playlist as a wishlist
+2. Import your library — upload your Serato "database V2" file or Rekordbox XML export
 3. Go to the Dashboard to see your library stats
-4. Use the Set Builder to generate your first AI setlist
+4. Use Plan Set to generate your first AI setlist
 5. Export back to Serato (.crate) or Rekordbox XML when ready
 SetLab never modifies your original Serato or Rekordbox files.`,
   },
   {
     category: 'set_builder',
-    content: `The Set Builder (the "Build Set" link in the top nav) generates a starting setlist from your actual library. You describe the gig — venue, crowd type, duration, lineup slot — and AI builds a structured draft. Each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it. The AI gives you a draft; you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Generating sets is unlimited on both Free and Pro — the free plan only caps exports at 3/month.`,
+    content: `Plan Set (the "Plan Set" link in the top nav) generates a starting setlist from your actual library. It's a 3-step form. Step 1 (gig context): optional mix name and venue name, an optional track source (your whole library or a specific imported Serato/Rekordbox playlist), primary and secondary genre, era/decade pills (1980s–2020s), specific artists to focus on, a vibe/mood note, then crowd type, set duration (30/60/90/120 min) and lineup slot (opener, middle, headliner, closing). Step 2: an interactive energy-arc editor (drag the intro/buildup/peak/sustain/cooldown points, or pick a preset like Slow Burn, Peak Hour, Warm Down). Step 3 (optional): pin must-play seed tracks, add a SoundCloud reference mix, or set a wordplay word for hip-hop lyrical transitions. AI then builds a structured draft where each track shows why it was chosen, how to transition to the next, and harmonic mixing logic. The result is a STARTING POINT — you swap, reorder, and customize it; the AI gives you a draft, you make the creative call. "Do-not-repeat" logic flags tracks you've played recently. Generating sets is unlimited on both Free and Pro — the free plan only caps exports at 3/month.`,
   },
   {
     category: 'track_id',
-    content: `Track ID identifies tracks via ACRCloud audio fingerprinting. Three input modes:
-1. Record — tap the mic, play 5–15 seconds of a track, get results
-2. Upload file — upload an audio file for fingerprinting
-3. Paste URL — paste a SoundCloud or Mixcloud mix URL to get a full timestamped tracklist for an entire DJ mix
-Identified tracks can be added directly to your wishlist or checked against your library. Free: 10 Track IDs/month. Pro: 500/month (mix URL counts as 5×). Access from the nav bar or Dashboard's "ID a Track" button.`,
+    content: `Track ID identifies tracks via ACRCloud audio fingerprinting. Two flows:
+1. Quick ID (single track) — tap the mic and play 5–15 seconds, or upload an audio file (MP3/WAV/M4A, up to 10MB), to identify one track. Shows the match with confidence, BPM, genre and year.
+2. Mix Tracklist (full mix) — upload a full mix file (MP3/WAV/M4A, up to 200MB) and SetLab scans it into a timestamped tracklist for the whole DJ mix.
+Identified tracks can be added directly to your wishlist (individually or all at once for a mix). Free: 10 Track IDs/month. Pro: 500/month. Access from the nav bar or Dashboard's "ID a Track" button.`,
   },
   {
     category: 'library',
     content: `The Library page has four tabs:
 - Library: your full imported collection with BPM, key, genre. Filter, search, and enrich metadata.
-- Wishlist: tracks you want to buy/add. Add from Track ID results, Spotify imports, or manually.
+- Wishlist: tracks you want to buy/add. Add from Track ID results or manually.
 - Crates: AI-generated themed crates.
 - Wordplay Studio: enter a word to find every track in your library connected to it, plus suggested transition pairs.
-Supported import formats: Serato database V2, Rekordbox XML, Spotify playlist (OAuth).`,
+Supported import formats: Serato database V2 and Rekordbox XML.`,
   },
   {
     category: 'library_intelligence',
@@ -53,7 +52,7 @@ Supported import formats: Serato database V2, Rekordbox XML, Spotify playlist (O
     category: 'setlist_vs_crate',
     content: `Setlist vs Crate — the difference in SetLab:
 A CRATE is a themed collection of tracks pulled from your library — a labeled bag of records that fit a vibe (e.g. "disco house", "wedding cocktail hour"). It's loosely ordered by energy but it is NOT a finished performance: it's a building block you draw from, reorder freely, and reuse. Think of it like a Serato crate or a Rekordbox playlist folder. Create one on the Crates page.
-A SETLIST is a full, ordered performance plan for one specific gig. You give the gig context (venue, crowd, duration, lineup slot) and AI sequences tracks start-to-finish with transition notes, harmonic mixing logic, an energy arc, and timing — the set you actually play top to bottom. Create one with Build Set.
+A SETLIST is a full, ordered performance plan for one specific gig. You give the gig context (venue, crowd, duration, lineup slot) and AI sequences tracks start-to-finish with transition notes, harmonic mixing logic, an energy arc, and timing — the set you actually play top to bottom. Create one with Plan Set.
 Simple way to remember it: a crate is the record bag; a setlist is the set you play out of it. A crate answers "which of my tracks fit this vibe?"; a setlist answers "in what order do I play them for this gig?" Both are AI-generated from your own library and both export to Serato (.crate), Rekordbox XML, or M3U.`,
   },
   {
@@ -67,6 +66,10 @@ Export from the Set Builder after generating a setlist, or from Library → Crat
   {
     category: 'post_gig',
     content: `Post-Gig Reflection closes the learning loop after a gig. Upload your recording and SetLab identifies what you actually played with timestamps, or log manually. The Reflection page shows: planned setlist vs what you actually played, energy arc overlay (planned vs actual), track-level diff (what you swapped), and patterns across recent gigs. This is pure analytics — no judgment. Access from the Dashboard or gig history.`,
+  },
+  {
+    category: 'invoicing',
+    content: `SetLab has a built-in Invoice Generator for DJs at setlab.ai/invoice (also in the user menu). Fill in your details (DJ/company name, email, phone, optional logo), the client and event (client name, email, event name, date, venue), and invoice details (invoice number, issue/due dates, currency — USD/EUR/GBP/CAD/AUD). Add line items with description, quantity and rate and totals calculate automatically, plus a free-form notes field for payment terms. Then download a branded PDF or send it to the client by email. It's a standalone tool — it doesn't require a library import.`,
   },
   {
     category: 'explore',
