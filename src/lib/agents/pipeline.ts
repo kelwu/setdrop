@@ -6,6 +6,7 @@ import {
   SetBlueprint, GeneratedSetlist,
 } from './types';
 import { GIG_BLUEPRINT_SYSTEM, SELECTOR_SYSTEM, NOTES_SYSTEM } from './prompts';
+import { SetlistInputError } from './errors';
 import { camelotRelation, toCamelot } from '@/lib/setdrop/key-utils';
 import { genreRelevance, superFamily, passesGenreGate } from '@/lib/setdrop/genre';
 import { MIN_SUPERFAMILY_TRACKS, targetTrackCount } from '@/lib/setdrop/readiness';
@@ -699,7 +700,7 @@ export async function runSetlistPipeline(
       const floor = Math.min(target, 8); // don't block short sets
       if (poolCount < floor) {
         const narrowed = genreActive || eraActive || anchor.active;
-        throw new Error(
+        throw new SetlistInputError(
           narrowed
             ? `Only ${poolCount} track${poolCount === 1 ? '' : 's'} in your "${input.sourcePlaylist}" playlist match your filters — too few for a ${input.durationMinutes}-minute set. Loosen a filter or pick a shorter duration.`
             : `Your "${input.sourcePlaylist}" playlist has only ${poolCount} track${poolCount === 1 ? '' : 's'} — too few to build a ${input.durationMinutes}-minute set. Add more tracks to the playlist, or pick a shorter duration.`,
@@ -709,14 +710,14 @@ export async function runSetlistPipeline(
       // Genre super-family floor: fail fast if the library can't support the gig's
       // super-family at all (e.g. Trance with an all-hip-hop library).
       if (genreActive && gigSuper !== 'other' && superFamilyCount < MIN_SUPERFAMILY_TRACKS) {
-        throw new Error(
+        throw new SetlistInputError(
           `Not enough tracks for a ${input.primaryGenre} set — your library has only ${superFamilyCount} ${gigSuper} track${superFamilyCount === 1 ? '' : 's'}. Import more ${input.primaryGenre} (or related) music and try again.`,
         );
       }
       // Combined-pool floor: even if the genre is well-stocked, the era/artist
       // intersection may be too thin to fill the set.
       if (poolCount < target) {
-        throw new Error(poolFloorError(input, poolCount));
+        throw new SetlistInputError(poolFloorError(input, poolCount));
       }
     }
 

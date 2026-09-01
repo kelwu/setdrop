@@ -51,8 +51,17 @@ export async function GET(req: NextRequest) {
   const evts = (events ?? []) as Array<{ status: string; duration_ms: number | null; created_at: string }>;
   const recent2h = evts.filter(e => e.created_at >= since2h);
   const success2h = recent2h.filter(e => e.status === 'success').length;
+  const error2h = recent2h.filter(e => e.status === 'error').length;
+  const rejected2h = recent2h.filter(e => e.status === 'rejected').length;
   const attempts2h = setlistAttempts2h ?? 0;
-  const rate2h = attempts2h > 0 ? success2h / attempts2h : 1;
+  // "Decided" = attempts that reached a real verdict (success or hard error).
+  // Exclude user-input rejections (library too thin for the request) — a DJ
+  // hammering an unsatisfiable filter is a working guardrail, not an outage.
+  // Attempts logged with no terminal event (silent hangs/kills) still count
+  // against the rate via the api_usage denominator; we fall back to the event
+  // ledger when api_usage under-counts so the denominator is never too small.
+  const decided2h = Math.max(attempts2h - rejected2h, success2h + error2h);
+  const rate2h = decided2h > 0 ? success2h / decided2h : 1;
 
   const successDurations = evts
     .filter(e => e.status === 'success' && typeof e.duration_ms === 'number')
@@ -65,9 +74,9 @@ export async function GET(req: NextRequest) {
   const checks: Check[] = [
     {
       key: 'gen_setlist_failrate',
-      breached: attempts2h >= MIN_ATTEMPTS_2H && rate2h < FAIL_RATE_ALERT,
+      breached: decided2h >= MIN_ATTEMPTS_2H && rate2h < FAIL_RATE_ALERT,
       severity: success2h === 0 ? 'CRITICAL' : 'WARN',
-      message: `Setlist generation: ${success2h}/${attempts2h} succeeded in the last 2h (${Math.round(rate2h * 100)}%).`,
+      message: `Setlist generation: ${success2h}/${decided2h} succeeded in the last 2h (${Math.round(rate2h * 100)}%)${rejected2h ? `; ${rejected2h} rejected for insufficient library (excluded)` : ''}.`,
     },
     {
       key: 'gen_setlist_latency',
@@ -111,7 +120,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    setlist: { attempts2h, success2h, rate2h: Number(rate2h.toFixed(2)), p90ms, runs24h: successDurations.length },
+    setlist: { attempts2h, success2h, error2h, rejected2h, decided2h, rate2h: Number(rate2h.toFixed(2)), p90ms, runs24h: successDurations.length },
     crate: { attempts24h: cAttempts, completions24h: cCompletions },
     notified: notes.map(n => `${n.kind}:${n.check.key}`),
   });
