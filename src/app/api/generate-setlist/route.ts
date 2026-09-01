@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runSetlistPipeline } from '@/lib/agents/pipeline';
 import { SetlistInput, LibraryTrack, GeneratedSetlist } from '@/lib/agents/types';
+import { SetlistInputError } from '@/lib/agents/errors';
 import { LIBRARY_TRACKS } from '@/lib/setdrop/constants';
 import { createClient } from '@/lib/supabase/server';
 import { recordUsage, usageToday, costToday, recordCost, recordGenerationEvent, type CallUsage } from '@/lib/api-usage';
@@ -358,8 +359,12 @@ export async function POST(req: NextRequest) {
       }));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[generate-setlist] Error:', message);
-      await recordGenerationEvent(user?.id ?? null, 'generate-setlist', 'error', Date.now() - genStart, message);
+      // A SetlistInputError is an expected, user-actionable refusal (library too
+      // thin for the request) — record it as 'rejected' so the health-check
+      // watchdog doesn't count it as a failure. Everything else is a real error.
+      const status = err instanceof SetlistInputError ? 'rejected' : 'error';
+      if (status === 'error') console.error('[generate-setlist] Error:', message);
+      await recordGenerationEvent(user?.id ?? null, 'generate-setlist', status, Date.now() - genStart, message);
       await writer.write(encode({ type: 'error', message }));
     } finally {
       streamClosed = true;

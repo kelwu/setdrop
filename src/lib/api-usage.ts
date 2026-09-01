@@ -128,13 +128,15 @@ export async function recordCost(
 }
 
 // Records the outcome + duration of one AI generation to the generation_events
-// ledger — for BOTH success and failure. usage_costs only logs successes, so
-// this is what lets the health-check watchdog see completion rate and latency
-// creep. Never throws — monitoring must not break the request.
+// ledger — for success, hard failure, AND user-input rejection. usage_costs only
+// logs successes, so this is what lets the health-check watchdog see completion
+// rate and latency creep. `'rejected'` marks an expected, user-actionable refusal
+// (library too thin for the request) — the watchdog excludes it from the failure
+// rate. Never throws — monitoring must not break the request.
 export async function recordGenerationEvent(
   userId: string | null,
   endpoint: string,
-  status: 'success' | 'error',
+  status: 'success' | 'error' | 'rejected',
   durationMs: number,
   errorReason?: string,
 ): Promise<void> {
