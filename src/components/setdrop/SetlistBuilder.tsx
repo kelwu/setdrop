@@ -449,6 +449,7 @@ export function SetlistBuilder() {
           is_public: false,
           share_url: savedSlug,
           tracks_json: finalSetlist.tracks,
+          review_notes: finalSetlist.reviewNotes || null,
         }).select('id').single();
         savedId = saved?.id;
       }

@@ -20,6 +20,7 @@ interface DbSetlist {
   created_at: string;
   tracks_json: unknown;
   energy_arc?: Record<string, number> | null;
+  review_notes?: string | null;
 }
 
 function trackCount(row: DbSetlist): number {
@@ -38,7 +39,7 @@ function dbToSetlist(row: DbSetlist): GeneratedSetlist {
   return {
     name: row.name,
     tracks: Array.isArray(row.tracks_json) ? (row.tracks_json as SetlistTrack[]) : [],
-    reviewNotes: '',
+    reviewNotes: row.review_notes ?? '',
     shareSlug: row.share_url || '',
     dbId: row.id,
     dbSlug: row.share_url || undefined,
@@ -78,7 +79,7 @@ export function SetlistHistory() {
       if (!user) return;
       const { data } = await supabase
         .from('setlists')
-        .select('id, name, primary_genre, secondary_genre, duration_minutes, crowd_context, lineup_slot, is_public, share_url, created_at, tracks_json, energy_arc')
+        .select('id, name, primary_genre, secondary_genre, duration_minutes, crowd_context, lineup_slot, is_public, share_url, created_at, tracks_json, energy_arc, review_notes')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       setSets(data as DbSetlist[] ?? []);

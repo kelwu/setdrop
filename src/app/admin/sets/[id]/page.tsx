@@ -2,8 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { getAdminUser } from '@/lib/admin';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
-import { BRAND } from '@/lib/brand';
 import { SD } from '@/lib/setdrop/constants';
+import { SetView, toDisplayTracks } from '@/components/setdrop/SetView';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export default async function AdminSetPage({ params }: Props) {
 
   const { data } = await supabase
     .from('setlists')
-    .select('id, user_id, name, primary_genre, secondary_genre, crowd_context, duration_minutes, lineup_slot, vibe, wordplay_theme, is_public, share_url, created_at, tracks_json')
+    .select('id, user_id, name, primary_genre, secondary_genre, crowd_context, duration_minutes, lineup_slot, vibe, wordplay_theme, is_public, share_url, created_at, tracks_json, review_notes')
     .eq('id', id)
     .single();
 
@@ -53,27 +53,18 @@ export default async function AdminSetPage({ params }: Props) {
   const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
   const tracks: SetlistTrack[] = Array.isArray(data.tracks_json) ? (data.tracks_json as SetlistTrack[]) : [];
+  const displayTracks = toDisplayTracks(tracks, undefined, data.primary_genre ?? undefined);
   const date = new Date(data.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const genre = [data.primary_genre, data.secondary_genre].filter(Boolean).join(' / ') || 'Mixed';
   const crowd = data.crowd_context
     ? data.crowd_context.charAt(0).toUpperCase() + data.crowd_context.slice(1).replace('-', ' ')
     : '';
   const dur = data.duration_minutes ? `${data.duration_minutes} min` : '';
-
-  // Energy arc SVG
-  const arcW = 760, arcH = 150;
-  const px = 44, py = 18;
-  const cw = arcW - px * 2, ch = arcH - py * 2;
-  const n = tracks.length;
-  const pts: [number, number][] = n >= 2
-    ? tracks.map((t, i) => [px + (i / (n - 1)) * cw, py + ch - (t.energyLevel / 10) * ch])
-    : [];
-  const arcD = pts.reduce((a, p, i) => {
-    if (i === 0) return `M${p[0]},${p[1]}`;
-    const pr = pts[i - 1], cx = (pr[0] + p[0]) / 2;
-    return a + ` C${cx},${pr[1]} ${cx},${p[1]} ${p[0]},${p[1]}`;
-  }, '');
-  const arcFill = arcD ? arcD + ` L${pts[n - 1][0]},${py + ch} L${px},${py + ch}Z` : '';
+  const setInfo: [string, string][] = [
+    ['Pool', genre],
+    ...(crowd ? [['Crowd', crowd] as [string, string]] : []),
+    ...(data.lineup_slot ? [['Slot', data.lineup_slot] as [string, string]] : []),
+  ];
 
   return (
     <div style={{ background: SD.bg, minHeight: '100vh', color: SD.text }}>
@@ -118,7 +109,7 @@ export default async function AdminSetPage({ params }: Props) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: '56px 40px 96px' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '56px 40px 96px' }}>
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textMuted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{date}</div>
           <h1 style={{ fontFamily: SD.display, fontSize: 'clamp(40px,6vw,80px)', letterSpacing: 4, margin: '0 0 12px', lineHeight: .95, color: SD.text }}>
@@ -139,41 +130,6 @@ export default async function AdminSetPage({ params }: Props) {
             </div>
           )}
         </div>
-
-        {arcD && (
-          <div style={{ background: SD.surface, border: `1px solid ${SD.border}`, borderRadius: 4, padding: '20px 20px 10px', marginBottom: 24, overflow: 'hidden' }}>
-            <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textMuted, textTransform: 'uppercase', marginBottom: 14 }}>Energy Arc</div>
-            <div style={{ overflowX: 'auto' }}>
-              <svg width={arcW} height={arcH} style={{ overflow: 'visible', display: 'block' }}>
-                <defs>
-                  <linearGradient id="arcFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={SD.accent} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={SD.accent} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                {[0, 2, 4, 6, 8, 10].map(v => {
-                  const y = py + ch - (v / 10) * ch;
-                  return (
-                    <g key={v}>
-                      <line x1={px} y1={y} x2={px + cw} y2={y} stroke={SD.border} strokeWidth={0.5} />
-                      <text x={px - 8} y={y + 4} textAnchor="end" fill={SD.textMuted} fontSize={9} fontFamily="var(--font-mono),monospace">{v}</text>
-                    </g>
-                  );
-                })}
-                <path d={arcFill} fill="url(#arcFill)" />
-                <path d={arcD} fill="none" stroke={SD.accent} strokeWidth={2} />
-                {pts.map((pt, i) => (
-                  <g key={i}>
-                    <circle cx={pt[0]} cy={pt[1]} r={4} fill={SD.accent} stroke={SD.bg} strokeWidth={1.5} />
-                    <text x={pt[0]} y={py + ch + 16} textAnchor="middle" fill={SD.textMuted} fontSize={8} fontFamily="var(--font-mono),monospace">
-                      {tracks[i].artist?.split(' ')[0] ?? ''}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-            </div>
-          </div>
-        )}
 
         {/* User Library */}
         <div style={{ marginBottom: 48, border: `1px solid ${SD.border}`, borderRadius: 4, overflow: 'hidden' }}>
@@ -234,42 +190,12 @@ export default async function AdminSetPage({ params }: Props) {
           ) : null}
         </div>
 
-        <div>
-          <div style={{ fontFamily: SD.mono, fontSize: 12, letterSpacing: 2, color: SD.textSec, textTransform: 'uppercase', marginBottom: 12 }}>
-            Tracklist
-          </div>
-          {tracks.length === 0 && (
-            <div style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, padding: '24px 0' }}>No tracks saved.</div>
-          )}
-          {tracks.map((t, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderBottom: `1px solid ${SD.border}` }}>
-              <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.textMuted, width: 22, textAlign: 'right', flexShrink: 0 }}>
-                {String(t.position || i + 1).padStart(2, '0')}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: SD.mono, fontSize: 13, fontWeight: 600, color: SD.text }}>{t.artist}</span>
-                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>— {t.title}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
-                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.accent }}>{t.bpm} BPM</span>
-                  <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{t.key}</span>
-                  {t.harmonicMixingNotes && (
-                    <span style={{ fontFamily: SD.mono, fontSize: 12, color: SD.textSec }}>{t.harmonicMixingNotes}</span>
-                  )}
-                </div>
-                {t.whyThisTrack && (
-                  <div style={{ fontFamily: SD.mono, fontSize: 11, color: SD.textMuted, marginTop: 4, lineHeight: 1.5 }}>{t.whyThisTrack}</div>
-                )}
-              </div>
-              <div style={{ flexShrink: 0 }}>
-                <span style={{ fontFamily: SD.mono, fontSize: 13, color: SD.accentDim, background: SD.accentDim, border: `1px solid ${SD.accent}22`, borderRadius: 2, padding: '2px 6px' }}>
-                  E{t.energyLevel}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <SetView
+          tracks={displayTracks}
+          reviewNotes={data.review_notes ?? undefined}
+          durationLabel={dur || undefined}
+          setInfo={setInfo}
+        />
       </div>
     </div>
   );

@@ -119,6 +119,16 @@ export interface SetlistTrack {
   bpmSupremeSearchUrl?: string;
   traxsourceSearchUrl?: string;
   djcitySearchUrl?: string;
+  // Persisted resolved store data — merged into tracks_json the first time a set
+  // is viewed post-generation (see SetlistOutput), so admin / public / history
+  // render the same purchase links + confidence the owner saw. Optional: absent
+  // on freshly generated tracks and on sets saved before this was added.
+  bpmSupremeUrl?: string;
+  bpmSupremeFound?: boolean;
+  traxsourceUrl?: string;
+  traxsourceFound?: boolean;
+  djcityUrl?: string;
+  djcityFound?: boolean;
 }
 
 export interface GeneratedSetlist {
