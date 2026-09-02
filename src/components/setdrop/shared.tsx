@@ -521,6 +521,7 @@ export function EnergyDot({ energy, size = 8 }: { energy: number; size?: number 
 export function TrackRow({ track }: { track: SampleTrack }) {
   const [exp, setExp] = useState(false);
   const [hov, setHov] = useState(false);
+  const hasNotes = !!(track.why || track.transition);
   return (
     <div
       onMouseEnter={() => setHov(true)}
@@ -569,7 +570,14 @@ export function TrackRow({ track }: { track: SampleTrack }) {
               ))}
             </div>
           )}
-          <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginLeft:4 }}>{exp ? '▲' : '▼'}</span>
+          {hasNotes ? (
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.accent, marginLeft:4,
+              letterSpacing:.5, display:'flex', alignItems:'center', gap:3, flexShrink:0 }}>
+              Why <span style={{ fontSize:10 }}>{exp ? '▲' : '▼'}</span>
+            </span>
+          ) : (
+            <span style={{ fontFamily:SD.mono, fontSize:12, color:SD.textMuted, marginLeft:4 }}>{exp ? '▲' : '▼'}</span>
+          )}
         </div>
       </div>
       {exp && (

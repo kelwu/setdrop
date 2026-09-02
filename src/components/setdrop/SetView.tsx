@@ -89,8 +89,15 @@ export function SetView({
         <div>
           <div style={{ fontFamily:SD.mono, fontSize:12, color:SD.textSec,
             letterSpacing:2, textTransform:'uppercase', marginBottom:12,
-            display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <span>Tracklist — {tracks.length} tracks</span>
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            flexWrap:'wrap', gap:'4px 12px' }}>
+            <span>Tracklist — {tracks.length} tracks
+              {tracks.length > 0 && (
+                <span style={{ color:SD.textMuted, textTransform:'none', letterSpacing:0, marginLeft:8 }}>
+                  · tap a track for why it&apos;s here + transition notes
+                </span>
+              )}
+            </span>
             <div style={{ display:'flex', alignItems:'center', gap:14 }}>
               {resolving && (
                 <span style={{ color:SD.textMuted, display:'flex', alignItems:'center', gap:5 }}>
