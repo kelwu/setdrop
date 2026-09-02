@@ -3,7 +3,8 @@ import { getAdminUser } from '@/lib/admin';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
 import { SD } from '@/lib/setdrop/constants';
-import { SetView, toDisplayTracks } from '@/components/setdrop/SetView';
+import { SetView } from '@/components/setdrop/SetView';
+import { toDisplayTracks } from '@/components/setdrop/setView.helpers';
 
 export const dynamic = 'force-dynamic';
 
