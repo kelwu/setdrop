@@ -5,7 +5,8 @@ export const revalidate = 3600;
 import { createAdminClient } from '@/lib/supabase/server';
 import type { SetlistTrack } from '@/lib/agents/types';
 import { BRAND } from '@/lib/brand';
-import { SetView, toDisplayTracks } from '@/components/setdrop/SetView';
+import { SetView } from '@/components/setdrop/SetView';
+import { toDisplayTracks, stripPersonalization } from '@/components/setdrop/setView.helpers';
 
 const S = {
   bg: '#0A0A0A', surface: '#141414', border: 'rgba(255,255,255,0.07)',
@@ -95,7 +96,9 @@ export default async function PublicSetPage({ params }: Props) {
 
         <SetView
           tracks={displayTracks}
-          reviewNotes={data.review_notes ?? undefined}
+          // Strip personalization SERVER-SIDE — showPersonalization={false} only
+          // hides it visually, but the raw prop would still ship to the client.
+          reviewNotes={stripPersonalization(data.review_notes)}
           durationLabel={dur || undefined}
           setInfo={setInfo}
           showPersonalization={false}
