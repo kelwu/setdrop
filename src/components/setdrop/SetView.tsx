@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SD } from '@/lib/setdrop/constants';
 import type { SampleTrack } from '@/lib/setdrop/constants';
 import { TrackRow, EnergyArcChart } from './shared';
@@ -78,6 +78,21 @@ export function SetView({
   const keys = [...new Set(tracks.map(t => t.key))];
   const wishCount = tracks.filter(t => t.wishlist).length;
 
+  // One-time teaching hint in the tracklist header. It shows until the DJ first
+  // expands a track, then fades out and is remembered (localStorage) so it never
+  // returns. Rendered client-only (starts 'hidden', flips to 'shown' post-mount
+  // only if unseen) to avoid an SSR/hydration mismatch and any flash for a
+  // returning DJ. Lifecycle: hidden → shown → fading → hidden.
+  const [hintState, setHintState] = useState<'hidden' | 'shown' | 'fading'>('hidden');
+  useEffect(() => {
+    try { if (!localStorage.getItem('sd_trackNotesHintSeen')) setHintState('shown'); } catch { /* SSR / no storage */ }
+  }, []);
+  const dismissHint = useCallback(() => {
+    // Keep the state updater pure (StrictMode double-invokes it); do the write here.
+    try { localStorage.setItem('sd_trackNotesHintSeen', '1'); } catch { /* ignore */ }
+    setHintState(s => (s === 'shown' ? 'fading' : s));  // 'fading' triggers the opacity transition
+  }, []);
+
   return (
     <>
       <SetHeadsUp reviewNotes={reviewNotes} />
@@ -92,8 +107,11 @@ export function SetView({
             display:'flex', alignItems:'center', justifyContent:'space-between',
             flexWrap:'wrap', gap:'4px 12px' }}>
             <span>Tracklist — {tracks.length} tracks
-              {tracks.length > 0 && (
-                <span style={{ color:SD.textMuted, textTransform:'none', letterSpacing:0, marginLeft:8 }}>
+              {tracks.length > 0 && hintState !== 'hidden' && (
+                <span
+                  onTransitionEnd={() => setHintState(s => s === 'fading' ? 'hidden' : s)}
+                  style={{ color:SD.textMuted, textTransform:'none', letterSpacing:0, marginLeft:8,
+                    opacity: hintState === 'fading' ? 0 : 1, transition:'opacity .45s ease' }}>
                   · tap a track for why it&apos;s here + transition notes
                 </span>
               )}
@@ -116,7 +134,7 @@ export function SetView({
           {tracks.length === 0 && (
             <div style={{ fontFamily:SD.mono, fontSize:13, color:SD.textMuted, padding:'24px 0' }}>No tracks saved.</div>
           )}
-          {tracks.map(t => <TrackRow key={t.pos} track={t} />)}
+          {tracks.map(t => <TrackRow key={t.pos} track={t} onExpand={dismissHint} />)}
         </div>
 
         {/* Sidebar */}

@@ -518,7 +518,7 @@ export function EnergyDot({ energy, size = 8 }: { energy: number; size?: number 
 }
 
 // ─── TrackRow ──────────────────────────────────────────────────────────────
-export function TrackRow({ track }: { track: SampleTrack }) {
+export function TrackRow({ track, onExpand }: { track: SampleTrack; onExpand?: () => void }) {
   const [exp, setExp] = useState(false);
   const [hov, setHov] = useState(false);
   const hasNotes = !!(track.why || track.transition);
@@ -526,7 +526,7 @@ export function TrackRow({ track }: { track: SampleTrack }) {
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      onClick={() => setExp(!exp)}
+      onClick={() => { if (!exp) onExpand?.(); setExp(!exp); }}
       style={{
         background: hov ? SD.surface2 : SD.surface,
         borderTop: `1px solid ${hov ? SD.borderMid : SD.border}`,
